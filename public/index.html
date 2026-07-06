@@ -1006,6 +1006,53 @@ function bkShoreX(z) { // west (river) shoreline x at z, null outside the build 
   return s[i][1] + (s[i + 1][1] - s[i][1]) * t;
 }
 
+/* ---- QUEENS EXT + SOUTH BRONX + ISLANDS (geo-first, baked like BK above) ---- */
+const QB = {"QN":{"bnd":[[5103,12928],[5189,12800],[5201,12688],[4866,12385],[4833,12598],[4712,12782],[4666,12605],[4564,12657],[4605,12822],[4529,12890],[4484,13015],[4256,13080],[4208,12931],[4222,13022],[4107,13059],[4173,13238],[3974,12841],[3856,12788],[3802,12709],[3788,12518],[3745,12695],[3782,12810],[3938,12908],[4037,13264],[3908,13355],[3580,13448],[2890,13246],[2743,12837],[2758,12986],[2673,12579],[2638,12382],[2649,12290],[2563,12137],[2432,11523],[2344,11359],[2276,11114],[2206,11028],[2015,11105],[1852,11037],[1762,10842],[1765,10607],[1801,10496],[1896,10368],[2147,10393],[2172,10217],[2104,10045],[2031,9979],[2013,9870],[1907,9683],[1844,8166],[1639,8169],[1747,9740],[1807,9927],[1801,10089],[1719,10296],[1623,10133],[1564,9809],[1542,9106],[1391,7653],[1407,7217],[2274,7057],[3765,6884],[5123,6998],[6096,8108],[6726,9382],[6999,11054],[6635,12552],[6132,13379],[5103,12928]],"shx":[[7200,1407],[7350,1400],[7500,1396],[7650,1391],[7800,1404],[7950,1416],[8100,1435],[8250,1448],[8400,1466],[8550,1479],[8700,1498],[8850,1511],[9000,1529],[9150,1542],[9300,1546],[9450,1552],[9600,1556],[9750,1560],[9900,1576],[10050,1599],[10200,1623],[10350,1719],[10500,1801],[10650,1764],[10800,1762],[10950,1780],[11100,1852],[11250,2293],[11400,2344],[11550,2432],[11700,2458],[11850,2498],[12000,2524],[12150,2550],[12300,2649],[12450,2638],[12600,2673],[12750,2701],[12900,2730],[13050,2758],[13200,2848],[13350,3015],[13500,3517]],"parks":[["Third Calvary Cemetery",[[5340,8061],[4900,7661],[4870,7800],[4828,7788],[4739,8208],[4837,8242],[4789,8439],[4843,8464],[5210,8618],[5340,8061]]],["Second Calvary Cemetery",[[5410,7548],[5469,7349],[4964,7259],[4927,7262],[4894,7373],[4913,7381],[4877,7549],[4839,7533],[4828,7574],[5344,8039],[5410,7548]]],["Saint Michael\u2019s Cemetery",[[4389,11300],[4905,11487],[4944,11236],[4905,11216],[4913,10737],[4809,10735],[4777,10836],[4748,10825],[4664,10931],[4598,10926],[4579,11141],[4390,11107],[4389,11300]]],["Astoria Park",[[2325,11168],[2358,11355],[2467,11560],[2562,12013],[2724,11984],[2574,11304],[2670,11219],[2650,11125],[2325,11168]]],["Queensbridge Park",[[1980,8226],[2020,8540],[1861,8556],[1854,8195],[1978,8198],[1980,8226]]]],"roads":[["Broadway",[[7341,9390],[7310,9513],[7210,9608],[6783,9742],[4658,9769],[2917,9861],[2201,9958]]],["Roosevelt Avenue",[[4604,8411],[4885,8802],[5072,9001],[7679,11218],[7899,11467]]],["21st Street",[[2521,7006],[2535,6958],[2508,6943],[2521,7006],[2364,7749],[2612,10020],[2654,11102],[2682,11225]]],["Queens Boulevard",[[2988,8118],[3485,7898],[3480,7932],[3860,8093],[3876,8065],[4686,8437],[4570,8360],[4510,8335],[4495,8363],[3860,8093],[3864,8060],[3514,7910]]],["Northern Boulevard",[[2988,8118],[3085,8492],[3162,8603],[3577,8887],[4046,9410],[4526,9601],[4985,9994]]],["Northern Boulevard",[[5155,10131],[7153,11858],[7494,12101]]],["Vernon Boulevard",[[2184,9931],[2035,9689],[2080,8841],[1998,8344],[1950,7705],[2067,7450],[2196,6852]]]]},"BX":{"bnd":[[-233,19701],[-190,19330],[-281,19332],[-401,19418],[-374,19281],[-218,19196],[-226,19003],[-166,18920],[-136,17617],[-200,16467],[-152,16224],[332,14904],[540,14036],[666,13876],[1025,13644],[1167,13480],[1719,13764],[1871,13643],[2378,13644],[2524,13702],[2655,13971],[2823,14625],[2966,14875],[3238,15106],[3219,15195],[3357,15252],[3420,15355],[3675,15449],[3855,15486],[3945,15421],[4262,15309],[4384,15342],[4718,15676],[4790,15561],[5129,15659],[5239,15798],[5349,16436],[5108,16700],[5256,16830],[4880,17437],[4087,18788],[3031,19692],[1985,20052],[884,20235],[57,19941],[-233,19701]],"shx":[[13500,1120],[13650,922],[13800,717],[13950,582],[14100,510],[14250,481],[14400,436],[14550,406],[14700,377],[14850,332],[15000,290],[15150,227],[15300,164],[15450,122],[15600,58],[15750,-5],[15900,-47],[16050,-110],[16200,-152],[16350,-188],[16500,-200],[16650,-193],[16800,-183],[16950,-176],[17100,-166],[17250,-160],[17400,-149],[17550,-143],[17700,-139],[17850,-142],[18000,-146],[18150,-149],[18300,-153],[18450,-156],[18600,-160],[18750,-163],[18900,-166],[19050,-226],[19200,-296],[19350,-401],[19500,-212],[19650,-233]],"parks":[["Claremont Park",[[1549,17686],[1622,17761],[1635,18157],[1550,18357],[1389,18267],[1274,18199],[1493,17876],[1549,17686]]],["Saint Mary's Park",[[2241,14927],[2050,14898],[2014,14933],[1895,14911],[1956,15331],[2133,15333],[2185,15277],[2241,14927]]],["Roberto Clemente State Park",[[-33,18830],[-51,18805],[-50,18627],[-22,18217],[10,18218],[27,18418],[-38,18473],[-16,18531],[-41,18579],[1,18669],[34,18665],[51,18975],[1,19223],[-82,19404],[-67,18991],[-28,18958],[-65,18954],[-55,18842],[-33,18830]]],["Walter Gladwin Park",[[2082,19185],[1892,19103],[1905,19055],[1960,18842],[2112,18918],[2082,19185]]]],"roads":[["Third Avenue",[[1413,20597],[1606,20269],[1750,20117],[1762,19567],[1998,18518],[1977,17436],[1961,16307],[1815,16137],[1740,15749],[1606,15400],[972,14462],[867,14207],[914,14316],[888,14202]]],["Bruckner Boulevard",[[1103,14049],[1815,14053],[2082,14229],[2591,14943],[3093,16014],[3031,15826],[3087,15917],[3156,16202],[3274,16466],[3208,16273],[3187,16288],[3241,16472],[3156,16202],[3188,16210],[3208,16273]]],["Westchester Avenue",[[1769,15471],[2117,15627],[2210,15702],[3492,17788],[3978,18194],[4608,19122]]],["Jerome Avenue",[[643,20814],[678,20329],[787,19674],[829,18912],[823,17402],[574,16884],[547,16583],[478,16331],[261,16122]]],["Grand Concourse",[[925,20562],[1056,19826],[1093,19514],[1153,18856],[1055,18345],[1185,17668],[968,16832],[916,16161],[941,16569]]],["Sedgwick Avenue",[[166,16095],[122,16232],[67,16911],[91,18089],[113,18627],[221,18831],[207,19014],[47,19475],[197,19853],[206,20115]]],["Southern Boulevard",[[3267,16850],[2966,17745],[2854,18869],[2615,19396],[2576,19707],[2211,20709]]],["Webster Avenue",[[1618,16679],[1635,16777],[1643,16691],[1626,16747],[1512,19142],[1354,20056]]],["Food Center Drive",[[4682,16423],[4852,16562],[4912,16573],[5141,16319],[5158,16254],[5098,15982],[5036,15905],[4960,15890],[4742,15986],[4673,15963],[4611,15897],[4740,15971],[4955,15875],[5049,15899],[5115,15992],[5168,16292],[4912,16559],[4852,16548],[4415,16204]]],["East Tremont Avenue",[[4047,19866],[3858,19534],[3317,19193],[3153,19131],[2093,19210],[1676,19053],[1526,19035],[1533,19013],[1517,19039]]],["Bruckner Boulevard",[[3442,17021],[3353,16838],[3296,16620],[3351,16802],[3379,16804],[3452,16928],[3536,17131],[3728,17295],[3731,17339],[3754,17316],[3796,17344],[4424,17880],[4407,17915],[5095,18565]]],["East 161st Street",[[302,16158],[488,16100],[414,16142],[496,16111],[591,16125],[533,16103],[575,16085],[723,16107],[530,16091],[488,16100],[612,16128],[1090,16190],[914,16145],[797,16152],[785,16118],[723,16107],[734,16144],[797,16152],[799,16123],[1097,16187]]],["Bruckner Boulevard",[[2788,15288],[3031,15826],[2600,14977],[2783,15299],[2616,14942],[2438,14725],[2590,14920]]]]},"ISL":{"ri":[[1639,8169],[1636,8440],[1688,8747],[1747,9740],[1806,9918],[1806,10040],[1707,10300],[1690,10221],[1623,10133],[1607,10006],[1564,9809],[1542,9106],[1511,9003],[1507,8659],[1472,8508],[1391,7653],[1400,7248],[1551,7682],[1639,8169]],"gi":[[433,-370],[333,-398],[155,-538],[175,-661],[56,-1481],[121,-1593],[198,-1620],[273,-1600],[336,-1560],[461,-1327],[656,-942],[733,-902],[799,-746],[803,-606],[724,-425],[518,-344],[433,-370]],"rw":[[1572,11468],[1881,11573],[2101,11548],[2194,11752],[2269,11831],[2316,12011],[2272,12234],[2350,12778],[2436,12904],[2505,13354],[2472,13436],[2281,13599],[1863,13627],[1680,13761],[1407,13635],[1419,13255],[1536,13068],[1573,12911],[1567,12703],[1602,12632],[1686,12636],[1678,12521],[1768,12576],[1716,12655],[1806,12573],[1676,12495],[1541,12479],[1481,12400],[1426,12215],[1402,11696],[1457,11529],[1572,11468]],"rk":[[4517,14743],[4192,14857],[3965,14668],[3899,14503],[3938,14219],[4080,13923],[4240,13939],[4338,13804],[4448,13736],[4799,13848],[5007,13906],[5189,13973],[5305,14100],[5553,14260],[5612,14402],[5637,14530],[5593,14662],[5488,14763],[5252,14768],[4974,14850],[4614,14746],[4521,14772],[4517,14743]]},"hoods":{"sunnyside":{"c":[4406,8343],"u":[-0.3584,0.9336],"bx":0},"woodside":{"c":[5180,9147],"u":[-0.2079,0.9781],"bx":0},"ditmars":{"c":[3663,11863],"u":[0.2419,0.9703],"bx":0},"steinway":{"c":[4791,12019],"u":[0.788,0.6157],"bx":0},"jacksonhts":{"c":[6138,10257],"u":[0.7986,0.6018],"bx":0},"motthaven":{"c":[1334,14436],"u":[-0.0175,0.9998],"bx":1},"portmorris":{"c":[2499,14197],"u":[-0.0175,0.9998],"bx":1},"melrose":{"c":[1468,16267],"u":[-0.1045,0.9945],"bx":1},"concourse":{"c":[629,16966],"u":[-0.0698,0.9976],"bx":1},"highbridge":{"c":[-158,17359],"u":[-0.0175,0.9998],"bx":0},"morrisania":{"c":[2371,17235],"u":[-0.2079,0.9781],"bx":1},"huntspoint":{"c":[4002,16258],"u":[0.7547,0.6561],"bx":1}},"lm":{"yankee":[578,16273],"bxcourt":[893,16074],"hub":[1609,15323],"hellgate_a":[2326,11486],"hellgate_b":[2544,12367],"triboro_rw":[2039,12691],"conedA":[2960,13534],"conedB":[3276,13466],"steinwayF":[3809,12766],"silvercup":[2773,8115],"cornell":[1680,8230],"fourfreedoms":[1477,7321],"rilight":[1647,10106],"octagon":[1495,9336],"fortjay":[546,-655],"castlew":[185,-698],"liggett":[488,-966],"psych":[2355,12871],"tram_m":[720,8243],"tram_r":[1543,8256]},"bay":[[2890,13246],[3580,13448],[3908,13355],[4037,13264],[3938,12908],[3782,12810],[3745,12695],[3788,12518],[3802,12709],[3856,12788],[3974,12841],[4173,13238],[4107,13059],[4222,13022],[4208,12931],[4256,13080],[4484,13015],[4473,12855],[4605,12822],[4564,12657],[4666,12605],[4712,12782],[4833,12598],[4866,12385],[5262,12686],[5160,12741],[5103,12928],[6057,13155],[6642,14212],[6907,15682],[6224,16857],[5190,16713],[4310,15766],[3723,14884],[2975,14036],[2468,14061],[2200,13784],[2338,13218]],"rwpark":[[1419,13255],[1413,13657],[1611,13767],[1679,13760],[1861,13624],[2116,13626],[2275,13592],[2485,13405],[2486,13182],[2441,12999],[2100,13008],[2040,12928],[1983,12926],[1942,12890],[1927,12835],[1966,12824],[1904,12408],[2017,12094],[1996,12130],[1801,12166],[1897,12904],[1973,12942],[2032,13250],[1991,13275],[2010,13421],[1940,13479],[1822,13438],[1479,13473],[1455,13427],[1475,13349],[1840,13279],[1821,13123],[1865,13117],[1793,12480],[1765,12515],[1629,12454],[1541,12479],[1676,12495],[1805,12582],[1763,12660],[1731,12655],[1758,12676],[1732,12665],[1716,12655],[1758,12637],[1768,12576],[1682,12518],[1686,12636],[1595,12642],[1567,12703],[1579,12872],[1553,13025],[1419,13255]],"wardspark":[[2025,11947],[2048,12119],[2160,12033],[2308,11972],[2269,11831],[2194,11752],[2147,11592],[2079,11543],[1829,11562],[1572,11468],[1457,11529],[1402,11696],[1426,12215],[1481,12400],[1541,12479],[1569,12466],[1505,12307],[1473,12290],[1449,12034],[1486,11995],[1454,11774],[1624,11758],[1622,11680],[1696,11689],[1732,11655],[1770,11692],[1770,11839],[1807,11770],[1951,11672],[1966,11703],[1810,11865],[1860,11915],[1984,11914],[2025,11947]]};
+function makeContains(B) {
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (const p of B) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
+  return (x, z) => {
+    if (x < x0 || x > x1 || z < z0 || z > z1) return false;
+    let ins = false;
+    for (let i = 0, j = B.length - 1; i < B.length; j = i++) {
+      const xi = B[i][0], zi = B[i][1], xj = B[j][0], zj = B[j][1];
+      if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) ins = !ins;
+    }
+    return ins;
+  };
+}
+const qnContains = makeContains(QB.QN.bnd), bxContains = makeContains(QB.BX.bnd);
+const bayContains = makeContains(QB.bay);
+function makeShoreX(shx) { // scan lookup — bucket rows can be sparse where the shore runs E-W
+  return (z) => {
+    if (z < shx[0][0] || z > shx[shx.length - 1][0]) return null;
+    for (let i = 0; i < shx.length - 1; i++) {
+      if (z <= shx[i + 1][0]) {
+        const t = (z - shx[i][0]) / (shx[i + 1][0] - shx[i][0]);
+        return shx[i][1] + (shx[i + 1][1] - shx[i][1]) * t;
+      }
+    }
+    return shx[shx.length - 1][1];
+  };
+}
+const qnShoreX = makeShoreX(QB.QN.shx), bxShoreX = makeShoreX(QB.BX.shx);
+// Roosevelt Island must fit the PINCHED stylized channel: the frozen calibration
+// makes the baked ring wider than the water between Manhattan's stylized east
+// coast and the real Queens shore. Squeeze its x-range into the channel per
+// vertex and carry its landmarks (Cornell, tram, lighthouse...) along.
+{
+  let x0 = 1e9, x1 = -1e9;
+  for (const p of QB.ISL.ri) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); }
+  const fit = (x, z) => {
+    const xw = coastAt(z).e + 50;
+    const qsx = ((bkShoreX(z) ?? qnShoreX(z) ?? (xw + 460)) - 90); // leave a readable east channel
+    return Math.round(xw + (x - x0) / (x1 - x0) * Math.max(120, qsx - xw));
+  };
+  for (const p of QB.ISL.ri) p[0] = fit(p[0], p[1]);
+  for (const k of ['cornell', 'fourfreedoms', 'rilight', 'octagon', 'tram_r'])
+    QB.lm[k][0] = fit(QB.lm[k][0], QB.lm[k][1]);
+}
+
 /* ============================================================
    13. Ground canvas (streets etched + painted long shadows)
    ============================================================ */
@@ -1228,27 +1275,47 @@ function eastW(z) { return z < 2400 ? 820 : z < 5200 ? 620 : z < 8000 ? 700 : 98
   // Brooklyn / Queens — west edge follows the REAL shoreline where the geo-first
   // build exists (bkShoreX), old stylized formula beyond it; extended south to Bay Ridge
   strip(-8500, 15300, 300, z => {
-    const bs = bkShoreX(z);
-    if (bs !== null) return bs + 15;
+    // westmost land edge at this z: South Bronx shore once it begins (the water
+    // between it and Queens is painted by the bay overlay), else the real
+    // Brooklyn/Queens shoreline, else the old stylized formula
+    const xs = bxShoreX(z);
+    if (xs !== null) return Math.max(xs, coastAt(clamp(z, Z_TIP_S + 40, Z_TIP_N - 40)).e + 120) + 15;
+    const bs = bkShoreX(z), qs = qnShoreX(z);
+    if (bs !== null || qs !== null) return Math.min(bs ?? 1e9, qs ?? 1e9) + 15;
     return coastAt(clamp(z, Z_TIP_S + 40, Z_TIP_N - 40)).e + eastW(clamp(z, 0, 13800)) + (z < 0 ? 500 + (0 - z) * 0.7 : 0);
   }, 8800); // extends under the whole geo-first build (Bushwick/Highland reach x≈8200)
-  // Bronx (wraps around the island's north tip)
-  strip(15400, 24200, 300, z => (z > 21520 ? -1400 : coastAt(Math.min(z, 21400)).e + 170), 4400);
+  // Bronx (wraps around the island's north tip) — west edge = real Harlem River bank
+  // where baked (clamped east of the stylized Manhattan coast to keep the channel open)
+  strip(15400, 24200, 300, z => {
+    const xs = bxShoreX(z);
+    const styl = z > 21520 ? -1400 : coastAt(Math.min(z, 21400)).e + 170;
+    return xs !== null ? Math.max(xs, coastAt(Math.min(z, 21400)).e + 120) + 15 : styl;
+  }, 4400);
   const m = new THREE.Mesh(sinkToGeometry(S), boroughGndMat);
   m.matrixAutoUpdate = false;
   scene.add(m);
 }
-// small islands: Roosevelt, Governors, Liberty, Ellis, Randalls
-const isletMat = patchClouds(new THREE.MeshLambertMaterial({ color: 0x6f7d5e,
-  polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }), true); // islets float 2.2 m over the water plane — flickers blue beyond ~10 km without bias
+// small islands — Roosevelt/Governors/Randalls/Rikers use their REAL baked rings
+// (the old hand-placed ellipses sat up to ~1 km from where live data lands).
+// tier -3/-6: islands must beat the bay water overlay (-2/-4) they sit inside.
+// DoubleSide: OSM ring winding varies.
+const isletMat = patchClouds(new THREE.MeshLambertMaterial({ color: 0x6f7d5e, side: THREE.DoubleSide,
+  polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }), true);
+const isletParkMat = patchClouds(new THREE.MeshLambertMaterial({ color: 0x4a6b3c, side: THREE.DoubleSide,
+  polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }), true); // Randalls/Wards is parkland
 const islets = [];
 function ellipseLoop(cx, cz, rx, rz, n = 26) { const l = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; l.push([cx + Math.cos(a) * rx, cz + Math.sin(a) * rz]); } return l; }
-islets.push(ellipseLoop(1270, 9550, 95, 1320)); // Roosevelt
-islets.push(ellipseLoop(850, -950, 320, 300));  // Governors
-islets.push(ellipseLoop(-2650, -2450, 100, 90)); // Liberty
-islets.push(ellipseLoop(-2500, -1650, 90, 70));  // Ellis
-islets.push(ellipseLoop(1380, 14600, 340, 950)); // Randalls
-for (const l of islets) scene.add(flatLand(l, 1.7, isletMat));
+// clamp island west edges off the stylized Manhattan east coast (the frozen
+// calibration lets the real rings kiss it by ~50 m at Roosevelt/Randalls)
+const clampEastOfManhattan = (ring, margin) => ring.map(([x, z]) =>
+  [z > Z_TIP_S && z < Z_TIP_N ? Math.max(x, coastAt(z).e + margin) : x, z]);
+islets.push([QB.ISL.ri, isletMat]);                                    // Roosevelt (real, channel-fitted above)
+islets.push([QB.ISL.gi, isletMat]);                                    // Governors (real)
+islets.push([ellipseLoop(-2650, -2450, 100, 90), isletMat]);           // Liberty
+islets.push([ellipseLoop(-2500, -1650, 90, 70), isletMat]);            // Ellis
+islets.push([clampEastOfManhattan(QB.ISL.rw, 55), isletParkMat]);      // Randalls/Wards (real)
+islets.push([QB.ISL.rk, isletMat]);                                    // Rikers (real)
+for (const [l, m] of islets) scene.add(flatLand(l, 1.7, m));
 
 /* ============================================================
    15. Infrastructure: piers, FDR ribbon, High Line, Palisades
@@ -1367,6 +1434,16 @@ scene.add(water);
   const m = new THREE.Mesh(BufferGeometryUtils.mergeGeometries(geos), lakeMat);
   m.matrixAutoUpdate = false;
   scene.add(m);
+  // ---- upper East River / Bowery Bay / Bronx Kill water overlay ----
+  // The borough ground plate paints solid land from its west edge eastward, so the
+  // basin between the South Bronx, Randalls and Queens needs water painted ON TOP.
+  // tier -2/-4: above the plate (-1/-2), below the islands that sit in it (-3/-6).
+  const bayMat = waterMat.clone();
+  bayMat.uniforms = waterMat.uniforms;
+  bayMat.polygonOffset = true; bayMat.polygonOffsetFactor = -2; bayMat.polygonOffsetUnits = -4;
+  bayMat.side = THREE.DoubleSide; // authored ring winding
+  const bayMesh = flatLand(QB.bay, 1.3, bayMat);
+  scene.add(bayMesh);
 }
 
 /* ============================================================
@@ -1516,8 +1593,24 @@ const midMeshes = [];
     }
   }
   for (const s of SUPERS) for (let i = 0; i < 34; i++) spots.push([s.x0 + RT() * (s.x1 - s.x0), LAND_Y, s.z0 + RT() * (s.z1 - s.z0), 0.7 + RT()]);
-  for (const [cx, cz, rx, rz, n, y] of [[850, -950, 290, 270, 260, 1.7], [1380, 14600, 300, 880, 380, 1.7], [-2650, -2450, 70, 60, 20, 1.7]])
+  for (const [cx, cz, rx, rz, n, y] of [[-2650, -2450, 70, 60, 20, 1.7]])
     for (let i = 0; i < n; i++) { const a = RT() * TAU, r = Math.sqrt(RT()); spots.push([cx + Math.cos(a) * rx * r, y, cz + Math.sin(a) * rz * r, 0.8 + RT()]); }
+  // Governors + Randalls/Wards trees: rejection-sampled inside the REAL island rings
+  {
+    const inRing = (P, x, z) => { let ins = false;
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+        if ((P[i][1] > z) !== (P[j][1] > z) && x < (P[j][0] - P[i][0]) * (z - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) ins = !ins;
+      } return ins; };
+    for (const [ring, n] of [[QB.ISL.gi, 240], [QB.ISL.rw, 380]]) {
+      let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+      for (const p of ring) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
+      for (let i = 0, made = 0; i < n * 5 && made < n; i++) {
+        const x = x0 + RT() * (x1 - x0), z = z0 + RT() * (z1 - z0);
+        if (!inRing(ring, x, z)) continue;
+        spots.push([x, 1.7, z, 0.8 + RT()]); made++;
+      }
+    }
+  }
   const im = new THREE.InstancedMesh(tGeo, patchClouds(new THREE.MeshLambertMaterial({ vertexColors: true }), true), spots.length);
   im.frustumCulled = false;
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color();
@@ -1735,6 +1828,311 @@ const midMeshes = [];
   console.log('[brooklyn] built', bkCount, 'buildings across', hoodNames.length, 'neighborhoods');
 }
 
+const NECKLACE = []; // bridge/arch light positions (consumed by section 21's emissive points)
+
+/* ============================================================
+   19c. QUEENS EXT + SOUTH BRONX + ISLANDS — geo-first build with
+   Manhattan-level detail: real parks/arterials PLUS drawn street
+   grids at each hood's true bearing, waterfront piers, and bespoke
+   landmarks (Hell Gate arch, Yankee Stadium, Cornell Tech, the
+   Roosevelt tram, Fort Jay...). 2 draw calls (ground + city).
+   ============================================================ */
+{
+  const R = rng(iHash(7171, 19));
+  const SG = Sink();  // ground: parks, arterials, street grids, piers
+  const SC = Sink();  // city: buildings + landmarks
+  const inPoly = (P, x, z) => { let ins = false;
+    for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+      if ((P[i][1] > z) !== (P[j][1] > z) && x < (P[j][0] - P[i][0]) * (z - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) ins = !ins;
+    } return ins; };
+  const parks = [...QB.QN.parks, ...QB.BX.parks];
+  const parkBB = parks.map(([, P]) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (const p of P) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
+    return [x0 - 15, x1 + 15, z0 - 15, z1 + 15]; });
+  const inAnyPark = (x, z) => {
+    for (let i = 0; i < parks.length; i++) {
+      const b = parkBB[i];
+      if (x > b[0] && x < b[1] && z > b[2] && z < b[3] && inPoly(parks[i][1], x, z)) return true;
+    } return false; };
+  // which footprint owns a point (BK owns its own ground — never double-build)
+  const owned = (x, z) => (bxContains(x, z) || (qnContains(x, z) && !bkContains(x, z)));
+  // road proximity (same 300 m cell hash as 19b)
+  const roads = [...QB.QN.roads, ...QB.BX.roads];
+  const roadHash = new Map(); const rkey = (x, z) => ((x / 300) | 0) * 4096 + ((z / 300) | 0);
+  const roadSegs = [];
+  for (const [, pts] of roads) for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    if (!owned((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
+    const id = roadSegs.length; roadSegs.push([a[0], a[1], b[0], b[1]]);
+    const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 250);
+    for (let k = 0; k <= n; k++) {
+      const kx = a[0] + (b[0] - a[0]) * k / n, kz = a[1] + (b[1] - a[1]) * k / n;
+      for (let ox = -1; ox <= 1; ox++) for (let oz = -1; oz <= 1; oz++) {
+        const key = rkey(kx + ox * 300, kz + oz * 300);
+        if (!roadHash.has(key)) roadHash.set(key, []);
+        const arr = roadHash.get(key);
+        if (arr[arr.length - 1] !== id) arr.push(id);
+      }
+    }
+  }
+  const nearRoad = (x, z, r) => {
+    const segs = roadHash.get(rkey(x, z));
+    if (!segs) return false;
+    for (const id of segs) {
+      const s = roadSegs[id];
+      const dx = s[2] - s[0], dz = s[3] - s[1], L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((x - s[0]) * dx + (z - s[1]) * dz) / L2, 0, 1);
+      const px = s[0] + dx * t, pz = s[1] + dz * t;
+      if ((x - px) * (x - px) + (z - pz) * (z - pz) < r * r) return true;
+    } return false; };
+  // ---- parks ----
+  for (const [nm, P] of parks) {
+    const cem = nm.includes('Cemetery');
+    const g = cem ? [0.34, 0.42, 0.27] : [0.27, 0.40, 0.22];
+    pushPoly(SG, P, 1.35, 0.5, g, 0, -1, g);
+    let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (const p of P) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
+    const step = cem ? 130 : 78;
+    for (let x = x0; x < x1; x += step) for (let z = z0; z < z1; z += step) {
+      const jx = x + (R() - 0.5) * 50, jz = z + (R() - 0.5) * 50;
+      if (!inPoly(P, jx, jz) || R() < 0.35) continue;
+      const s = 9 + R() * 10;
+      pushBoxG(SG, jx, jz, 1.9, 5 + R() * 6, s, s, R() * 3, [0.15 + R() * 0.06, 0.28 + R() * 0.08, 0.13 + R() * 0.05], R(), -1);
+    }
+  }
+  // ---- arterials ----
+  for (const [nm, pts] of roads) {
+    const wide = /Boulevard|Concourse|Bruckner|Avenue$/.test(nm) ? 24 : 18;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+      if (!owned(mx, mz)) continue;
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L < 10) continue;
+      pushBoxG(SG, mx, mz, 1.55, 0.45, L + wide * 0.5, wide, Math.atan2(b[1] - a[1], b[0] - a[0]), [0.16, 0.155, 0.15], 0, -1, [0.16, 0.155, 0.15]);
+    }
+  }
+  // ---- hood recipes ----
+  const REC = {
+    sunnyside:  { su: 58, sv: 106, h0: 8,  h1: 13, gl: 0.02, pal: 'brick' },
+    woodside:   { su: 58, sv: 106, h0: 8,  h1: 13, gl: 0.01, pal: 'brick' },
+    ditmars:    { su: 56, sv: 104, h0: 8,  h1: 12, gl: 0.01, pal: 'brick' },
+    steinway:   { su: 60, sv: 110, h0: 8,  h1: 13, gl: 0.02, pal: 'brick', ind: 0.18 },
+    jacksonhts: { su: 62, sv: 112, h0: 13, h1: 20, gl: 0.02, pal: 'stone' },
+    motthaven:  { su: 58, sv: 108, h0: 9,  h1: 15, gl: 0.02, pal: 'brick', ind: 0.12, prj: 0.05 },
+    portmorris: { su: 84, sv: 148, h0: 7,  h1: 12, gl: 0.00, pal: 'brick', ind: 0.55, skip: 0.22 },
+    melrose:    { su: 58, sv: 108, h0: 10, h1: 17, gl: 0.02, pal: 'brick', prj: 0.06 },
+    concourse:  { su: 60, sv: 110, h0: 16, h1: 26, gl: 0.03, pal: 'stone' },
+    highbridge: { su: 58, sv: 108, h0: 12, h1: 20, gl: 0.02, pal: 'brick', prj: 0.04 },
+    morrisania: { su: 58, sv: 106, h0: 9,  h1: 15, gl: 0.01, pal: 'brick' },
+    huntspoint: { su: 88, sv: 150, h0: 7,  h1: 12, gl: 0.00, pal: 'brick', ind: 0.5, skip: 0.25 }
+  };
+  const hoodNames = Object.keys(QB.hoods);
+  const nearestHood = (x, z) => { let best = null, bd = 1e18;
+    for (const h of hoodNames) { const c = QB.hoods[h].c;
+      const d = (x - c[0]) * (x - c[0]) + (z - c[1]) * (z - c[1]);
+      if (d < bd) { bd = d; best = h; } }
+    return best; };
+  const L = QB.lm;
+  const excl = [[L.yankee, 210], [L.bxcourt, 130], [L.hub, 150], [L.conedA, 280], [L.steinwayF, 170]];
+  const inExcl = (x, z) => { for (const [c, r] of excl) { const dx = x - c[0], dz = z - c[1]; if (dx * dx + dz * dz < r * r) return true; } return false; };
+  const shoreMargin = (x, z) => {
+    const qs = qnShoreX(z), bs = bxShoreX(z);
+    if (qs !== null && qnContains(x, z) && x - qs < 26) return true;
+    if (bs !== null && bxContains(x, z) && x - bs < 26) return true;
+    return false; };
+  const okCell = (x, z) =>
+    owned(x, z) && owned(x - 45, z) && owned(x + 45, z) && owned(x, z + 45) && owned(x, z - 45) &&
+    !inAnyPark(x, z) && !shoreMargin(x, z);
+  // ---- drawn street grids (the Manhattan-detail upgrade over the BK build):
+  // asphalt ribbons along each hood's true bearing, streets every row pitch and
+  // cross avenues every ~4 lots, clipped to owned land / parks / shore
+  const asph = [0.185, 0.18, 0.175];
+  let streetKm = 0;
+  for (const h of hoodNames) {
+    const cfg = REC[h], hd = QB.hoods[h];
+    const ux = hd.u[0], uz = hd.u[1], vx = -uz, vz = ux;
+    const rot = Math.atan2(uz, ux), rotV = Math.atan2(vz, vx);
+    for (const [du, dvx, dvz, pitch, w, r2] of [
+      [cfg.sv, ux, uz, cfg.sv, 7.5, rot],        // streets: run along u, spaced by sv
+      [cfg.su * 4, vx, vz, cfg.su * 4, 11, rotV] // avenues: run along v, spaced 4 lots
+    ]) {
+      const runDirX = dvx, runDirZ = dvz;
+      for (let t = -3400; t <= 3400; t += pitch) {
+        let run = null;
+        for (let s = -3400; s <= 3400 + 1e-6; s += 60) {
+          // position: t across the run direction
+          const px = du === cfg.sv ? vx : ux, pz = du === cfg.sv ? vz : uz;
+          const x = hd.c[0] + runDirX * s + px * t, z = hd.c[1] + runDirZ * s + pz * t;
+          const ok = s <= 3400 && okCell(x, z) && nearestHood(x, z) === h;
+          if (ok && !run) run = [x, z];
+          else if (!ok && run) {
+            const ex = hd.c[0] + runDirX * (s - 60) + px * t, ez = hd.c[1] + runDirZ * (s - 60) + pz * t;
+            const len = Math.hypot(ex - run[0], ez - run[1]);
+            if (len > 70) {
+              pushBoxG(SG, (run[0] + ex) / 2, (run[1] + ez) / 2, 1.45, 0.35, len, w, r2, asph, 0, -1, asph);
+              streetKm += len / 1000;
+            }
+            run = null;
+          }
+        }
+      }
+    }
+  }
+  // ---- building fill at true bearings ----
+  let qbCount = 0;
+  for (const h of hoodNames) {
+    const cfg = REC[h], hd = QB.hoods[h];
+    const ux = hd.u[0], uz = hd.u[1], vx = -uz, vz = ux;
+    for (let t = -3400; t <= 3400; t += cfg.sv) {
+      for (let s = -3400; s <= 3400; s += cfg.su) {
+        const x = hd.c[0] + ux * s + vx * t + (R() - 0.5) * 8;
+        const z = hd.c[1] + uz * s + vz * t + (R() - 0.5) * 8;
+        if (cfg.skip && R() < cfg.skip) continue;
+        if (R() < 0.10) continue;
+        if (!okCell(x, z)) continue;
+        if (nearestHood(x, z) !== h) continue;
+        if (inExcl(x, z) || nearRoad(x, z, 17)) continue;
+        let hgt = cfg.h0 + R() * (cfg.h1 - cfg.h0);
+        let kind = R() < cfg.gl ? 1 : 0;
+        let w = cfg.su * (0.78 + R() * 0.16), d = 20 + R() * 14;
+        if (cfg.ind && R() < cfg.ind) { w = cfg.su * 1.15; d = 34 + R() * 26; hgt = 6.5 + R() * 4.5; kind = -1; }
+        // towers-in-the-park public housing (South Bronx signature)
+        if (cfg.prj && R() < cfg.prj) { hgt = 42 + R() * 18; w = 26 + R() * 8; d = 24 + R() * 8; kind = 0; }
+        const pal = kind === 1 ? PAL.glass : (cfg.pal === 'stone' ? PAL.stone : PAL.brick);
+        const col = pal[(R() * pal.length) | 0];
+        const fade = 0.80 + R() * 0.3;
+        pushBoxG(SC, x, z, 1.25, hgt, w, d, Math.atan2(uz, ux) + (R() - 0.5) * 0.02,
+          kind === -1 ? [0.52 + R() * 0.1, 0.50 + R() * 0.08, 0.47 + R() * 0.06] : [col[0] * fade, col[1] * fade, col[2] * fade],
+          R(), kind);
+        qbCount++;
+      }
+    }
+  }
+  // ---- waterfront piers (Manhattan-style, along the real shores) ----
+  const pierC = [0.45, 0.42, 0.38];
+  for (let z = 10500; z < 11600; z += 260 + R() * 140) { // Hallett's Cove bank (south of here the east channel is too thin for piers)
+    if (R() < 0.35) continue;
+    const sx = qnShoreX(z); if (sx === null) continue;
+    const len = 55 + R() * 90, w = 13 + R() * 8;
+    pushBoxG(SG, sx - len / 2 + 8, z, 0.6, 2.4, len, w, 0, pierC, R(), -1);
+  }
+  for (let z = 13700; z < 19200; z += 300 + R() * 160) { // Bronx Harlem River bank
+    if (R() < 0.45) continue;
+    const sx = bxShoreX(z); if (sx === null) continue;
+    const len = 45 + R() * 70, w = 12 + R() * 7;
+    pushBoxG(SG, sx - len / 2 + 8, z, 0.6, 2.4, len, w, 0, pierC, R(), -1);
+  }
+  /* ---- landmarks ---- */
+  // Hell Gate Bridge: dark-red steel through-arch over the channel + long viaduct
+  {
+    const a = L.hellgate_a, b = L.hellgate_b;
+    const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
+    const ux2 = dx / len, uz2 = dz / len, rot = Math.atan2(dz, dx);
+    const col = [0.42, 0.20, 0.16], deckY = 30;
+    for (let s = -700; s < len + 600; s += 90) { // viaduct deck + piers
+      const x = a[0] + ux2 * (s + 45), z = a[1] + uz2 * (s + 45);
+      pushBoxG(SC, x, z, deckY - 1.6, 2.6, 96, 11, rot, col, 0.3, -1);
+      if (s < -60 || s > len + 20) pushBoxG(SC, x, z, 1.7, deckY - 3, 8, 12, rot, [0.55, 0.52, 0.48], 0.3, -1);
+    }
+    for (const e of [a, b]) pushBoxG(SC, e[0], e[1], 1.7, deckY + 22, 16, 20, rot, [0.62, 0.58, 0.52], 0.3, -1); // stone portal towers
+    const AS = 16;
+    for (const off of [-6, 6]) { // twin arch ribs with hangers
+      let prev = null;
+      for (let i = 0; i <= AS; i++) {
+        const t2 = i / AS, s = t2 * len;
+        const u2 = 2 * t2 - 1;
+        const y = deckY + 52 * (1 - u2 * u2);
+        const x = a[0] + ux2 * s - uz2 * off, z = a[1] + uz2 * s + ux2 * off;
+        if (prev) pushBeam(SC, prev[0], prev[1], prev[2], x, y, z, 1.2, col);
+        if (i > 0 && i < AS && y > deckY + 3) pushBeam(SC, x, y, z, x, deckY, z, 0.3, col);
+        if (i % 2 === 0) NECKLACE.push(x, y + 0.8, z);
+        prev = [x, y, z];
+      }
+    }
+  }
+  // Con Ed Astoria: turbine halls + candy-stripe stacks
+  pushBoxG(SC, L.conedA[0], L.conedA[1], 1.7, 26, 190, 90, -0.35, [0.58, 0.56, 0.54], 0.4, -1, [0.5, 0.49, 0.48]);
+  pushBoxG(SC, L.conedB[0], L.conedB[1], 1.7, 20, 130, 70, -0.35, [0.55, 0.52, 0.50], 0.4, -1);
+  for (let i = 0; i < 4; i++) pushPrism(SC, L.conedA[0] - 60 + i * 42, L.conedA[1] + 30 - i * 12, 1.7, 82 + (i % 2) * 8, 5.5, 4.5, 8, 0, i % 2 ? [0.82, 0.30, 0.26] : [0.85, 0.83, 0.80], 0.3, -1);
+  // Steinway piano factory: brick works + stack
+  pushBoxG(SC, L.steinwayF[0], L.steinwayF[1], 1.7, 15, 130, 60, 0.25, [0.50, 0.30, 0.22], 0.3, 0);
+  pushPrism(SC, L.steinwayF[0] + 50, L.steinwayF[1] + 25, 1.7, 40, 3.5, 2.8, 8, 0, [0.45, 0.27, 0.20], 0.3, -1);
+  // Silvercup sign block (LIC edge)
+  pushBoxG(SC, L.silvercup[0], L.silvercup[1], 1.7, 22, 90, 50, -0.26, [0.52, 0.36, 0.26], 0.4, 0);
+  // Yankee Stadium at its TRUE anchor: limestone bowl + field + light masts
+  pushPrism(SC, L.yankee[0], L.yankee[1], 1.7, 26, 128, 118, 20, 0.44, [0.82, 0.80, 0.76], 0.4, -1, [0.30, 0.48, 0.30]);
+  for (let i = 0; i < 6; i++) { const a2 = i / 6 * TAU;
+    pushBeam(SC, L.yankee[0] + Math.cos(a2) * 118, 27, L.yankee[1] + Math.sin(a2) * 108, L.yankee[0] + Math.cos(a2) * 122, 44, L.yankee[1] + Math.sin(a2) * 112, 0.7, [0.7, 0.7, 0.72]); }
+  // Bronx County Courthouse + the Hub cluster
+  pushBoxG(SC, L.bxcourt[0], L.bxcourt[1], 1.7, 42, 95, 68, 0.44, [0.80, 0.77, 0.70], 0.35, 0);
+  for (let i = 0; i < 3; i++) pushBoxG(SC, L.hub[0] + (i - 1) * 70, L.hub[1] + (i % 2) * 60 - 30, 1.7, 30 + R() * 22, 46, 38, 0.44, PAL.stone[i % PAL.stone.length], R(), 0);
+  // Rikers Island: perimeter + barracks rows + H-blocks
+  {
+    const rc = [4750, 14300];
+    for (let i = 0; i < 7; i++) pushBoxG(SC, rc[0] - 300 + (i % 4) * 170, rc[1] - 120 + ((i / 4) | 0) * 190, 1.9, 8 + (i % 3) * 2, 130, 34, 0.35, [0.62, 0.62, 0.60], R(), -1);
+    for (let i = 0; i < 2; i++) pushBoxG(SC, rc[0] + 180 + i * 160, rc[1] + 120, 1.9, 15, 90, 70, 0.35, [0.58, 0.58, 0.56], R(), 0);
+  }
+  // Roosevelt Island set
+  pushPrism(SC, L.octagon[0], L.octagon[1], 1.9, 20, 11, 9, 8, 0, [0.72, 0.68, 0.60], 0.4, 0, [0.4, 0.42, 0.45]);
+  for (let i = 0; i < 3; i++) pushBoxG(SC, L.cornell[0] + (i - 1) * 60, L.cornell[1] + (i % 2) * 60 - 30, 1.9, 22 + i * 6, 62, 30, -0.26, PAL.glass[i % PAL.glass.length], R(), 1);
+  pushPrism(SC, L.rilight[0], L.rilight[1], 1.9, 16, 3.6, 1.6, 6, 0, [0.62, 0.58, 0.50], 0.3, -1);
+  pushBoxG(SC, L.fourfreedoms[0], L.fourfreedoms[1], 1.9, 3, 55, 40, -0.26, [0.88, 0.87, 0.84], 0.2, -1, [0.86, 0.85, 0.82]);
+  pushBoxG(SC, L.fourfreedoms[0] + 12, L.fourfreedoms[1] + 24, 4.9, 2, 30, 18, -0.26, [0.90, 0.89, 0.86], 0.2, -1);
+  // hospitals (Coler north / Blackwell-era chevrons south)
+  pushBoxG(SC, L.rilight[0] + 25, L.rilight[1] - 260, 1.9, 14, 120, 26, -0.20, [0.78, 0.76, 0.72], 0.4, 0);
+  pushBoxG(SC, L.fourfreedoms[0] + 45, L.fourfreedoms[1] + 300, 1.9, 16, 110, 28, -0.26, [0.76, 0.74, 0.70], 0.4, 0);
+  // the tram: cables Manhattan -> island with towers and two cabins
+  {
+    const m = L.tram_m, r2 = L.tram_r, ty = 46;
+    pushBoxG(SC, m[0], m[1], 1.9, ty, 7, 7, 0, [0.45, 0.10, 0.12], 0.3, -1);
+    pushBoxG(SC, r2[0], r2[1], 1.9, ty, 7, 7, 0, [0.45, 0.10, 0.12], 0.3, -1);
+    for (const off of [-4, 4]) {
+      let prev = null;
+      for (let i = 0; i <= 10; i++) {
+        const t2 = i / 10, u2 = 2 * t2 - 1;
+        const x = m[0] + (r2[0] - m[0]) * t2, z = m[1] + (r2[1] - m[1]) * t2 + off;
+        const y = ty - 14 * (1 - u2 * u2);
+        if (prev) pushBeam(SC, prev[0], prev[1], prev[2], x, y, z, 0.22, [0.3, 0.3, 0.32]);
+        prev = [x, y, z];
+      }
+      const cx = m[0] + (r2[0] - m[0]) * (off < 0 ? 0.35 : 0.65), cz = m[1] + (r2[1] - m[1]) * (off < 0 ? 0.35 : 0.65) + off;
+      pushBoxG(SC, cx, cz, ty - 14 * (1 - Math.pow(2 * (off < 0 ? 0.35 : 0.65) - 1, 2)) - 4.5, 3.6, 8, 5, 0, [0.75, 0.12, 0.15], 0.3, -1);
+    }
+  }
+  // Wards Island: Manhattan Psychiatric slabs + Icahn Stadium oval
+  for (let i = 0; i < 3; i++) pushBoxG(SC, L.psych[0] + (i - 1) * 55, L.psych[1] + (i % 2) * 50 - 25, 1.9, 44 + i * 5, 60, 22, 0.3, [0.72, 0.70, 0.66], R(), 0);
+  pushPrism(SC, 1900, 12250, 1.9, 9, 55, 42, 16, 0.3, [0.70, 0.70, 0.72], 0.4, -1, [0.75, 0.45, 0.30]);
+  // Governors Island: Fort Jay star, Castle Williams drum, Liggett Hall, the hills
+  {
+    const fj = L.fortjay;
+    for (let i = 0; i < 5; i++) { const a2 = i / 5 * TAU + 0.3;
+      pushBoxG(SC, fj[0] + Math.cos(a2) * 52, fj[1] + Math.sin(a2) * 52, 1.9, 4.5, 62, 16, a2 + Math.PI / 2, [0.45, 0.50, 0.38], 0.3, -1, [0.40, 0.48, 0.34]); }
+    pushPrism(SC, L.castlew[0], L.castlew[1], 1.9, 11, 21, 20, 14, 0, [0.55, 0.42, 0.35], 0.4, -1);
+    pushBoxG(SC, L.liggett[0], L.liggett[1], 1.9, 11, 205, 17, 0.42, [0.52, 0.32, 0.24], 0.35, 0);
+    { // the Hills: sampled INSIDE the ring's southern lobe (hardcoded spots missed it)
+      let made = 0;
+      for (let i = 0; i < 200 && made < 4; i++) {
+        const x = 60 + R() * 700, z = -1550 + R() * 380;
+        if (!inPoly(QB.ISL.gi, x, z) || !inPoly(QB.ISL.gi, x - 55, z) || !inPoly(QB.ISL.gi, x + 55, z)) continue;
+        pushPrism(SC, x, z, 1.9, 14 + R() * 9, 55, 8, 9, R(), [0.25, 0.38, 0.20], R(), -1);
+        made++;
+      }
+    }
+    for (let i = 0; i < 5; i++) pushBoxG(SC, fj[0] - 140 + i * 55, fj[1] + 130, 1.9, 8, 40, 14, 0.42, [0.68, 0.55, 0.42], R(), 0);
+  }
+  // ---- meshes (2 draw calls) ----
+  const qbCityMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 0);
+  const qbGndMat = patchClouds(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }), true);
+  for (const [s, m] of [[SC, qbCityMat], [SG, qbGndMat]]) {
+    const mesh = new THREE.Mesh(sinkToGeometry(s), m);
+    mesh.matrixAutoUpdate = false;
+    scene.add(mesh);
+  }
+  console.log('[qns+bronx] built', qbCount, 'buildings,', streetKm.toFixed(0), 'km of drawn streets');
+}
+
 /* ============================================================
    20. Boroughs — honest low fill fading into haze (always on)
    ============================================================ */
@@ -1772,19 +2170,21 @@ const midMeshes = [];
   const SB = Sink();
   fillRegion(SB, 22, -2300, 15200, z => coastAt(clamp(z, 0, 13600)).e + eastW(clamp(z, 0, 13600)) + 60, 5400, 1, -0.05,
     [[2350, 1150, 340, 380, 8], [2150, 3800, 260, 420, 2.4], [2500, 8300, 320, 380, 6]],
-    120, 95, (x, z) => { // skip inside the geo-first footprint AND in the river strip
-      if (bkContains(x, z)) return true; // between the old stylized coast and the REAL shore
-      const bs = bkShoreX(z);
-      return bs !== null && x < bs + 20;
+    120, 95, (x, z) => { // skip inside ANY geo-first footprint, river strips, and the bay
+      if (bkContains(x, z) || qnContains(x, z) || bxContains(x, z) || bayContains(x, z)) return true;
+      const bs = bkShoreX(z), qs = qnShoreX(z);
+      return (bs !== null && x < bs + 20) || (qs !== null && x < qs + 20);
     });
-  // Bronx
+  // Bronx — generic filler only beyond the geo-first South Bronx build
   const SX = Sink();
   fillRegion(SX, 23, 15500, 23600, z => (z > 21520 ? -1100 : coastAt(Math.min(z, 21400)).e + 220), 3400, 1, 0.1,
-    [[900, 16900, 500, 600, 1.4]]);
-  // Yankee Stadium bowl
-  pushPrism(SX, 900, 16880, 1.1, 24, 125, 118, 20, 0, [0.82, 0.80, 0.76], 0.4, -1, [0.30, 0.48, 0.30]);
-  // Roosevelt Island slabs
-  for (let z = 8850; z < 10700; z += 130) pushBoxG(SB, 1270 + wig(z, 0.01, 20), z, 1.8, 26 + wig(z, 0.007, 8), 34, 70, 0.05, [0.58, 0.44, 0.36], wig(z, 1, 0.5) + 0.5, 0);
+    [[900, 16900, 500, 600, 1.4]],
+    120, 95, (x, z) => {
+      if (bxContains(x, z)) return true;
+      const bs = bxShoreX(z);
+      return bs !== null && x < bs + 20;
+    });
+  // (Yankee Stadium + Roosevelt Island now built for real in section 19c)
   for (const s of [SJ, SB, SX]) {
     const m = new THREE.Mesh(sinkToGeometry(s), boroughMat);
     m.matrixAutoUpdate = false;
@@ -1797,7 +2197,7 @@ const midMeshes = [];
    ============================================================ */
 const LS = Sink();   // opaque landmark geometry
 const ES = Sink();   // emissive specials (crowns, billboards, torch)
-const NECKLACE = []; // bridge light positions
+// (declaration moved up: section 19c's Hell Gate arch pushes lights too)
 const BRIDGE_ROUTES = [];
 function pushBeam(S, x0, y0, z0, x1, y1, z1, r, col, kind = -1) {
   const ax = x1 - x0, ay = y1 - y0, az = z1 - z0;
