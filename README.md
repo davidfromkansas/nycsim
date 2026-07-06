@@ -8,7 +8,7 @@ fog and sun position all mirror the city right now.
 - `public/index.html` — the entire scene (procedural, no assets, ~25k buildings, 3-tier LOD)
 - `lib/api-core.js` — zero-dependency data layer (caching, protobuf/ZIP/CSV decoding, upstream fallbacks)
 - `server.js` — local dev server: `node server.js` → http://localhost:4173
-- `api/[...path].js` — the same data layer as a Vercel serverless function
+- `api/index.js` — the same data layer as a Vercel serverless function
 
 ## Deploy
 
