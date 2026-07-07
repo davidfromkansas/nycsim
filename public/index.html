@@ -489,9 +489,10 @@ const F_WTOWER = 1, F_HVAC = 2, F_CORNICE = 4, F_FIRESC = 8, F_TALL = 16;
    ALL generation below builds on real geometry. These indexes are
    also the future agent-query substrate (edge/node/block ids).
    ============================================================ */
-const [SG_DATA, BLK_DATA] = await Promise.all([
+const [SG_DATA, BLK_DATA, BLDG] = await Promise.all([
   fetch('streets.json').then(r => r.json()),
-  fetch('blocks.json').then(r => r.json())
+  fetch('blocks.json').then(r => r.json()),
+  fetch('buildings.json').then(r => r.json()) // 305k REAL buildings as oriented boxes (one-time local bake)
 ]);
 const G_NODES = SG_DATA.nodes, G_EDGES = SG_DATA.edges, G_BLOCKS = BLK_DATA.blocks;
 console.log('[graph]', G_EDGES.length, 'street edges,', G_NODES.length, 'nodes,', G_BLOCKS.length, 'blocks');
@@ -593,9 +594,9 @@ function pickPal(name, rnd) { const p = PAL[name]; return p[Math.floor(rnd * p.l
 
 function makeBuilding(cx, cz, w, d, rot, rec, R, opts = {}) {
   if (!onLand(cx, cz) || inPark(cx, cz) || inPad(cx, cz)) return;
-  if (distToBway(cx, cz) < 26) return;
+  if (!opts.real && distToBway(cx, cz) < 26) return; // real footprints legitimately flank Broadway
   const sup = inSuper(cx, cz);
-  if (sup && !opts.superOK) return;
+  if (sup && !opts.superOK && !opts.real) return;
   const zone = recipeAt(cx, cz);
   let h = opts.h;
   if (h === undefined) {
@@ -789,17 +790,21 @@ function generateCity() {
       segN++;
     }
   }
-  for (const blk of G_BLOCKS) {
-    const o = blockOBB(blk.p);
-    if (!onLand(o.cx, o.cz)) continue;                    // Manhattan blocks only (boroughs fill in 19x)
-    if (o.w < 22 || o.l < 22) continue;                   // traffic-island slivers
-    const R = rng(iHash(Math.round(o.cx), Math.round(o.cz)));
-    const bw = Math.min(o.w, 400), bl = Math.min(o.l, 400); // megablock guard (piers/parks)
-    fillBlock(o.cx, o.cz, bw - 14, bl - 14, o.rot, R, (x, z) => polyContains(blk.p, x, z));
-    blkN++;
+  /* REAL BUILDINGS (user's one-time bake): every Manhattan box is a true
+     footprint+height from the NYC Building Footprints dataset, fed through
+     makeBuilding so the district palette/arch/window character still applies.
+     genSuperblocks retired — the real projects are in the data. */
+  let realN = 0;
+  for (let i = 0; i < BLDG.n; i++) {
+    const x = BLDG.x[i], z = BLDG.z[i];
+    if (!onLand(x, z)) continue;
+    const R = rng(iHash(BLDG.bin[i] | 0, 3));
+    makeBuilding(x, z, BLDG.w[i], BLDG.d[i], BLDG.r[i] / 1000, recipeAt(x, z), R,
+      { h: Math.max(4, BLDG.h[i]), real: true });
+    realN++;
   }
-  genSuperblocks(); // towers-in-the-park zones keep their bespoke fills (block fill is gated out by inSuper)
-  console.log('[manhattan] real fabric:', segN, 'street segments,', blkN, 'blocks filled,', B.length, 'buildings');
+  const blkN2 = realN; // (block-perimeter fill retired in favor of real footprints)
+  console.log('[manhattan] real fabric:', segN, 'street segments,', realN, 'REAL footprints,', B.length, 'buildings');
 }
 generateCity();
 
@@ -2200,10 +2205,31 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
     }
     return RECB[best] || RECB.generic;
   };
+  // real buildings own the inner zone; procedural block fill covers the outer ring
+  const IB = BLDG.meta.innerBox; // [x0, x1, z0, z1]
+  const inInner = (x, z) => x > IB[0] && x < IB[1] && z > IB[2] && z < IB[3];
+  let realB = 0;
+  for (let i = 0; i < BLDG.n; i++) {
+    const x = BLDG.x[i], z = BLDG.z[i];
+    if (onLand(x, z)) continue;                            // Manhattan boxes feed B in generateCity
+    if (!landB(x, z)) continue;
+    const [h0, h1, gl, palN] = recipeB(x, z);
+    const R2 = rng(iHash(BLDG.bin[i] | 0, 5));
+    const h = Math.max(4, BLDG.h[i]);
+    const kind = h > 42 && R2() < 0.5 ? 1 : (h < 8 && BLDG.w[i] * BLDG.d[i] > 350 ? -1 : 0);
+    const pal = kind === 1 ? PAL.glass : (palN === 'stone' ? PAL.stone : PAL.brick);
+    const col = pal[(R2() * pal.length) | 0];
+    const fade = 0.80 + R2() * 0.3;
+    pushBoxG(SCb, x, z, 1.25, h, BLDG.w[i], BLDG.d[i], BLDG.r[i] / 1000,
+      kind === -1 ? [0.52 + R2() * 0.1, 0.50 + R2() * 0.08, 0.47 + R2() * 0.06] : [col[0] * fade, col[1] * fade, col[2] * fade],
+      R2(), kind);
+    realB++;
+  }
   let blkB = 0, blkN = 0;
   for (const blk of G_BLOCKS) {
     const o = blockOBB(blk.p);
     if (onLand(o.cx, o.cz)) continue;                     // Manhattan handled in generateCity
+    if (inInner(o.cx, o.cz)) continue;                    // real footprints own the inner zone
     if (!landB(o.cx, o.cz)) continue;
     if (blk.a < 1500 || o.w < 24 || o.l < 24) continue;   // traffic islands
     const rec = recipeB(o.cx, o.cz);
@@ -2251,7 +2277,7 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
     mesh.matrixAutoUpdate = false;
     scene.add(mesh);
   }
-  console.log('[street-truth]', ribKm.toFixed(0), 'km real streets,', blkN, 'blocks,', blkB, 'buildings');
+  console.log('[street-truth]', ribKm.toFixed(0), 'km real streets,', realB, 'REAL borough footprints,', blkN, 'outer blocks,', blkB, 'filler buildings');
 }
 
 /* ============================================================
