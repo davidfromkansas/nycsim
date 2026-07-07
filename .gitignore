@@ -5,3 +5,4 @@ mta-bus-key.json
 .vercel
 .DS_Store
 node_modules
+/data/
