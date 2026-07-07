@@ -5216,7 +5216,10 @@ const cams = (() => {
       for (const c of j.cams || []) {
         if (c.area === 'Staten Island') continue; // no land built there
         const g = subway.geoRaw(c.lat, c.lon);
-        CAMS.push({ id: c.id, name: c.name, area: c.area, x: g.x, z: g.z });
+        // cameras live at intersections: snap to the nearest street-graph node
+        const n = nearestNode(g.x, g.z, 90);
+        const x = n >= 0 ? G_NODES[n][0] : g.x, z = n >= 0 ? G_NODES[n][1] : g.z;
+        CAMS.push({ id: c.id, name: c.name, area: c.area, x, z, nodeId: n });
       }
       if (CAMS.length) { build(); console.log('[cams]', CAMS.length, 'traffic cameras placed'); }
       else throw new Error('empty');
@@ -5305,11 +5308,24 @@ const buses = (() => {
       if (a.lat == null || a.lon == null || !a.id) continue;
       const g = subway.geoRaw(a.lat, a.lon); // buses live on streets AND bridges — no water clamp
       const spd = a.speedMs || 0;
-      let vx = 0, vz = 0, yaw = null;
+      let vx = 0, vz = 0, yaw = null, travelAng = null;
       if (a.bearing != null) {
         const azW = (a.bearing * Math.PI) / 180 - GRID_ROT;
         yaw = Math.atan2(Math.sin(azW), Math.cos(azW));
         vx = Math.sin(azW) * spd; vz = Math.cos(azW) * spd;
+        travelAng = Math.atan2(Math.cos(azW), Math.sin(azW)); // atan2(dz,dx) convention
+      }
+      // MAP-MATCH: snap the fix onto the best street edge (distance + heading agreement),
+      // drive ALONG the street axis, and keep the graph join keys on the record —
+      // (edgeId, edgeT, street name) is how future agent queries join live ↔ geography.
+      const m = matchStreet(g.x, g.z, 55, travelAng);
+      if (m) {
+        g.x = m.x; g.z = m.z;
+        if (spd > 0.3) {
+          const sgn = (vx * Math.cos(m.ang) + vz * Math.sin(m.ang)) >= 0 ? 1 : -1;
+          vx = Math.cos(m.ang) * spd * sgn; vz = Math.sin(m.ang) * spd * sgn;
+          yaw = Math.atan2(vx, vz);
+        }
       }
       const fx = g.x + vx * ageS, fz = g.z + vz * ageS;
       let v = fleet.get(a.id);
@@ -5325,6 +5341,8 @@ const buses = (() => {
         if (yaw !== null) v.yaw = yaw;
       }
       v.route = a.route; v.spd = spd; v.dest = a.dest || '';
+      v.edgeId = m ? m.ei : -1; v.edgeT = m ? m.t : 0;
+      v.street = m ? G_EDGES[m.ei].nm : '';
     }
   }
   function poll() {
@@ -5383,8 +5401,9 @@ const buses = (() => {
       ch.v = v;
       if (!v) { if (ch.html) { ch.html = ''; ch.el.style.display = 'none'; } continue; }
       const dst = v.dest && v.dest.length > 26 ? v.dest.slice(0, 25) + '…' : v.dest;
+      const stNm = v.street ? v.street.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()) : '';
       const html = '<b>' + (v.route || 'Bus') + (dst ? ' → ' + dst : '') + '</b><br><span class="sub">' +
-        (v.spd > 0.4 ? Math.round(v.spd * 2.237) + ' mph' : 'stopped') + ' · ' + v.id.replace(/^[^_]*_/, '') + '</span>';
+        (v.spd > 0.4 ? Math.round(v.spd * 2.237) + ' mph' : 'stopped') + (stNm ? ' · on ' + stNm : '') + '</span>';
       if (html !== ch.html) { ch.html = html; ch.el.innerHTML = html; ch.el.style.display = 'block'; } // .fybl base CSS is display:none
     }
   }
