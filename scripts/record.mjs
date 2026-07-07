@@ -41,11 +41,11 @@ const Y = now.getUTCFullYear(), M = pad(now.getUTCMonth() + 1), D = pad(now.getU
 const q = Math.floor(now.getUTCMinutes() / 15) * 15;
 const stamp = `${pad(now.getUTCHours())}${pad(q)}`;
 
-const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents] = await Promise.all([
+const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds] = await Promise.all([
   tryGet('/api/buses'), tryGet('/api/citibike'), tryGet('/api/ferries'),
   tryGet('/api/flights'), tryGet('/api/weather'),
   DAILY ? tryGet('/api/subway') : Promise.resolve(null),
-  tryGet('/api/traffic'), tryGet('/api/traffic-events')
+  tryGet('/api/traffic'), tryGet('/api/traffic-events'), tryGet('/api/birds')
 ]);
 
 const frame = {
@@ -60,6 +60,9 @@ const frame = {
     Math.round(v.heading ?? -1), Math.round((v.speedMs ?? 0) * 10) / 10, v.route || '', v.headsign || '', v.docked ? 1 : 0]),
   flights: (flights?.ac ?? []).map(a => [a.hex, a.cs, r5(a.lat), r5(a.lon),
     Math.round(a.altM), Math.round(a.gsMs), Math.round(a.track)]),
+  // BirdCast (Cornell Lab) radar migration over Manhattan
+  birds: birds && typeof birds.aloft === 'number' ? { aloft: birds.aloft, dirDeg: birds.dirDeg,
+    speedMs: birds.speedMs, hMeanM: birds.hMeanM, hMaxM: birds.hMaxM, night: !!birds.night, t: birds.t } : null,
   // traffic records readings only — link geometry is re-fetched live at replay time
   traffic: (traffic?.links ?? []).map(l => [l.id, l.speed, l.tt]),
   trafficEvents: (trafficEvents?.events ?? []).map(e => [e.id, e.kind, e.sev,

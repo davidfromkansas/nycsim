@@ -221,6 +221,7 @@
     <button data-p="park" title="Central Park (4)">Park</button>
     <button data-p="bridges" title="East River bridges (5)">Bridges</button>
     <button data-p="gwb" title="George Washington Bridge (6)">GWB</button>
+    <button data-p="birds" title="Bird migration — live BirdCast radar (7)">Birds</button>
   </div>
   <div class="sep"></div>
   <div class="grp">
@@ -3950,7 +3951,9 @@ const PRESETS = {
 };
 let camTween = null;
 function flyTo(name) {
-  const pr = PRESETS[name]; if (!pr) return;
+  let pr = PRESETS[name];
+  if (name === 'birds') pr = birds.vantage(); // dynamic: into the migration stream (module defined later, resolved at click time)
+  if (!pr) return;
   camTween = {
     p0: camera.position.clone(), t0: controls.target.clone(),
     p1: new THREE.Vector3(...pr.p), t1: new THREE.Vector3(...pr.t),
@@ -4024,7 +4027,7 @@ function togglePhoto() {
 ui.photo.addEventListener('click', togglePhoto);
 addEventListener('keydown', (e) => {
   const K = e.key.toLowerCase();
-  const pk = { '0': 'hero', '1': 'hero', '2': 'downtown', '3': 'canyon', '4': 'park', '5': 'bridges', '6': 'gwb' };
+  const pk = { '0': 'hero', '1': 'hero', '2': 'downtown', '3': 'canyon', '4': 'park', '5': 'bridges', '6': 'gwb', '7': 'birds' };
   if (pk[K]) flyTo(pk[K]);
   else if (K === 'h') flyTo('hero');
   else if (K === 'p') togglePhoto();
@@ -4372,6 +4375,8 @@ const precipOverlay = (() => {
 // and render the recorded moment; the subway clock freezes at epochS. Set only
 // by the timeline module below.
 const HIST = { active: false, day: '', epochS: 0, liveWx: null };
+// live bird-migration readout (BirdCast) — written by the birds module, read by the chip
+const BIRDS = { aloft: 0, night: false };
 const live = (() => {
   const FAKE = { time: null, weather: null };
   // neutral defaults keep Live usable fully offline
@@ -4533,6 +4538,7 @@ const live = (() => {
     chipEl.innerHTML = (HIST.active || scrubMin <= -720 ? WD_FMT.format(dt_) + ' · ' : '') + TIME_FMT.format(dt_) +
       ' · ' + f + '°F · ' + condText(W.code) +
       ' · ' + COMPASS[Math.round(W.windDir / 45) % 8] + ' ' + mph + ' mph' +
+      (BIRDS.aloft >= 500 ? ' · ' + BIRDS.aloft.toLocaleString('en-US') + ' birds migrating' : '') +
       (HIST.active ? ' <span class="off">· replaying ' + HIST.day + '</span>'
         : scrubMin !== 0 ? ' <span class="off">· sun ' + (scrubMin > 0 ? '+' : '−') + (Math.abs(scrubMin) / 60).toFixed(1) + 'h</span>' : '') +
       (W.offline && !HIST.active ? ' <span class="off">· weather offline</span>' : '');
@@ -4644,6 +4650,7 @@ const timeline = (() => {
     if (frame.weather) live.applyWeather(frame.weather);
     flights.hist(frame.flights || []); ferries.hist(frame.ferries || []);
     buses.hist(frame.buses || []); subway.hist(frame.subway); citibike.hist(frame.bikes || []);
+    birds.hist(frame.birds || { aloft: 0 }); // pre-birds snapshots replay a quiet sky
     rtraffic.hist(frame.traffic || [], frame.trafficEvents || []);
     setBadge('past', LBL_FMT.format(new Date(midday(day))));
   }
@@ -4651,7 +4658,7 @@ const timeline = (() => {
     if (!HIST.active) return;
     HIST.active = false; HIST.day = '';
     flights.hist(null); ferries.hist(null); buses.hist(null); subway.hist(null); citibike.hist(null);
-    rtraffic.hist(null);
+    birds.hist(null); rtraffic.hist(null);
     if (HIST.liveWx) live.applyWeather(HIST.liveWx);
   }
   async function apply(off) {
@@ -6441,6 +6448,134 @@ const citibike = (() => {
 window.__citibike = citibike; // dev/testing hook
 
 /* ============================================================
+   25f. Live bird migration — BirdCast radar data over Manhattan.
+   /api/birds serves the New York County row of the 10-minute
+   radar dataset behind dashboard.birdcast.org: birds aloft,
+   mean travel direction, speed, mean/max flight altitude.
+   One InstancedMesh of flapping silhouettes (+1 draw call);
+   flock size scales ~√(birds aloft) capped at 600, everyone
+   streams in the real measured direction at the real speed and
+   altitude band, wrapping across a Manhattan-corridor box.
+   Migration is nocturnal — daytime the sky is honestly quiet.
+   Data: BirdCast — Cornell Lab of Ornithology / CSU / UMass.
+   ============================================================ */
+const birds = (() => {
+  const CAP = 600;
+  const X0 = -3000, X1 = 3000, Z0 = -800, Z1 = 22300; // Manhattan corridor + margins
+  // silhouette: two swept wings (airlife's bird, scaled up for altitude readability)
+  const geo = new THREE.BufferGeometry();
+  {
+    const pos = new Float32Array([0, 0, 1.2, -2.6, 0, -1, 0, 0, -0.4, 0, 0, 1.2, 0, 0, -0.4, 2.6, 0, -1].map(v => v * 2.4));
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const ph = new Float32Array(CAP); const RR = rng(4061);
+    for (let i = 0; i < CAP; i++) ph[i] = RR() * TAU;
+    geo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(ph, 1));
+  }
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
+    uniforms: { uTime: cityUniforms.uTime, uFogColor: FOG_UNI.uFogColor, uFogDensity: FOG_UNI.uFogDensity },
+    vertexShader: `
+      attribute float aPhase; uniform float uTime; varying float vFog;
+      void main(){
+        vec3 p = position;
+        p.y += sin(uTime * 7.0 + aPhase) * abs(position.x) * 0.55; // slower beat than park birds: travelers, not loiterers
+        vec4 mv = viewMatrix * modelMatrix * instanceMatrix * vec4(p, 1.0);
+        vFog = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      varying float vFog; uniform vec3 uFogColor; uniform float uFogDensity;
+      void main(){
+        float f = 1.0 - exp(-pow(vFog * uFogDensity, 2.0));
+        gl_FragColor = vec4(mix(vec3(0.10, 0.10, 0.12), uFogColor, f), 1.0);
+      }`
+  });
+  const mesh = new THREE.InstancedMesh(geo, mat, CAP);
+  mesh.count = 0; mesh.frustumCulled = false;
+  scene.add(mesh);
+  // per-bird state; the whole pool is pre-seeded, D drives how many are shown
+  const RB = rng(4062);
+  const B = [];
+  for (let i = 0; i < CAP; i++)
+    B.push({ x: X0 + RB() * (X1 - X0), z: Z0 + RB() * (Z1 - Z0), y: 200,
+             jit: (RB() - 0.5) * 0.42, sp: 0.8 + RB() * 0.4, wob: RB() * TAU, yr: RB() });
+  let D = null, N = 0, hd = 0, spd = 6;
+  const yFor = (b) => { // altitude band from the radar's mean/max heights (compressed like nothing else flies that high)
+    const ym = (70 + Math.min(D.hMeanM || 400, 3000) * 0.28) * 1.5;
+    const yx = Math.max(ym * 1.15, (70 + Math.min(D.hMaxM || 700, 3500) * 0.24) * 1.5);
+    return Math.min(ym * (0.55 + b.yr * 0.9), yx);
+  };
+  function setData(d) {
+    D = d || { aloft: 0 };
+    BIRDS.aloft = Math.max(0, Math.round(D.aloft || 0));
+    BIRDS.night = !!D.night;
+    hd = ((D.dirDeg || 0) * Math.PI) / 180 - GRID_ROT; // toward-direction → world yaw
+    spd = Math.max(2, D.speedMs || 4) * 1.8;           // slight cinematic multiplier
+    N = BIRDS.aloft <= 0 ? 0 : Math.min(CAP, Math.ceil(4 * Math.sqrt(BIRDS.aloft)));
+    for (const b of B) b.y = yFor(b);
+    if (N < mesh.count) for (let i = N; i < mesh.count; i++) mesh.setMatrixAt(i, _bdZero);
+    mesh.count = N;
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+  let poll = 6, delay = 120, polling = false;
+  function doPoll() {
+    polling = true;
+    fetch('/api/birds').then(r => { if (!r.ok) throw 0; return r.json(); })
+      .then(j => { if (typeof j.aloft !== 'number') throw 0; setData(j); delay = 120; })
+      .catch(() => { delay = Math.min(delay * 2, 600); })
+      .finally(() => { polling = false; poll = T + delay; });
+  }
+  // history replay: the recorded nightly measurement (1 am snapshots catch peak
+  // migration hours). Old frames without a birds field replay an empty sky.
+  function hist(d) {
+    if (d === null) { poll = 0; delay = 120; return; } // back to live
+    setData(d);
+  }
+  const _bdM = new THREE.Matrix4(), _bdQ = new THREE.Quaternion(), _bdS = new THREE.Vector3(),
+        _bdV = new THREE.Vector3(), _bdUp = new THREE.Vector3(0, 1, 0), _bdZero = new THREE.Matrix4().makeScale(0, 0, 0);
+  function update(t, dt) {
+    if (!polling && t >= poll && !HIST.active) doPoll();
+    if (!N) return;
+    const sx = Math.sin(hd), sz = Math.cos(hd);
+    for (let i = 0; i < N; i++) {
+      const b = B[i];
+      const h = hd + b.jit + Math.sin(t * 0.35 + b.wob) * 0.12; // lazy weave inside the stream
+      b.x += Math.sin(h) * spd * b.sp * dt;
+      b.z += Math.cos(h) * spd * b.sp * dt;
+      // left the corridor along the travel direction → respawn on the upstream edge
+      if (b.x < X0 || b.x > X1 || b.z < Z0 || b.z > Z1) {
+        if (Math.abs(sx) > Math.abs(sz)) { b.x = sx > 0 ? X0 : X1; b.z = Z0 + RB() * (Z1 - Z0); }
+        else { b.z = sz > 0 ? Z0 : Z1; b.x = X0 + RB() * (X1 - X0); }
+        b.y = yFor(b);
+      }
+      const yy = b.y + Math.sin(t * 0.7 + b.wob) * 8;
+      _bdQ.setFromAxisAngle(_bdUp, h);
+      _bdS.setScalar(16 * clamp(_bdV.set(b.x, yy, b.z).distanceTo(camera.position) / 1500, 1, 6));
+      _bdM.compose(_bdV, _bdQ, _bdS);
+      mesh.setMatrixAt(i, _bdM);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+  // "Birds" preset: aim into the migration stream — centroid of the mid-island
+  // slice of the flock (rim outliers skew the average), camera trailing it so
+  // the birds cross the frame. Quiet sky → a would-be vantage over midtown.
+  function vantage() {
+    let cx = 0, cy = 0, cz = 0, n = 0;
+    for (let i = 0; i < N; i++) {
+      const b = B[i];
+      if (b.z < 2000 || b.z > 18000) continue;
+      cx += b.x; cy += b.y; cz += b.z; n++;
+    }
+    if (n > 3) { cx /= n; cy /= n; cz /= n; }
+    else { cx = -200; cz = 9800; cy = D && D.aloft > 0 ? yFor({ yr: 0.5 }) : 240; }
+    const bx = Math.sin(hd), bz = Math.cos(hd);
+    return { p: [cx - bx * 780, cy + 40, cz - bz * 780], t: [cx + bx * 400, cy + 5, cz + bz * 400] }; // near-level: the stream crosses mid-frame
+  }
+  return { update, hist, vantage, data: () => D, count: () => N };
+})();
+window.__birds = birds; // dev/testing hook
+
+/* ============================================================
    25g. LIVE TRAFFIC — real NYC DOT sensor speeds painted onto
    the roads they measure, + 511NY incidents/closures as markers.
    /api/traffic (60 s): each sensor link becomes a ribbon riding
@@ -6862,6 +6997,7 @@ function frame() {
   ferries.update(T, dt);
   buses.update(T, dt);
   citibike.update(T, dt);
+  birds.update(T, dt);
   rtraffic.update(T, dt);
   cells.tick(T, dt, _focus, camY);
   steam.tick(_focus, camY);

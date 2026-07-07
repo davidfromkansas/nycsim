@@ -36,10 +36,10 @@ module.exports = async (req, res) => {
       try { const r = await fetch(base + p, { signal: AbortSignal.timeout(45000) }); return r.ok ? r.json() : null; }
       catch { return null; }
     };
-    const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents] = await Promise.all([
+    const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds] = await Promise.all([
       get('/api/buses'), get('/api/citibike'), get('/api/ferries'),
       get('/api/flights'), get('/api/weather'), get('/api/subway'),
-      get('/api/traffic'), get('/api/traffic-events')
+      get('/api/traffic'), get('/api/traffic-events'), get('/api/birds')
     ]);
     const r5 = (v) => Math.round(v * 1e5) / 1e5;
     const now = new Date();
@@ -55,6 +55,9 @@ module.exports = async (req, res) => {
       flights: (flights?.ac ?? []).map(a => [a.hex, a.cs, r5(a.lat), r5(a.lon),
         Math.round(a.altM), Math.round(a.gsMs), Math.round(a.track)]),
       subway: subway ? { trips: subway.trips, vehStatus: subway.vehStatus } : null,
+      // BirdCast (Cornell Lab) radar migration over Manhattan — 1 am snapshots catch peak hours
+      birds: birds && typeof birds.aloft === 'number' ? { aloft: birds.aloft, dirDeg: birds.dirDeg,
+        speedMs: birds.speedMs, hMeanM: birds.hMeanM, hMaxM: birds.hMaxM, night: !!birds.night, t: birds.t } : null,
       // traffic records readings only — link geometry is re-fetched live at replay
       // time (same pattern as bike stations: the substrate churns far slower than the data)
       traffic: (traffic?.links ?? []).map(l => [l.id, l.speed, l.tt]),
