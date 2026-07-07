@@ -62,6 +62,30 @@
   }
   body.touchnav #joy { display:block; }
   body.photo #joy { display:none; }
+  #camview { position:fixed; top:14px; left:14px; z-index:40; display:none; font:11px system-ui,-apple-system,sans-serif; }
+  #camview .ring {
+    width:232px; height:232px; border-radius:50%; overflow:hidden; position:relative;
+    border:2px solid rgba(120,220,255,.55); box-shadow:0 8px 34px rgba(0,0,0,.55); background:#000;
+  }
+  #camview img { width:100%; height:100%; object-fit:cover; display:block; }
+  #camview .live {
+    position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    background:rgba(205,32,44,.92); color:#fff; font-weight:700; font-size:10px;
+    padding:1px 9px; border-radius:9px; letter-spacing:.8px;
+  }
+  #camview .live i { display:inline-block; width:6px; height:6px; border-radius:50%; background:#fff; margin-right:5px; animation:camblink 1.6s infinite; }
+  @keyframes camblink { 0%,100% { opacity:1; } 50% { opacity:.25; } }
+  #camview .x {
+    position:absolute; top:16px; right:26px; width:24px; height:24px; border-radius:50%;
+    background:rgba(10,13,20,.75); color:rgba(255,255,255,.9); border:1px solid rgba(255,255,255,.25);
+    font:12px system-ui; cursor:pointer; line-height:22px; text-align:center; padding:0;
+  }
+  #camview .name {
+    margin:7px auto 0; text-align:center; color:rgba(255,255,255,.92); max-width:232px;
+    background:rgba(10,13,20,.6); border:1px solid rgba(255,255,255,.1); border-radius:10px;
+    padding:4px 10px; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  body.photo #camview { display:none !important; }
   #chip {
     position:fixed; top:12px; right:12px; z-index:10;
     font:11px/1.4 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.85);
@@ -157,6 +181,7 @@
 <div id="hint">drag orbit &middot; scroll to dive &middot; WASD to fly &middot; keys 0&ndash;6 views &middot; L light &middot; P photo</div>
 <div id="flyhint">flying &middot; WASD/arrows move &middot; Space/C up/down &middot; Shift boost &middot; Esc exit</div>
 <div id="joy"><div id="joyK"></div></div>
+<div id="camview"><div class="ring"><img alt="live traffic camera"><div class="live"><i></i>LIVE</div><button class="x" title="close">✕</button></div><div class="name"></div></div>
 <div id="dbg"></div>
 <div id="chip"></div>
 <div id="scrub">
@@ -5053,6 +5078,116 @@ const ferries = (() => {
   }
   return { update, list: fyList, vessels, _fly: flyToVessel };
 })();
+
+/* ============================================================
+   25c. Live traffic cameras (NYC DOT — the network 511NY lists).
+   One additive billboard Points layer (+1 draw call); click a
+   marker → circular live viewer top-left polling the camera's
+   JPEG endpoint (~1.5 s — how the official sites stream too).
+   ============================================================ */
+const cams = (() => {
+  const IMG = id => 'https://webcams.nyctmc.org/api/cameras/' + id + '/image';
+  const CAMS = []; // { id, name, area, x, z }
+  const view = document.getElementById('camview');
+  const vImg = view.querySelector('img'), vName = view.querySelector('.name'), vX = view.querySelector('.x');
+  // marker glyph: dark disc, cyan ring, white camera
+  const tex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.beginPath(); g.arc(32, 32, 26, 0, TAU); g.fillStyle = 'rgba(12,17,26,0.94)'; g.fill();
+    g.lineWidth = 3.5; g.strokeStyle = 'rgba(120,215,255,0.95)'; g.stroke();
+    g.fillStyle = '#fff';
+    g.beginPath(); g.roundRect(15, 24, 21, 16, 3); g.fill();
+    g.beginPath(); g.moveTo(38, 28.5); g.lineTo(49, 22); g.lineTo(49, 42); g.lineTo(38, 35.5); g.closePath(); g.fill();
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  let mesh = null;
+  function build() {
+    const pos = new Float32Array(CAMS.length * 3);
+    CAMS.forEach((cm, i) => { pos[i * 3] = cm.x; pos[i * 3 + 1] = 12; pos[i * 3 + 2] = cm.z; });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: tex }, uDpr: { value: renderer.getPixelRatio() } },
+      transparent: true, depthTest: false, depthWrite: false,
+      vertexShader: `uniform float uDpr;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = clamp(24000.0 / -mv.z, 8.0, 40.0) * uDpr;
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `uniform sampler2D uMap;
+        void main() {
+          // pre-flip x: the presentation mirror (scaleX(-1)) flips point sprites back
+          vec4 c = texture2D(uMap, vec2(1.0 - gl_PointCoord.x, gl_PointCoord.y));
+          if (c.a < 0.08) discard;
+          gl_FragColor = c;
+        }`
+    });
+    mesh = new THREE.Points(g, mat);
+    mesh.frustumCulled = false; mesh.renderOrder = 6; mesh.matrixAutoUpdate = false;
+    scene.add(mesh);
+  }
+  // ---- data (once; camera list churns slowly) ----
+  let tries = 0;
+  function load() {
+    fetch('/api/cams').then(r => r.json()).then(j => {
+      for (const c of j.cams || []) {
+        if (c.area === 'Staten Island') continue; // no land built there
+        const g = subway.geoRaw(c.lat, c.lon);
+        CAMS.push({ id: c.id, name: c.name, area: c.area, x: g.x, z: g.z });
+      }
+      if (CAMS.length) { build(); console.log('[cams]', CAMS.length, 'traffic cameras placed'); }
+      else throw new Error('empty');
+    }).catch(() => { if (++tries < 5) setTimeout(load, 30000); });
+  }
+  load();
+  // ---- circular live viewer ----
+  let active = null, timer = null;
+  function refresh() {
+    if (!active) return;
+    vImg.src = IMG(active.id) + '?_=' + Date.now(); // browser keeps the last frame until the new one decodes
+  }
+  function open(cm) {
+    active = cm;
+    vName.textContent = cm.name + (cm.area ? ' · ' + cm.area : '');
+    vImg.removeAttribute('src');
+    view.style.display = 'block';
+    refresh();
+    clearInterval(timer); timer = setInterval(refresh, 1600);
+  }
+  function close() {
+    active = null; clearInterval(timer); timer = null;
+    view.style.display = 'none';
+  }
+  vX.addEventListener('click', close);
+  vImg.addEventListener('error', () => { if (active) vName.textContent = active.name + ' · camera offline'; });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  // ---- marker picking: click (not drag) → nearest marker within 26 px ----
+  // canvas events arrive via the mirror shim already in camera space, so the
+  // plain NDC projection below compares apples to apples
+  const _cv = new THREE.Vector3(), _cd = new THREE.Vector3();
+  let dX = 0, dY = 0, dT = 0;
+  renderer.domElement.addEventListener('pointerdown', (e) => { dX = e.clientX; dY = e.clientY; dT = performance.now(); });
+  renderer.domElement.addEventListener('pointerup', (e) => {
+    if (!CAMS.length || document.pointerLockElement) return;
+    if (performance.now() - dT > 450 || Math.hypot(e.clientX - dX, e.clientY - dY) > 7) return;
+    camera.getWorldDirection(_cd);
+    let best = null, bd = 26 * 26;
+    for (const cm of CAMS) {
+      _cv.set(cm.x - camera.position.x, 12 - camera.position.y, cm.z - camera.position.z);
+      if (_cv.dot(_cd) < 0) continue; // behind the camera
+      _cv.set(cm.x, 12, cm.z).project(camera);
+      const sx = (_cv.x * 0.5 + 0.5) * innerWidth, sy = (-_cv.y * 0.5 + 0.5) * innerHeight;
+      const d = (sx - e.clientX) * (sx - e.clientX) + (sy - e.clientY) * (sy - e.clientY);
+      if (d < bd) { bd = d; best = cm; }
+    }
+    if (best) open(best);
+  });
+  return { list: CAMS, open, close };
+})();
+window.__cams = cams; // dev/testing hook
 
 /* ============================================================
    26c. URL-hash scene driver (testing / deep links)
