@@ -6613,7 +6613,10 @@ const birds = (() => {
       const bx_ = BOXES[best];
       for (let j = g.start; j < g.start + g.size; j++) {
         const b = B[j];
-        if (b.bo !== best) { b.bo = best; b.x = bx_.x0 + RB() * (bx_.x1 - bx_.x0); b.z = bx_.z0 + RB() * (bx_.z1 - bx_.z0); }
+        if (b.bo !== best) {
+          if (bfFollow === b) bfFollow = null; // redistribution teleports the bird
+          b.bo = best; b.x = bx_.x0 + RB() * (bx_.x1 - bx_.x0); b.z = bx_.z0 + RB() * (bx_.z1 - bx_.z0);
+        }
         b.y = yFor(b);
         if (j < N) NB[best]++;
       }
@@ -6648,8 +6651,26 @@ const birds = (() => {
     const el = document.createElement('div');
     el.className = 'fybl birdf';
     document.body.appendChild(el);
-    bfChips.push({ el, b: null, html: '' });
+    const ch = { el, b: null, html: '' };
+    el.addEventListener('click', () => { if (ch.b) flyToFlock(ch.b); }); // ride along with the stream
+    bfChips.push(ch);
   }
+  // chip click → glide in behind the skein leader, then drift with the flock
+  // (bus/ferry ride-along pattern; grabbing the view hands control back)
+  let bfFollow = null;
+  const bfPrev = new THREE.Vector3(), bfOff = new THREE.Vector3();
+  function flyToFlock(b) {
+    bfFollow = b;
+    bfPrev.set(b.x, b.y, b.z);
+    const P = BD[b.bo] || BD.mn;
+    const fx = Math.sin(P.hd), fz = Math.cos(P.hd);
+    bfOff.set(-fx * 560 - fz * 240, 70, -fz * 560 + fx * 240); // trailing 3/4 view, slightly above
+    camTween = { p0: camera.position.clone(), t0: controls.target.clone(),
+      p1: new THREE.Vector3(b.x + bfOff.x, b.y + bfOff.y, b.z + bfOff.z),
+      t1: new THREE.Vector3(b.x, b.y, b.z), t: 0, dur: 1.9 };
+  }
+  renderer.domElement.addEventListener('pointerdown', () => { bfFollow = null; });
+  renderer.domElement.addEventListener('wheel', () => { bfFollow = null; }, { passive: true });
   function chipHTML(b) {
     const bos = (D && D.boroughs) || { mn: D };
     const s = bos[b.bo] || bos.mn || D || {};
@@ -6695,6 +6716,7 @@ const birds = (() => {
         _bdV = new THREE.Vector3(), _bdE = new THREE.Euler(0, 0, 0, 'YXZ'),
         _bdZero = new THREE.Matrix4().makeScale(0, 0, 0);
   function respawn(b) { // left its borough's box along the travel direction → re-enter upstream
+    if (bfFollow === b) bfFollow = null; // don't teleport the rider across the map
     const p = BD[b.bo] || BD.mn, bx_ = BOXES[b.bo] || BOXES.mn;
     if (Math.abs(Math.sin(p.hd)) > Math.abs(Math.cos(p.hd))) { b.x = Math.sin(p.hd) > 0 ? bx_.x0 : bx_.x1; b.z = bx_.z0 + RB() * (bx_.z1 - bx_.z0); }
     else { b.z = Math.cos(p.hd) > 0 ? bx_.z0 : bx_.z1; b.x = bx_.x0 + RB() * (bx_.x1 - bx_.x0); }
@@ -6739,6 +6761,17 @@ const birds = (() => {
       mesh.setMatrixAt(i, _bdM);
     }
     mesh.instanceMatrix.needsUpdate = true;
+    if (bfFollow) { // carry the view along with the flock (orbit offset preserved)
+      const b = bfFollow;
+      if (camTween) {
+        camTween.t1.set(b.x, b.y, b.z);
+        camTween.p1.set(b.x + bfOff.x, b.y + bfOff.y, b.z + bfOff.z);
+      } else {
+        camera.position.x += b.x - bfPrev.x; camera.position.y += b.y - bfPrev.y; camera.position.z += b.z - bfPrev.z;
+        controls.target.x += b.x - bfPrev.x; controls.target.y += b.y - bfPrev.y; controls.target.z += b.z - bfPrev.z;
+      }
+      bfPrev.set(b.x, b.y, b.z);
+    }
     bfChipT += dt;
     if (bfChipT >= 0.7) { bfChipT = 0; assignFlockChips(); }
     for (const ch of bfChips) {
