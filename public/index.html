@@ -5997,9 +5997,14 @@ const citibike = (() => {
   const _part = (g, r, gg, b) => { const n = g.attributes.position.count, c = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { c[i * 3] = r; c[i * 3 + 1] = gg; c[i * 3 + 2] = b; }
     g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return g; };
-  const bikeGeo = BufferGeometryUtils.mergeGeometries([
-    _part(new THREE.BoxGeometry(0.5, 1.1, 2.2).translate(0, 0.8, 0), 0.10, 0.12, 0.15),  // frame/wheels
-    _part(new THREE.BoxGeometry(0.8, 1.2, 0.7).translate(0, 1.9, -0.1), 0.30, 0.85, 1.0) // rider (cyan = simulated)
+  const bikeGeo = BufferGeometryUtils.mergeGeometries([ // reads as a BIKE at distance: wheels, frame, bars, rider
+    _part(new THREE.BoxGeometry(0.35, 1.6, 1.6).translate(0, 0.8, 1.55), 0.08, 0.09, 0.12),   // front wheel
+    _part(new THREE.BoxGeometry(0.35, 1.6, 1.6).translate(0, 0.8, -1.55), 0.08, 0.09, 0.12),  // rear wheel
+    _part(new THREE.BoxGeometry(0.4, 0.4, 3.4).translate(0, 1.5, 0), 0.16, 0.5, 0.65),        // frame (citibike blue)
+    _part(new THREE.BoxGeometry(0.4, 1.0, 0.4).translate(0, 2.1, 1.5), 0.16, 0.5, 0.65),      // head tube
+    _part(new THREE.BoxGeometry(1.8, 0.35, 0.4).translate(0, 2.7, 1.5), 0.12, 0.14, 0.18),    // handlebars
+    _part(new THREE.BoxGeometry(1.0, 1.8, 1.0).translate(0, 2.9, -0.5), 0.30, 0.85, 1.0),     // rider torso (cyan = simulated)
+    _part(new THREE.BoxGeometry(0.7, 0.6, 0.7).translate(0, 4.1, -0.4), 0.30, 0.85, 1.0)      // helmet
   ]);
   const rMesh = new THREE.InstancedMesh(bikeGeo, new THREE.MeshLambertMaterial({
     vertexColors: true, emissive: 0x2bc7f0, emissiveIntensity: 0.5 }), RN);
@@ -6174,7 +6179,7 @@ const citibike = (() => {
       const segl = r.cum[r.seg + 1] - r.cum[r.seg] || 1;
       const f = (r.s - r.cum[r.seg]) / segl;
       const x = a[0] + (b[0] - a[0]) * f, z = a[1] + (b[1] - a[1]) * f;
-      const k = 1.4 * clamp(Math.hypot(x - camera.position.x, z - camera.position.z) / 1500, 1, 4);
+      const k = 2.6 * clamp(Math.hypot(x - camera.position.x, z - camera.position.z) / 1500, 1, 4.5); // larger, readable bikes
       _q.setFromAxisAngle(_up, Math.atan2(b[0] - a[0], b[1] - a[1]));
       _s.setScalar(k);
       _m.compose(_v.set(x, 1.9, z), _q, _s);
