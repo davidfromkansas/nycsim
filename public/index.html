@@ -4376,7 +4376,8 @@ const precipOverlay = (() => {
 // by the timeline module below.
 const HIST = { active: false, day: '', epochS: 0, liveWx: null };
 // live bird-migration readout (BirdCast) — written by the birds module, read by the chip
-const BIRDS = { aloft: 0, night: false };
+const BIRDS = { aloft: 0, night: false, passed: 0, pct: null };
+const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][Math.min(n % 10, 4)] || 'th');
 const live = (() => {
   const FAKE = { time: null, weather: null };
   // neutral defaults keep Live usable fully offline
@@ -4539,6 +4540,8 @@ const live = (() => {
       ' · ' + f + '°F · ' + condText(W.code) +
       ' · ' + COMPASS[Math.round(W.windDir / 45) % 8] + ' ' + mph + ' mph' +
       (BIRDS.aloft >= 500 ? ' · ' + BIRDS.aloft.toLocaleString('en-US') + ' birds migrating' : '') +
+      (BIRDS.passed >= 2000 ? ' · ' + BIRDS.passed.toLocaleString('en-US') + ' crossed tonight' +
+        (BIRDS.pct !== null ? ' <span class="off">(' + ordinal(BIRDS.pct) + ' pctile)</span>' : '') : '') +
       (HIST.active ? ' <span class="off">· replaying ' + HIST.day + '</span>'
         : scrubMin !== 0 ? ' <span class="off">· sun ' + (scrubMin > 0 ? '+' : '−') + (Math.abs(scrubMin) / 60).toFixed(1) + 'h</span>' : '') +
       (W.offline && !HIST.active ? ' <span class="off">· weather offline</span>' : '');
@@ -6544,6 +6547,8 @@ const birds = (() => {
     D = d || { aloft: 0 };
     BIRDS.aloft = Math.max(0, Math.round(D.aloft || 0));
     BIRDS.night = !!D.night;
+    BIRDS.passed = Math.max(0, Math.round(D.passed || 0));
+    BIRDS.pct = typeof D.pct === 'number' ? D.pct : null;
     hd = ((D.dirDeg || 0) * Math.PI) / 180 - GRID_ROT; // toward-direction → world yaw
     spd = Math.max(2, D.speedMs || 4) * 1.8;           // slight cinematic multiplier
     N = BIRDS.aloft <= 0 ? 0 : Math.min(CAP, Math.ceil(4 * Math.sqrt(BIRDS.aloft)));

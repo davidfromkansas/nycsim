@@ -57,7 +57,8 @@ module.exports = async (req, res) => {
       subway: subway ? { trips: subway.trips, vehStatus: subway.vehStatus } : null,
       // BirdCast (Cornell Lab) radar migration over Manhattan — 1 am snapshots catch peak hours
       birds: birds && typeof birds.aloft === 'number' ? { aloft: birds.aloft, dirDeg: birds.dirDeg,
-        speedMs: birds.speedMs, hMeanM: birds.hMeanM, hMaxM: birds.hMaxM, night: !!birds.night, t: birds.t } : null,
+        speedMs: birds.speedMs, hMeanM: birds.hMeanM, hMaxM: birds.hMaxM, night: !!birds.night, t: birds.t,
+        passed: birds.passed ?? 0, pct: birds.pct ?? null } : null,
       // traffic records readings only — link geometry is re-fetched live at replay
       // time (same pattern as bike stations: the substrate churns far slower than the data)
       traffic: (traffic?.links ?? []).map(l => [l.id, l.speed, l.tt]),
