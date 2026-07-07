@@ -2672,27 +2672,60 @@ const traffic = (() => {
   }
   const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
   const gy = LAND_Y + 0.55;
-  // avenues: one-way, alternating direction
-  let ai = 0;
-  for (const s of SEG) {
-    if (s.kind !== 'ave') continue;
-    const dir = (ai++ % 2 === 0);
-    const pts = dir ? [v3(s.x0, gy, s.z0), v3(s.x1, gy, s.z1)] : [v3(s.x1, gy, s.z1), v3(s.x0, gy, s.z0)];
-    addRoute(pts, 'ave', 13.5, 0.34, 2);
+  /* STREET-TRUTH traffic: cars drive routes WALKED on the real graph —
+     start at a random drivable edge, keep taking the straightest legal
+     continuation at each intersection (one-way `td` respected), for a
+     couple of km. Citywide: the boroughs get real traffic for the
+     first time. Bridges/highways keep their bespoke elevated routes. */
+  const RWK = rng(4242);
+  const carY = (x, z) => (onLand(x, z) ? LAND_Y + 0.55 : 1.95); // borough ribbons sit lower than the island
+  const dirOK = (e, d) => e.rw !== 4 && (e.td === 3 || e.td === 0 || (d === 0 ? e.td === 1 : e.td === 2));
+  const edgeAng = (e, d, atEnd) => {
+    const p = e.p, i = atEnd ? p.length - 2 : 0;
+    const a = d === 0 ? p[i] : p[p.length - 1 - i], b = d === 0 ? p[i + 1] : p[p.length - 2 - i];
+    return Math.atan2(b[1] - a[1], b[0] - a[0]);
+  };
+  function walkRoute(ei0, d0, maxLen) {
+    const pts = [];
+    let ei = ei0, d = d0, len = 0, guard = 0, prevEi = -1;
+    while (len < maxLen && guard++ < 70) {
+      const e = G_EDGES[ei];
+      const p = d === 0 ? e.p : [...e.p].reverse();
+      for (let i = pts.length ? 1 : 0; i < p.length; i++) pts.push(v3(p[i][0], carY(p[i][0], p[i][1]), p[i][1]));
+      for (let i = 0; i < p.length - 1; i++) len += Math.hypot(p[i + 1][0] - p[i][0], p[i + 1][1] - p[i][1]);
+      const n = d === 0 ? e.b : e.a;
+      const arrive = edgeAng(e, d, true);
+      let best = -1, bestD = 1e9, bestDir = 0;
+      for (const ej of G_NODES[n][2]) {
+        if (ej === ei || ej === prevEi) continue;
+        const e2 = G_EDGES[ej];
+        const d2 = e2.a === n ? 0 : 1;
+        if (!dirOK(e2, d2)) continue;
+        let da = Math.abs(edgeAng(e2, d2, false) - arrive) % (2 * Math.PI);
+        if (da > Math.PI) da = 2 * Math.PI - da;
+        da += RWK() * 0.35; // slight wander so flows spread over the grid
+        if (da < bestD) { bestD = da; best = ej; bestDir = d2; }
+      }
+      if (best < 0 || bestD > 1.5) break; // dead end / only sharp turns
+      prevEi = ei; ei = best; d = bestDir;
+    }
+    return pts;
   }
-  // crosstown streets: every 3rd row, alternating one-way
-  let si = 0;
-  for (const s of SEG) {
-    if (s.kind !== 'st') continue;
-    if ((Math.round(s.z0 / 80) % 3) !== 0) continue;
-    const dir = (si++ % 2 === 0);
-    const pts = dir ? [v3(s.x0, gy, s.z0), v3(s.x1, gy, s.z1)] : [v3(s.x1, gy, s.z1), v3(s.x0, gy, s.z0)];
-    addRoute(pts, 'st', 8.5, 0.3, 1);
+  {
+    let made = 0, tries = 0;
+    while (made < 850 && tries++ < 6000) {
+      const ei = (RWK() * G_EDGES.length) | 0;
+      const e = G_EDGES[ei];
+      if (e.rw === 3 || e.rw === 4) continue;         // ramps/tunnels are poor route seeds
+      const d = dirOK(e, 0) ? 0 : dirOK(e, 1) ? 1 : -1;
+      if (d < 0) continue;
+      const pts = walkRoute(ei, d, 1400 + RWK() * 2200);
+      if (pts.length < 3) continue;
+      const wide = e.w >= 20, hw = e.rw === 1;
+      addRoute(pts, hw ? 'hwy' : wide ? 'ave' : 'st', hw ? 21 : wide ? 12.5 : 8.5, wide ? 0.3 : 0.2, wide ? 2 : 1);
+      made++;
+    }
   }
-  // Broadway
-  const bwayPts = BWAY.map(p => v3(p[1], gy, p[0]));
-  addRoute(bwayPts, 'bway', 11, 0.4, 2);
-  addRoute(bwayPts.slice().reverse(), 'bway', 11, 0.4, 2);
   // highways (both directions, offset lanes)
   const off = (pts, o) => pts.map((p, i) => {
     const q = pts[Math.min(i + 1, pts.length - 1)], r = pts[Math.max(i - 1, 0)];
