@@ -1,9 +1,12 @@
 # secrets — live in env vars on Vercel, these files locally
 opensky-credentials.json
 mta-bus-key.json
+ai-gateway-key.json
+.env*.local
 
 .vercel
 .DS_Store
 node_modules
 /data/
 gh-data-token.json
+.env*

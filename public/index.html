@@ -169,6 +169,42 @@
     border-radius:6px; padding:1px 7px;
   }
   body.photo #chip, body.manual #chip, body.photo #scrub, body.manual #scrub { opacity:0; pointer-events:none; }
+  #agentFab {
+    position:fixed; right:14px; bottom:14px; z-index:31; width:40px; height:40px;
+    border-radius:50%; font:17px system-ui; line-height:38px; text-align:center; padding:0; cursor:pointer;
+    color:rgba(255,255,255,.9); background:rgba(10,13,20,.55); border:1px solid rgba(140,190,255,.3);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); transition:opacity .4s;
+  }
+  #agentFab:hover { background:rgba(25,45,70,.78); border-color:rgba(140,190,255,.5); }
+  #agentPanel {
+    position:fixed; right:14px; bottom:62px; z-index:31; width:min(320px, 88vw);
+    display:none; flex-direction:column; gap:6px;
+    font:11px/1.45 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.88);
+    background:rgba(10,13,20,.72); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(140,190,255,.18); border-radius:12px; padding:8px;
+  }
+  body.agent #agentPanel { display:flex; }
+  body.agent #agentFab { background:rgba(232,165,88,.4); border-color:rgba(255,220,160,.55); }
+  #agentLog { max-height:36vh; overflow-y:auto; display:flex; flex-direction:column; gap:5px; scrollbar-width:thin; }
+  #agentLog .m { border-radius:9px; padding:4px 8px; max-width:92%; white-space:pre-wrap; word-wrap:break-word; }
+  #agentLog .m.me { align-self:flex-end; background:rgba(232,165,88,.18); border:1px solid rgba(232,165,88,.25); }
+  #agentLog .m.ai { align-self:flex-start; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09); }
+  #agentLog .m.err { align-self:flex-start; background:rgba(205,32,44,.16); border:1px solid rgba(205,32,44,.35); color:rgba(255,200,200,.9); }
+  #agentLog .m.wait { align-self:flex-start; opacity:.55; font-style:italic; }
+  #agentForm { display:flex; gap:5px; }
+  #agentForm input {
+    flex:1; font:11px system-ui,sans-serif; color:rgba(255,255,255,.9);
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+    border-radius:8px; padding:5px 8px; outline:none;
+  }
+  #agentForm input:focus { border-color:rgba(140,190,255,.45); }
+  #agentForm button {
+    font:12px system-ui,sans-serif; color:rgba(255,255,255,.85); cursor:pointer;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.10);
+    border-radius:8px; padding:3px 10px;
+  }
+  #agentForm button:disabled { opacity:.4; cursor:default; }
+  body.photo #agentFab, body.photo #agentPanel { display:none !important; }
   /* the world was authored +x=east/+z=north, which a right-handed renderer displays
      mirror-imaged (looking north puts east on screen-LEFT). Mirroring the presented
      image makes the whole city read like the real map. Pointer x is mirrored back
@@ -219,6 +255,11 @@
     <input id="timeSlider" type="range" min="-10080" max="0" step="5" value="0" title="Scrub the city back through the last 7 days">
   </div>
   <button id="timeReset" title="Back to now">now</button>
+</div>
+<button id="agentFab" title="City Concierge — ask about live NYC, or say where to fly">✦</button>
+<div id="agentPanel">
+  <div id="agentLog"></div>
+  <form id="agentForm"><input id="agentIn" type="text" maxlength="300" placeholder="Ask the city… “show me Times Square”" autocomplete="off"><button type="submit" title="send">➤</button></form>
 </div>
 
 <script>/* module errors surface as unhandled rejections under top-level await */
@@ -6704,6 +6745,80 @@ function applyHash() {
 }
 addEventListener('hashchange', applyHash);
 applyHash();
+
+/* ============================================================
+   26d. City Concierge — sandboxed LLM agent chat (POST /api/agent).
+   The server (lib/agent-core.js) runs read-only tools over the
+   twin's own cached feeds and may return ONE validated camera
+   intent per turn; nothing else in the scene is writable by it.
+   Camera application: presets reuse flyTo(); lat/lon targets go
+   through subway.geoRaw — the calibrated pipeline (IRON RULE 1),
+   never re-derived — and tween via the existing camTween. The
+   look direction comes from projecting a short geo step along
+   the requested compass heading through the same transform, so
+   the 29° grid rotation and the mirrored presentation are
+   handled for free.
+   ============================================================ */
+const concierge = (() => {
+  const fab = document.getElementById('agentFab'), log = document.getElementById('agentLog'),
+        form = document.getElementById('agentForm'), input = document.getElementById('agentIn'),
+        sendBtn = form.querySelector('button');
+  const hist = []; // plain {role, content} text turns; server keeps the last 16
+  let busy = false, greeted = false;
+  function add(cls, text) {
+    const d = document.createElement('div');
+    d.className = 'm ' + cls; d.textContent = text; // textContent: never render reply HTML
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+    return d;
+  }
+  function applyCam(c) {
+    if (!c) return;
+    if (c.preset) return flyTo(c.preset);
+    if (typeof c.lat !== 'number' || typeof c.lon !== 'number') return;
+    const g = subway.geoRaw(c.lat, c.lon);
+    const alt = clamp(c.altitude_m || 600, 80, 16000);
+    const hd = ((c.heading_deg ?? 25) * Math.PI) / 180;
+    const g2 = subway.geoRaw(c.lat + Math.cos(hd) * 0.008,
+                             c.lon + (Math.sin(hd) * 0.008) / Math.cos((c.lat * Math.PI) / 180));
+    let dx = g2.x - g.x, dz = g2.z - g.z;
+    const L = Math.hypot(dx, dz) || 1; dx /= L; dz /= L;
+    const dist = alt * 1.25; // ~39° down-tilt, reads like the presets
+    camTween = { p0: camera.position.clone(), t0: controls.target.clone(),
+      p1: new THREE.Vector3(g.x - dx * dist, alt, g.z - dz * dist),
+      t1: new THREE.Vector3(g.x, 0, g.z),
+      t: 0, dur: clamp(c.duration_s || 2.6, 1, 6) };
+  }
+  async function send(text) {
+    if (busy || !text) return;
+    busy = true; input.disabled = true; sendBtn.disabled = true;
+    add('me', text);
+    hist.push({ role: 'user', content: text });
+    const wait = add('wait', 'thinking…');
+    try {
+      const r = await fetch('/api/agent', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: hist.slice(-12) }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'http ' + r.status);
+      hist.push({ role: 'assistant', content: j.reply });
+      wait.remove(); add('ai', j.reply);
+      if (j.camera) applyCam(j.camera);
+    } catch (e) {
+      wait.remove(); add('err', String(e.message || e));
+    }
+    busy = false; input.disabled = false; sendBtn.disabled = false; input.focus();
+  }
+  fab.addEventListener('click', () => {
+    const on = document.body.classList.toggle('agent');
+    if (on && !greeted) { greeted = true; add('ai', 'Ask me about live NYC — trains, ferries, planes, traffic, weather — or tell me where to fly.'); }
+    if (on) input.focus();
+  });
+  // the global keydown handler binds 0–6/H/P/L; typing here must not fly the camera
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { document.body.classList.remove('agent'); fab.focus(); } e.stopPropagation(); });
+  form.addEventListener('submit', (e) => { e.preventDefault(); const t = input.value.trim(); input.value = ''; send(t); });
+  return { send, applyCam };
+})();
+window.__agent = concierge; // dev/testing hook
 
 /* ============================================================
    27. Main loop

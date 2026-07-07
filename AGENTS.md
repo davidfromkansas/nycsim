@@ -30,6 +30,8 @@ city state; a timeline slider scrubs the city back through the last 7 days.
 | `server.js` | Local dev server: static `public/` + `/api/*`. `node server.js` → http://localhost:4173 |
 | `api/index.js` | Vercel catch-all → `handleApi` (vercel.json rewrites `/api/(.*)` → it; real files in `api/` win over the rewrite) |
 | `api/record.js` | Nightly snapshot cron (05:05 UTC): fetches own APIs, commits to `data` branch via GitHub API |
+| `lib/agent-core.js` | "City Concierge" LLM agent: read-only tools over the cached feeds + validated camera intents. Raw-fetch to Vercel AI Gateway (Anthropic-compat endpoint), per-IP rate limits. Chat UI = index.html §26d. |
+| `api/agent.js` | Vercel function for POST `/api/agent` → `handleAgent` (server.js mirrors it locally) |
 | `scripts/record.mjs` | Manual/local recorder (same frame format) |
 | `public/streets.json` | Real street graph: 86,471 CSCL edges + 57,450 nodes (see schema below) |
 | `public/blocks.json` | 27,257 real city-block faces |
@@ -42,8 +44,10 @@ node server.js            # http://localhost:4173 — that's it, no install
 ```
 - Secrets live in git-ignored root files (ask the user if you don't have them):
   `opensky-credentials.json` (flights), `mta-bus-key.json` (buses),
-  `gh-data-token.json` (history playback reads the private data branch).
-  Missing keys degrade gracefully (empty feeds), nothing crashes.
+  `gh-data-token.json` (history playback reads the private data branch),
+  `ai-gateway-key.json` or `.env.local` via `vercel env pull` (concierge agent LLM;
+  on Vercel deployments the OIDC token is automatic — enable AI Gateway on the project).
+  Missing keys degrade gracefully (empty feeds; agent replies 503), nothing crashes.
   **NEVER log, commit, or echo these values.**
 - Syntax-check server code before pushing: `node -e "require('./lib/api-core.js')"`.
 - Client testing hooks (browser console):
