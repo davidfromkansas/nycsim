@@ -1195,6 +1195,20 @@ function makeShoreX(shx) { // scan lookup — bucket rows can be sparse where th
   };
 }
 const qnShoreX = makeShoreX(QB.QN.shx), bxShoreX = makeShoreX(QB.BX.shx);
+// is this point on borough land the scene actually has? (shared by fills, ribbons, traffic)
+function landOK(x, z) {
+  if (bayContains(x, z)) return false;
+  if (z > 12800 && z < 21500) { // Harlem corridor: keep east of the visual channel
+    const ee = Math.max(bxShoreX(z) ?? -1e9, coastAt(Math.min(z, 21400)).e + 120) + 12;
+    if (x < ee) return false;
+  }
+  if (z > 15300 && x > 8600) return false; // east of the (extended) Bronx plate = LI Sound
+  if (bkContains(x, z) || bxContains(x, z)) return true;
+  if (qnContains(x, z) && !bkContains(x, z)) return true;
+  if (x > 8600 || z < -8400 || z > 24150) return false;
+  const s = bxShoreX(z) ?? bkShoreX(z) ?? qnShoreX(z);
+  return s === null || x > s + 12;
+}
 // Roosevelt Island must fit the PINCHED stylized channel: the frozen calibration
 // makes the baked ring wider than the water between Manhattan's stylized east
 // coast and the real Queens shore. Squeeze its x-range into the channel per
@@ -1449,7 +1463,7 @@ function eastW(z) { return z < 2400 ? 820 : z < 5200 ? 620 : z < 8000 ? 700 : 98
     const xs = bxShoreX(z);
     const styl = z > 21520 ? -1400 : coastAt(Math.min(z, 21400)).e + 170;
     return xs !== null ? Math.max(xs, coastAt(Math.min(z, 21400)).e + 120) + 15 : styl;
-  }, 4400);
+  }, 8600); // extends over the REAL East Bronx (real buildings/streets fill it; LI Sound past 8600)
   const m = new THREE.Mesh(sinkToGeometry(S), boroughGndMat);
   m.matrixAutoUpdate = false;
   scene.add(m);
@@ -1965,6 +1979,15 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
     } return false; };
   // ---- parks ----
   for (const [nm, P] of parks) {
+    // Harlem-channel guard: real Bronx riverfront parks (e.g. Roberto Clemente SP)
+    // bake INSIDE the visual channel — skip any park whose centroid is off-fabric
+    let pcx = 0, pcz = 0;
+    for (const p of P) { pcx += p[0]; pcz += p[1]; }
+    pcx /= P.length; pcz /= P.length;
+    if (pcz > 12800 && pcz < 21500) {
+      const ee = Math.max(bxShoreX(pcz) ?? -1e9, coastAt(Math.min(pcz, 21400)).e + 120) + 12;
+      if (pcx < ee) continue;
+    }
     const cem = nm.includes('Cemetery');
     const g = cem ? [0.34, 0.42, 0.27] : [0.27, 0.40, 0.22];
     pushPoly(SG, P, 1.35, 0.5, g, 0, -1, g);
@@ -2165,21 +2188,8 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
   const inExclB = (x, z) => { for (const [c, r] of excl) { const dx = x - c[0], dz = z - c[1]; if (dx * dx + dz * dz < r * r) return true; } return false; };
   // land test for block content: inside a geo footprint, or on the generic plate east —
   // but never in the bay, never west of a sampled real shoreline
-  const landB = (x, z) => {
-    if (bayContains(x, z)) return false;
-    // Harlem corridor: the real Bronx bank bakes WEST of the visual channel
-    // (stylized upper Manhattan is wider than the calibration) — keep all
-    // borough content east of the channel the plate clamp defines
-    if (z > 12800 && z < 21500) {
-      const ee = Math.max(bxShoreX(z) ?? -1e9, coastAt(Math.min(z, 21400)).e + 120) + 12;
-      if (x < ee) return false;
-    }
-    if (bkContains(x, z) || bxContains(x, z)) return true;
-    if (qnContains(x, z) && !bkContains(x, z)) return true;
-    if (x > 8600 || z < -8400 || z > 23800) return false;
-    const s = bxShoreX(z) ?? bkShoreX(z) ?? qnShoreX(z);
-    return s === null || x > s + 12;
-  };
+  const landB = landOK; // hoisted to top level (traffic + fills share it)
+
   // ---- ribbons: every non-Manhattan drivable edge (bridges + tunnels excluded) ----
   let ribKm = 0;
   const asph = [0.17, 0.165, 0.16];
@@ -2743,7 +2753,7 @@ const traffic = (() => {
      first time. Bridges/highways keep their bespoke elevated routes. */
   const RWK = rng(4242);
   const carY = (x, z) => (onLand(x, z) ? LAND_Y + 0.55 : 1.95); // borough ribbons sit lower than the island
-  const dirOK = (e, d) => e.rw !== 4 && (e.td === 3 || e.td === 0 || (d === 0 ? e.td === 1 : e.td === 2));
+  const dirOK = (e, d) => e.rw !== 4 && e.rw !== 2 && (e.td === 3 || e.td === 0 || (d === 0 ? e.td === 1 : e.td === 2)); // no tunnels, no bridge decks (cars at ground y would drive on the river)
   const edgeAng = (e, d, atEnd) => {
     const p = e.p, i = atEnd ? p.length - 2 : 0;
     const a = d === 0 ? p[i] : p[p.length - 1 - i], b = d === 0 ? p[i + 1] : p[p.length - 2 - i];
@@ -2765,6 +2775,8 @@ const traffic = (() => {
         const e2 = G_EDGES[ej];
         const d2 = e2.a === n ? 0 : 1;
         if (!dirOK(e2, d2)) continue;
+        const em = e2.p[e2.p.length >> 1];
+        if (!onLand(em[0], em[1]) && !landOK(em[0], em[1])) continue; // never walk onto water streets
         let da = Math.abs(edgeAng(e2, d2, false) - arrive) % (2 * Math.PI);
         if (da > Math.PI) da = 2 * Math.PI - da;
         da += RWK() * 0.35; // slight wander so flows spread over the grid
@@ -2780,7 +2792,9 @@ const traffic = (() => {
     while (made < 850 && tries++ < 6000) {
       const ei = (RWK() * G_EDGES.length) | 0;
       const e = G_EDGES[ei];
-      if (e.rw === 3 || e.rw === 4) continue;         // ramps/tunnels are poor route seeds
+      if (e.rw >= 2) continue;                        // ramps/tunnels/bridge decks are not route seeds
+      const sm = e.p[0];
+      if (!onLand(sm[0], sm[1]) && !landOK(sm[0], sm[1])) continue; // no routes seeded off-fabric
       const d = dirOK(e, 0) ? 0 : dirOK(e, 1) ? 1 : -1;
       if (d < 0) continue;
       const pts = walkRoute(ei, d, 1400 + RWK() * 2200);
