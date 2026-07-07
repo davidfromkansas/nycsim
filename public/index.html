@@ -7508,10 +7508,46 @@ const concierge = (() => {
     }
     return { show, clear, tick };
   })();
-  layerChip.addEventListener('click', () => lfx.clear());
+  /* --- focus highlight: a glowing boundary drawn on the ground around the area
+         the agent just zoomed into. A pulsing band + faint fill, scaled to the
+         framed radius (or the agent's highlight_radius_m). Circles are symmetric
+         so the scaleX(-1) presentation needs no mirror math. +2 draw calls. --- */
+  const ring = (() => {
+    // an annotation overlay (like the layer pins): depthTest off so the boundary
+    // reads cleanly over the city instead of being swallowed by tall buildings.
+    const grp = new THREE.Group(); grp.visible = false; grp.renderOrder = 12; scene.add(grp);
+    const COL = new THREE.Color(0xe8a558);
+    const band = new THREE.Mesh(new THREE.RingGeometry(0.955, 1.0, 128),
+      new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+    const edge = new THREE.Mesh(new THREE.RingGeometry(0.992, 1.0, 128),
+      new THREE.MeshBasicMaterial({ color: 0xfff0d8, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+    band.rotation.x = edge.rotation.x = -Math.PI / 2;
+    band.position.y = edge.position.y = 8; band.renderOrder = 12; edge.renderOrder = 13;
+    grp.add(band, edge);
+    let cx = 0, cz = 0, rad = 0, t0 = 0;
+    function show(x, z, radius) {
+      cx = x; cz = z; rad = clamp(radius, 80, 6000); t0 = performance.now();
+      grp.position.set(cx, 0, cz); grp.visible = true;
+    }
+    function hide() { grp.visible = false; }
+    function tick() {
+      if (!grp.visible) return;
+      const now = performance.now();
+      const intro = clamp((now - t0) / 650, 0, 1); // fade + expand in
+      const e = 1 - Math.pow(1 - intro, 3);
+      const r = rad * (0.72 + 0.28 * e);
+      grp.scale.set(r, 1, r);
+      const pulse = 0.7 + 0.3 * Math.sin(now / 1000 * 2.2);
+      band.material.opacity = 0.5 * e * pulse;
+      edge.material.opacity = 0.95 * e;
+      grp.rotation.y += 0.0016; // slow scan
+    }
+    return { show, hide, tick };
+  })();
+  layerChip.addEventListener('click', () => { lfx.clear(); ring.hide(); });
   function applyCam(c) {
     if (!c) return;
-    if (c.preset) return flyTo(c.preset);
+    if (c.preset) { ring.hide(); return flyTo(c.preset); } // presets are broad overviews, not a specific area
     const alt = clamp(c.altitude_m || 600, 80, 16000);
     const hd = ((c.heading_deg ?? 25) * Math.PI) / 180;
     let tx, tz, dx, dz;
@@ -7532,6 +7568,13 @@ const concierge = (() => {
       p1: new THREE.Vector3(tx - dx * dist, alt, tz - dz * dist),
       t1: new THREE.Vector3(tx, 0, tz),
       t: 0, dur: clamp(c.duration_s || 2.6, 1, 6) };
+    // outline the framed area: agent's radius if given, else derived from altitude.
+    // skip broad overviews (a zoom into "a specific area" is what gets a boundary).
+    const explicit = isFinite(c.highlight_radius_m);
+    if (explicit && c.highlight_radius_m <= 0) ring.hide();              // agent opted out
+    else if (explicit) ring.show(tx, tz, c.highlight_radius_m);
+    else if (alt < 4000) ring.show(tx, tz, clamp(alt * 0.85, 150, 3500));
+    else ring.hide();
   }
   function applyTimeline(t) {
     if (t && isFinite(t.scrub_min)) timeline.set(clamp(Math.round(t.scrub_min), -10080, 0));
@@ -7599,7 +7642,8 @@ const concierge = (() => {
   // the global keydown handler binds 0–7/H/P/L; typing here must not fly the camera
   input.addEventListener('keydown', (e) => { if (e.key === 'Escape') { document.body.classList.remove('agent'); fab.focus(); } e.stopPropagation(); });
   form.addEventListener('submit', (e) => { e.preventDefault(); const t = input.value.trim(); input.value = ''; send(t); });
-  return { send, applyCam, applyTimeline, showLayers: lfx.show, clearLayer: lfx.clear, tick: lfx.tick };
+  function tickAll() { lfx.tick(); ring.tick(); }
+  return { send, applyCam, applyTimeline, showLayers: lfx.show, clearLayer: () => { lfx.clear(); ring.hide(); }, focusRing: ring, tick: tickAll };
 })();
 window.__agent = concierge; // dev/testing hook
 

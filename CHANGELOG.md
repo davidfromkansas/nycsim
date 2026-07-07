@@ -52,6 +52,10 @@ own live data, flies the camera anywhere on request, draws query results directl
   buildings/streets, time travel).
 - "Zoom in on Times Square" flies there; "street level at the Brooklyn Bridge, looking
   at Manhattan" lands a low camera aimed the right way.
+- Zooming into a specific place draws a glowing gold boundary on the ground around the
+  framed area — "highlight the area around Times Square" outlines a ~450 m circle,
+  "highlight Central Park" a ~1,600 m one. Broad overviews (the whole island) don't get
+  a boundary; the "✕ layer" chip clears it.
 - "Map the 5 slowest roads in Manhattan" drops labeled pins ("FDR N 25th–63rd St ·
   15.5 mph") and auto-frames them; "highlight Broadway end to end" draws all ~400 street
   segments; "ring every closure with a 250 m buffer" adds circles. A "✕ layer" chip in
