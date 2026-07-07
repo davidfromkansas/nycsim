@@ -604,7 +604,6 @@ const RPARKS = [
   { n: 'forttryon', x0: -1050, x1: -430, z0: 18980, z1: 19820 },
   { n: 'inwood',  x0: -980, x1: -220, z0: 20080, z1: 21400 },
   { n: 'highbr',  x0: 240,  x1: 460,  z0: 16050, z1: 18400 },
-  { n: 'eastriv', x0: 1560, x1: 2100, z0: 2750, z1: 4360 },
   { n: 'jackie',  x0: 900, x1: 1400,  z0: 12300, z1: 12700 }
 ];
 function inCentralPark(x, z) { return x > PARK.x0 && x < PARK.x1 && z > PARK.z0 && z < PARK.z1; }
@@ -613,8 +612,13 @@ function inRiverside(x, z) { // riverside park strip (west of Riverside Dr)
   const c = coastAt(z);
   return x < Math.max(c.w + 165, -1560) && x > c.w;
 }
+function inEastRiverPark(x, z) { // thin real strip along the LES shore, east of the FDR
+  if (z < 2750 || z > 5250) return false;
+  const c = coastAt(z);
+  return x > c.e - 135 && x < c.e;
+}
 function inPark(x, z) {
-  if (inCentralPark(x, z) || inRiverside(x, z)) return true;
+  if (inCentralPark(x, z) || inRiverside(x, z) || inEastRiverPark(x, z)) return true;
   for (const p of RPARKS) if (x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1) return true;
   return false;
 }
@@ -1541,6 +1545,8 @@ function paintGround(mode) {
   // riverside strip
   ctx.fillStyle = wcol('#4c7040', SW * 0.75);
   for (let z = 8900; z < 15400; z += 60) { const c = coastAt(z); ctx.fillRect(w2u(c.w), w2v(z), (Math.max(c.w + 165, -1560) - c.w) * pxm, 60 * (GC.H / (GC.Z1 - GC.Z0)) + 1); }
+  // east river park strip (coast-relative — the old static rect smothered real LES blocks)
+  for (let z = 2750; z < 5250; z += 60) { const c = coastAt(z); ctx.fillRect(w2u(c.e - 135), w2v(z), 135 * pxm, 60 * (GC.H / (GC.Z1 - GC.Z0)) + 1); }
   for (const s of SUPERS) green(s.x0, s.z0, s.x1, s.z1, wcol('#5c7a4a', SW * 0.75));
   // central park
   green(PARK.x0, PARK.z0, PARK.x1, PARK.z1, wcol('#4e7a42', SW * 0.78));
@@ -2008,6 +2014,7 @@ const midMeshes = [];
     spots.push([x, LAND_Y + elevAt(x, z), z, 0.9 + RT() * 1.1]);
   }
   for (let z = 8940; z < 15400; z += 14) { const c = coastAt(z); const x = c.w + 15 + RT() * 135; if (x < -1560) spots.push([x, LAND_Y, z + (RT() - 0.5) * 12, 0.8 + RT()]); }
+  for (let z = 2780; z < 5250; z += 22) { const c = coastAt(z); spots.push([c.e - 15 - RT() * 110, LAND_Y, z + (RT() - 0.5) * 16, 0.8 + RT()]); }
   for (const p of RPARKS) {
     const forest = ['morning', 'stnick', 'forttryon', 'inwood', 'highbr'].includes(p.n);
     const n = Math.min(900, ((p.x1 - p.x0) * (p.z1 - p.z0)) / (forest ? 260 : 700));
