@@ -6639,17 +6639,25 @@ const birds = (() => {
 window.__birds = birds; // dev/testing hook
 
 /* ============================================================
-   25g. LIVE TRAFFIC — real NYC DOT sensor speeds painted onto
-   the roads they measure, + 511NY incidents/closures as markers.
-   /api/traffic (60 s): each sensor link becomes a ribbon riding
-   its road, colored green→amber→red by measured mph. Points are
-   graph-snapped (heading-aware), ride the bespoke elevated decks
-   (FDR viaduct, WSH, bridge lanes) where those exist, and GAP
-   through tunnels / open water — nothing paints the river.
+   25g. LIVE TRAFFIC — measured speeds painted onto the roads,
+   from three provenances (each labeled honestly in its chips):
+   · /api/traffic (60 s, LIVE): DOT highway sensor links, wide
+     ribbons on an arterial color scale.
+   · /api/traffic-local (E-ZPass reader links on NORMAL streets,
+     published in daily batches ~2 days behind): narrow ribbons
+     colored by the profile hour matching the VIEWED wall clock —
+     a "recent typical" baseline in Live, and the day's real
+     measurements when the timeline replays a published day.
+   · live bus-probe estimates: the bus fleet is already map-
+     matched to street edges with derived speeds — moving buses
+     aggregated per edge over a rolling 10-min window give a
+     genuinely LIVE local-street signal (live-only, cams
+     precedent; a frozen replay tableau has no window).
+   All ribbons are graph-snapped (heading-aware), ride the
+   bespoke elevated decks where those exist, and GAP through
+   tunnels / open water — nothing paints the river.
    /api/traffic-events (4 min): one tinted Points layer, red =
-   incident, amber = closure; water-borne fixes with no road are
-   dropped. Pooled chips (bus-pattern) surface road name + live
-   mph / event descriptions. +2 draw calls total.
+   incident, amber = closure. +4 draw calls total.
    ============================================================ */
 const rtraffic = (() => {
   // --- elevated decks the sensor roads ride (built once from the bespoke routes) ---
@@ -6685,56 +6693,181 @@ const rtraffic = (() => {
     else c.setRGB(0.93 - (t - 0.5) * 1.54, 0.73, 0.11 + (t - 0.5) * 0.4);
     return c.convertSRGBToLinear(); // authored in sRGB; vertex colors feed the linear pipeline
   }
+  function ribbonQuads(P, C, pts, w, c) { // gap-aware quad strip along a placed polyline
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      if (!a || !b) continue; // gap (tunnel / water)
+      const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1;
+      const nx = -dz / l * w / 2, nz = dx / l * w / 2;
+      P.push(a[0] - nx, a[1], a[2] - nz, a[0] + nx, a[1], a[2] + nz, b[0] - nx, b[1], b[2] - nz,
+             a[0] + nx, a[1], a[2] + nz, b[0] + nx, b[1], b[2] + nz, b[0] - nx, b[1], b[2] - nz);
+      for (let k = 0; k < 6; k++) C.push(c.r, c.g, c.b);
+    }
+  }
+  function swapRibbonMesh(cur, P, C, mat, order) { // dispose-and-replace (rebuilds are minute-scale)
+    if (cur) { scene.remove(cur); cur.geometry.dispose(); }
+    if (!P.length) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(C), 3));
+    const m = new THREE.Mesh(g, mat);
+    m.frustumCulled = false; m.renderOrder = order; m.matrixAutoUpdate = false;
+    scene.add(m);
+    return m;
+  }
   function rebuildRibbons() {
     const P = [], C = [];
     for (const L of LINKS) {
       const rec = histSpd ? histSpd.get(L.id) : null;
       const mph = histSpd ? (rec ? rec[0] : null) : L.speed;
       if (mph == null) continue; // sensor absent from this day's recording: hide, don't lie
-      spdColor(mph, _rc);
-      for (let i = 0; i < L.pts.length - 1; i++) {
-        const a = L.pts[i], b = L.pts[i + 1];
-        if (!a || !b) continue; // gap (tunnel / water)
-        const dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1;
-        const nx = -dz / l * RIB_W / 2, nz = dx / l * RIB_W / 2;
-        P.push(a[0] - nx, a[1], a[2] - nz, a[0] + nx, a[1], a[2] + nz, b[0] - nx, b[1], b[2] - nz,
-               a[0] + nx, a[1], a[2] + nz, b[0] + nx, b[1], b[2] + nz, b[0] - nx, b[1], b[2] - nz);
-        for (let k = 0; k < 6; k++) C.push(_rc.r, _rc.g, _rc.b);
-      }
+      ribbonQuads(P, C, L.pts, RIB_W, spdColor(mph, _rc));
     }
-    if (ribbons) { scene.remove(ribbons); ribbons.geometry.dispose(); ribbons = null; }
-    if (!P.length) return;
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(P), 3));
-    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(C), 3));
-    ribbons = new THREE.Mesh(g, ribbonMat);
-    ribbons.frustumCulled = false; ribbons.renderOrder = 3; ribbons.matrixAutoUpdate = false;
-    scene.add(ribbons);
+    ribbons = swapRibbonMesh(ribbons, P, C, ribbonMat, 3);
+  }
+  function placeGeo(latlon, hwy) { // geo polyline → scene pts with deck/tunnel/water handling
+    const raw = latlon.map(p => subway.geoRaw(p[0], p[1]));
+    const pts = [];
+    for (let i = 0; i < raw.length; i++) {
+      const j = Math.min(i, raw.length - 2);
+      const ang = Math.atan2(raw[j + 1].z - raw[j].z, raw[j + 1].x - raw[j].x); // matchStreet's atan2(dz,dx) convention
+      const m = matchStreet(raw[i].x, raw[i].z, 70, ang);
+      if (m && G_EDGES[m.ei].rw === 4) { pts.push(null); continue; } // tunnel: never paint the river
+      const x = m ? m.x : raw[i].x, z = m ? m.z : raw[i].z;
+      // hwy sources ride nearby elevated decks unconditionally; local-street sources only
+      // when the matched edge itself is highway/bridge/ramp (57th St must not levitate onto a viaduct)
+      const ey = (hwy || (m && G_EDGES[m.ei].rw >= 1)) ? elevAt(x, z) : null;
+      if (ey !== null) pts.push([x, ey + 0.45, z]);                  // FDR viaduct / WSH / bridge lanes
+      else if (m && G_EDGES[m.ei].rw === 2) pts.push([x, 46, z]);    // bridge deck without a bespoke route (cams' constant)
+      else if (!onLand(x, z) && !landOK(x, z)) pts.push(null);       // off-graph over water: gap
+      else pts.push([x, onLand(x, z) ? LAND_Y + 0.35 : 1.75, z]);    // road surface, just under the cars
+    }
+    const valid = pts.filter(p => p);
+    return valid.length < 2 ? null : { pts, mid: valid[valid.length >> 1] };
   }
   function ingestLinks(list) {
     LINKS.length = 0;
     for (const l of list) {
-      const raw = l.pts.map(p => subway.geoRaw(p[0], p[1]));
-      const pts = [];
-      for (let i = 0; i < raw.length; i++) {
-        const j = Math.min(i, raw.length - 2);
-        const ang = Math.atan2(raw[j + 1].z - raw[j].z, raw[j + 1].x - raw[j].x); // matchStreet's atan2(dz,dx) convention
-        const m = matchStreet(raw[i].x, raw[i].z, 70, ang);
-        if (m && G_EDGES[m.ei].rw === 4) { pts.push(null); continue; } // tunnel: never paint the river
-        const x = m ? m.x : raw[i].x, z = m ? m.z : raw[i].z;
-        const ey = elevAt(x, z);
-        if (ey !== null) pts.push([x, ey + 0.45, z]);                  // FDR viaduct / WSH / bridge lanes
-        else if (m && G_EDGES[m.ei].rw === 2) pts.push([x, 46, z]);    // bridge deck without a bespoke route (cams' constant)
-        else if (!onLand(x, z) && !landOK(x, z)) pts.push(null);       // off-graph over water: gap
-        else pts.push([x, onLand(x, z) ? LAND_Y + 0.35 : 1.75, z]);    // road surface, just under the cars
-      }
-      const valid = pts.filter(p => p);
-      if (valid.length < 2) continue;
-      LINKS.push({ id: String(l.id), name: l.name, speed: l.speed, tt: l.tt,
-        pts, mid: valid[valid.length >> 1] });
+      const p = placeGeo(l.pts, true);
+      if (!p) continue;
+      LINKS.push({ id: String(l.id), name: l.name, speed: l.speed, tt: l.tt, pts: p.pts, mid: p.mid });
     }
     rebuildRibbons();
     if (LINKS.length) console.log('[traffic]', LINKS.length, 'DOT sensor links painted');
+  }
+  /* --- E-ZPass local street speeds (/api/traffic-local) — DOT reader links on normal
+     streets, published in daily batches ~2 days behind. Each link carries a 24-hour
+     mph profile; ribbons recolor to the profile hour matching the VIEWED wall clock
+     (timeline thumb), so Live shows a labeled "recent typical" baseline and a replay
+     of a published day shows its real measurements. Narrower ribbons, local scale. --- */
+  const EZ = { day: '', days: new Map(), shown: { day: '', hh: -1, links: [] },
+               pending: '', poll: 10, delay: 60, busy: false };
+  let ezMesh = null, ezKey = '', ezCheckT = 0;
+  const EZ_W = 6;
+  const NY_HH = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23', hour: 'numeric' });
+  const tlSlider = document.getElementById('timeSlider');
+  const viewedHour = () => +NY_HH.format(new Date(Date.now() + (tlSlider ? +tlSlider.value * 60000 : 0)));
+  function spdColorL(mph, c) { // local-street scale: green ≥ 18 · amber ≈ 11 · red ≤ 4
+    const t = clamp((mph - 4) / 14, 0, 1);
+    if (t < 0.5) c.setRGB(0.93, 0.13 + t * 1.2, 0.11);
+    else c.setRGB(0.93 - (t - 0.5) * 1.54, 0.73, 0.11 + (t - 0.5) * 0.4);
+    return c.convertSRGBToLinear();
+  }
+  function ezIngest(j) {
+    const placed = [];
+    for (const l of j.links || []) {
+      const p = placeGeo(l.pts, false);
+      if (!p) continue;
+      placed.push({ id: String(l.id), name: l.name, spd: l.spd, pts: p.pts, mid: p.mid });
+    }
+    return placed;
+  }
+  function ezRebuild() { // recolors on view-hour / day change; key comparison keeps it ~free
+    const day = (HIST.active && EZ.days.get(HIST.day)) ? HIST.day : EZ.day;
+    const links = EZ.days.get(day) || [];
+    const hh = viewedHour();
+    const key = day + ':' + hh + ':' + links.length;
+    if (key === ezKey) return;
+    ezKey = key;
+    const P = [], C = [], shown = [];
+    for (const L of links) {
+      const mph = L.spd[hh];
+      if (mph == null) continue; // no tag reads that hour: hide, don't invent
+      ribbonQuads(P, C, L.pts, EZ_W, spdColorL(mph, _rc));
+      shown.push(L);
+    }
+    ezMesh = swapRibbonMesh(ezMesh, P, C, ribbonMat, 3);
+    EZ.shown = { day, hh, links: shown };
+  }
+  function ezPoll() {
+    EZ.busy = true;
+    fetch('/api/traffic-local').then(r => { if (!r.ok) throw 0; return r.json(); })
+      .then(j => {
+        if (!j.day || !Array.isArray(j.links) || !j.links.length) throw 0;
+        EZ.day = j.day;
+        if (!EZ.days.has(j.day)) {
+          EZ.days.set(j.day, ezIngest(j));
+          console.log('[traffic] E-ZPass locals:', EZ.days.get(j.day).length, 'links · published day', j.day);
+        }
+        ezKey = ''; EZ.delay = 1800; // daily-batch source: refresh half-hourly
+      })
+      .catch(() => { EZ.delay = Math.min(EZ.delay * 2, 3600); })
+      .finally(() => { EZ.busy = false; EZ.poll = T + EZ.delay; });
+  }
+  function ezFetchDay() { // timeline replay: fetch the scrubbed day's real profile
+    const d = HIST.day;
+    if (!d || EZ.days.has(d) || EZ.pending === d) return;
+    EZ.pending = d;
+    fetch('/api/traffic-local/' + d).then(r => r.json())
+      .then(j => { // unpublished day (the ~2-day lag window) → null: rebuild falls back to latest, chips stay honest about the day shown
+        EZ.days.set(d, Array.isArray(j.links) && j.links.length ? ezIngest(j) : null);
+        ezKey = '';
+      })
+      .catch(() => { /* transient: retried on next scrub */ })
+      .finally(() => { EZ.pending = ''; });
+  }
+  const ezLabel = (name) => { // "57th Street - Westbound - 9th Ave (...) to 10th Ave (...)" → compact
+    const p = name.split(/\s+-+\s+/);
+    return title((p[0] || name).trim()) + (p[1] ? ' ' + p[1].trim().replace(/bound.*/i, '') : '');
+  };
+  /* --- live bus-probe speeds: the fleet is already map-matched to street edges
+     (edgeId join keys, 25d) with derived speeds. Aggregate MOVING buses per edge
+     over a rolling 10-min window (≥2 distinct buses) — a genuinely live local-
+     street estimate. Dwell stops are excluded, so read it as "moving speed",
+     biased high vs door-to-door. Live-only (cams precedent). --- */
+  const PRB = { samples: [], edges: [], mesh: null, sampleAt: 8, next: 20 };
+  const prbMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide,
+    transparent: true, opacity: 0.72, depthWrite: false });
+  function prbSample(t) {
+    for (const v of buses.list) if (v.edgeId >= 0 && v.spd > 1.5) PRB.samples.push([v.edgeId, v.id, v.spd, t]);
+    while (PRB.samples.length && t - PRB.samples[0][3] > 600) PRB.samples.shift();
+    if (PRB.samples.length > 60000) PRB.samples.splice(0, PRB.samples.length - 60000); // hard cap
+  }
+  function prbRebuild() {
+    const agg = new Map(); // ei → { sum, n, ids }
+    for (const s of PRB.samples) {
+      let a = agg.get(s[0]);
+      if (!a) { a = { sum: 0, n: 0, ids: new Set() }; agg.set(s[0], a); }
+      a.sum += s[2]; a.n++; a.ids.add(s[1]);
+    }
+    const P = [], C = [];
+    PRB.edges.length = 0;
+    for (const [ei, a] of agg) {
+      if (a.ids.size < 2) continue; // one bus is an anecdote, not an estimate
+      const e = G_EDGES[ei];
+      if (e.rw === 4) continue;
+      const mph = (a.sum / a.n) * 2.237;
+      spdColorL(mph, _rc);
+      const pts = e.p.map(p => { // probes nest just above the E-ZPass/DOT ribbons
+        if (e.rw === 2) return [p[0], 46.2, p[1]];
+        const ey = e.rw >= 1 ? elevAt(p[0], p[1]) : null; // express buses ride the viaducts
+        return [p[0], ey !== null ? ey + 0.6 : (onLand(p[0], p[1]) ? LAND_Y + 0.5 : 1.9), p[1]];
+      });
+      ribbonQuads(P, C, pts, 5, _rc);
+      const mid = pts[pts.length >> 1];
+      PRB.edges.push({ mph, n: a.ids.size, nm: e.nm || '', mid });
+    }
+    PRB.mesh = swapRibbonMesh(PRB.mesh, P, C, prbMat, 4);
   }
   /* --- 511NY events: one tinted Points layer (cams-pattern glyph) --- */
   const EVMAX = 400;
@@ -6828,9 +6961,9 @@ const rtraffic = (() => {
       .catch(() => { eDelay = Math.min(eDelay * 2, 960); })
       .finally(() => { eBusy = false; ePoll = T + eDelay; });
   }
-  /* --- chips (pool of 4, shared by links + events; events outrank) --- */
+  /* --- chips (pool of 5, shared by all sub-layers; events outrank) --- */
   const chips = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     const el = document.createElement('div');
     el.className = 'fybl traffic';
     document.body.appendChild(el);
@@ -6864,6 +6997,26 @@ const rtraffic = (() => {
         html: '<b>' + (e.kind === 'incident' ? 'Incident' : 'Closure') +
           (e.road ? ' · ' + e.road : '') + '</b><br><span class="sub">' + dsc + '</span>' });
     }
+    for (const L of EZ.shown.links) { // E-ZPass locals: chip declares the published day + hour shown
+      const mph = L.spd[EZ.shown.hh];
+      if (mph == null) continue;
+      const d = _v.set(L.mid[0], L.mid[1], L.mid[2]).distanceTo(camera.position);
+      if (d >= 3600) continue; // local streets: hyper-local chips
+      _v.set(L.mid[0], L.mid[1] + 5, L.mid[2]).project(camera);
+      if (_v.z > 1 || _v.x < -1 || _v.x > 1 || _v.y < -1 || _v.y > 1) continue;
+      near.push({ d, x: L.mid[0], y: L.mid[1] + 5, z: L.mid[2],
+        html: '<b>' + ezLabel(L.name) + '</b><br><span class="sub">' + Math.round(mph) +
+          ' mph · E-ZPass ' + EZ.shown.day.slice(5) + ' · ' + EZ.shown.hh + ':00</span>' });
+    }
+    for (const p of PRB.edges) { // live bus probes: honest about the estimate's origin
+      const d = _v.set(p.mid[0], p.mid[1], p.mid[2]).distanceTo(camera.position);
+      if (d >= 3600) continue;
+      _v.set(p.mid[0], p.mid[1] + 5, p.mid[2]).project(camera);
+      if (_v.z > 1 || _v.x < -1 || _v.x > 1 || _v.y < -1 || _v.y > 1) continue;
+      near.push({ d: d * 1.15, x: p.mid[0], y: p.mid[1] + 5, z: p.mid[2],
+        html: '<b>' + (p.nm ? title(p.nm) : 'Street') + '</b><br><span class="sub">~' +
+          Math.round(p.mph) + ' mph moving · ' + p.n + ' live buses</span>' });
+    }
     near.sort((a, b) => a.d - b.d);
     for (let i = 0; i < chips.length; i++) {
       const ch = chips[i], o = i < near.length ? near[i] : null;
@@ -6876,7 +7029,14 @@ const rtraffic = (() => {
   function update(t, dt) {
     if (!tBusy && t >= tPoll && !HIST.active) pollLinks();
     if (!eBusy && t >= ePoll && !HIST.active) pollEvents();
-    if (!LINKS.length && !EV.length) return;
+    if (!EZ.busy && t >= EZ.poll && !HIST.active) ezPoll();
+    if (HIST.active) ezFetchDay(); // replay path: the published archive IS the recording
+    if (t >= ezCheckT) { ezCheckT = t + 2; ezRebuild(); } // recolor when the viewed hour/day changes
+    if (!HIST.active) {
+      if (t >= PRB.sampleAt) { PRB.sampleAt = t + 5; prbSample(t); }
+      if (t >= PRB.next) { PRB.next = t + 30; prbRebuild(); }
+    }
+    if (!LINKS.length && !EV.length && !EZ.shown.links.length && !PRB.edges.length) return;
     if (t > chipT) { chipT = t + 0.6; assignChips(); }
     for (const ch of chips) { // glue chips to their anchors every frame
       if (!ch.o) continue;
@@ -6894,14 +7054,19 @@ const rtraffic = (() => {
       rebuildRibbons();
       ingestEvents(liveEvents);
       tPoll = 0; ePoll = 0;
+      ezKey = ''; // E-ZPass ribbons snap back to the latest published day
+      PRB.sampleAt = 0; PRB.next = 20; // probe window restarts clean after the frozen tableau
       return;
     }
     histSpd = new Map(spdRows.map(r => [String(r[0]), [r[1], r[2]]]));
     rebuildRibbons();
     ingestEvents(evRows.map(r => ({ id: r[0], kind: r[1], sev: r[2], road: r[3],
       dir: r[4], lat: r[5], lon: r[6], desc: r[7] })));
+    ezKey = ''; // ezRebuild switches to the replayed day once its profile loads (ezFetchDay)
+    PRB.samples.length = 0; PRB.edges.length = 0; // bus probes are live-only: no window in a tableau
+    PRB.mesh = swapRibbonMesh(PRB.mesh, [], [], prbMat, 4);
   }
-  return { update, hist, links: LINKS, events: EV };
+  return { update, hist, links: LINKS, events: EV, ez: EZ, probes: PRB };
 })();
 window.__rtraffic = rtraffic; // dev/testing hook
 
