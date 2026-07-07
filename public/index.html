@@ -6568,7 +6568,7 @@ const birds = (() => {
     }
     for (const b of B) { const bx_ = BOXES.mn; b.x = bx_.x0 + RB() * (bx_.x1 - bx_.x0); b.z = bx_.z0 + RB() * (bx_.z1 - bx_.z0); }
   }
-  let D = null, N = 0, hd = 0, sizeK = 9.6, farK = 6;
+  let D = null, N = 0, hd = 0, sizeK = 4.8, farK = 6;
   const BD = {}; // per-borough flight params derived from that county's radar row
   const yFor = (b) => { // altitude band from the borough's mean/max radar heights (compressed)
     const p = BD[b.bo] || BD.mn;
@@ -6595,7 +6595,7 @@ const birds = (() => {
     // adaptive size: sparse skies keep the hero-scale birds; dense migration nights
     // shrink them toward natural proportions (and cap the far boost) so 600 birds
     // read as a flowing river, not a thicket of overlapping wings
-    sizeK = 9.6 * clamp(Math.sqrt(90 / Math.max(N, 1)), 0.38, 1);
+    sizeK = 4.8 * clamp(Math.sqrt(90 / Math.max(N, 1)), 0.38, 1);
     farK = N > 220 ? 3 : 6;
     // deal skeins/singles to boroughs by each county's share of birds aloft
     const tot = Object.values(BD).reduce((s, p) => s + p.aloft, 0);
