@@ -5246,7 +5246,7 @@ const buses = (() => {
         v.vx = vx; v.vz = vz; v.seen = tNow;
         if (yaw !== null) v.yaw = yaw;
       }
-      v.route = a.route; v.spd = spd;
+      v.route = a.route; v.spd = spd; v.dest = a.dest || '';
     }
   }
   function poll() {
@@ -5304,7 +5304,8 @@ const buses = (() => {
       const ch = bChips[i], v = i < _bNear.length ? _bNear[i] : null;
       ch.v = v;
       if (!v) { if (ch.html) { ch.html = ''; ch.el.style.display = 'none'; } continue; }
-      const html = '<b>' + (v.route || 'Bus') + '</b><br><span class="sub">' +
+      const dst = v.dest && v.dest.length > 26 ? v.dest.slice(0, 25) + '…' : v.dest;
+      const html = '<b>' + (v.route || 'Bus') + (dst ? ' → ' + dst : '') + '</b><br><span class="sub">' +
         (v.spd > 0.4 ? Math.round(v.spd * 2.237) + ' mph' : 'stopped') + ' · ' + v.id.replace(/^[^_]*_/, '') + '</span>';
       if (html !== ch.html) { ch.html = html; ch.el.innerHTML = html; ch.el.style.display = 'block'; } // .fybl base CSS is display:none
     }
