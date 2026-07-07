@@ -106,6 +106,26 @@ local server and Vercel pick it up automatically.
 History: `/api/history` (manifest) + `/api/history/:day` proxy the `data` branch.
 Timeline module in index.html replays snapshots through each module's `hist()`.
 
+## Changelog (CHANGELOG.md)
+
+Every USER-VISIBLE feature you ship gets an entry at the TOP of `CHANGELOG.md`, in the
+same commit or push as the feature. Internal refactors, data bakes, and fixes don't.
+
+Required per entry, in this order:
+1. `## <emoji> Title` — short, user-facing name
+2. `**Shipped:** <Month D, YYYY>` — the date the feature reached production
+3. `**TL;DR:**` — one or two sentences on what it does
+4. `**What you'll see:**` — concrete, observable behavior (numbers, examples of real
+   chip/UI text, keys/buttons). No marketing fluff; if a follow-up commit changes the
+   behavior materially, update the entry rather than appending a correction.
+5. `**How it works:**` — the mechanism in a paragraph, with **links to every external
+   data source** used, and honest caveats (data cadence, confidence flags, what the
+   visualization does and doesn't represent). Credit data providers by name.
+
+Style: match the existing entries — plain prose, concrete examples over adjectives,
+state what a visualization *represents* (see the Birds entry's "radar measurement,
+not tracked individuals" framing — that standard applies to every layer).
+
 ## Working in parallel with another agent
 
 - `public/index.html` is ONE FILE and the other agent edits it too. **Coordinate scope
