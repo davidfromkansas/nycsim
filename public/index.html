@@ -192,6 +192,9 @@
   <button id="timeReset" title="Back to now">now</button>
 </div>
 
+<script>/* module errors surface as unhandled rejections under top-level await */
+addEventListener('unhandledrejection', e => { window.__moduleError = String(e.reason && e.reason.stack || e.reason); console.error('[module]', window.__moduleError); });
+addEventListener('error', e => { window.__moduleError = e.message + ' @ ' + e.filename + ':' + e.lineno; });</script>
 <script type="importmap">
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js",
@@ -477,6 +480,105 @@ const STACKS = [
 ];
 const F_WTOWER = 1, F_HVAC = 2, F_CORNICE = 4, F_FIRESC = 8, F_TALL = 16;
 
+/* ============================================================
+   4b. REAL STREET GRAPH + CITY BLOCKS — the city's spatial skeleton.
+   Baked offline from NYC CSCL centerlines (scratchpad cscl_bake.py /
+   cscl_faces.py): every drivable street as graph edges with names,
+   widths, one-way dirs and topology; city blocks as the graph's
+   interior faces. Fetched here via top-level await (ES module) so
+   ALL generation below builds on real geometry. These indexes are
+   also the future agent-query substrate (edge/node/block ids).
+   ============================================================ */
+const [SG_DATA, BLK_DATA] = await Promise.all([
+  fetch('streets.json').then(r => r.json()),
+  fetch('blocks.json').then(r => r.json())
+]);
+const G_NODES = SG_DATA.nodes, G_EDGES = SG_DATA.edges, G_BLOCKS = BLK_DATA.blocks;
+console.log('[graph]', G_EDGES.length, 'street edges,', G_NODES.length, 'nodes,', G_BLOCKS.length, 'blocks');
+// spatial hash of edges (200 m cells) — map-matching + proximity queries
+const EDGE_HASH = new Map();
+const ehKey = (x, z) => ((x / 200) | 0) * 8192 + ((z / 200) | 0);
+for (let ei = 0; ei < G_EDGES.length; ei++) {
+  const p = G_EDGES[ei].p;
+  for (let i = 0; i < p.length - 1; i++) {
+    const n = Math.ceil(Math.hypot(p[i + 1][0] - p[i][0], p[i + 1][1] - p[i][1]) / 180);
+    for (let k = 0; k <= n; k++) {
+      const x = p[i][0] + (p[i + 1][0] - p[i][0]) * k / n, z = p[i][1] + (p[i + 1][1] - p[i][1]) * k / n;
+      for (let ox = -1; ox <= 1; ox++) for (let oz = -1; oz <= 1; oz++) {
+        const key = ehKey(x + ox * 200, z + oz * 200);
+        let a = EDGE_HASH.get(key); if (!a) { a = []; EDGE_HASH.set(key, a); }
+        if (a[a.length - 1] !== ei) a.push(ei);
+      }
+    }
+  }
+}
+// nearest point on an edge: returns {ei, t (0..1 by length), x, z, d2, segAng}
+function matchStreet(x, z, maxD = 60, wantAng = null) {
+  const cand = EDGE_HASH.get(ehKey(x, z));
+  if (!cand) return null;
+  let best = null, bestScore = maxD * maxD;
+  for (const ei of cand) {
+    const e = G_EDGES[ei], p = e.p;
+    for (let i = 0; i < p.length - 1; i++) {
+      const ax = p[i][0], az = p[i][1], bx = p[i + 1][0], bz = p[i + 1][1];
+      const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1);
+      const px = ax + dx * t, pz = az + dz * t;
+      let d2 = (x - px) * (x - px) + (z - pz) * (z - pz);
+      if (wantAng !== null) { // heading agreement: penalize perpendicular streets
+        let da = Math.abs(((Math.atan2(dz, dx) - wantAng) % Math.PI + Math.PI) % Math.PI);
+        da = Math.min(da, Math.PI - da);
+        d2 *= 1 + da * 1.6;
+      }
+      if (d2 < bestScore) { bestScore = d2; best = { ei, seg: i, t, x: px, z: pz, ang: Math.atan2(dz, dx) }; }
+    }
+  }
+  return best;
+}
+// nearest graph node (intersections) — cameras snap here
+function nearestNode(x, z, maxD = 80) {
+  const cand = EDGE_HASH.get(ehKey(x, z));
+  if (!cand) return -1;
+  let best = -1, bd = maxD * maxD;
+  for (const ei of cand) {
+    for (const n of [G_EDGES[ei].a, G_EDGES[ei].b]) {
+      const N = G_NODES[n];
+      const d = (N[0] - x) * (N[0] - x) + (N[1] - z) * (N[1] - z);
+      if (d < bd) { bd = d; best = n; }
+    }
+  }
+  return best;
+}
+// oriented bounding box of a block polygon: rot = longest edge bearing
+function blockOBB(poly) {
+  let bi = 0, bl2 = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const l2 = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2;
+    if (l2 > bl2) { bl2 = l2; bi = i; }
+  }
+  const a = poly[bi], b = poly[(bi + 1) % poly.length];
+  const rot = Math.atan2(b[1] - a[1], b[0] - a[0]);
+  const ca = Math.cos(-rot), sa = Math.sin(-rot);
+  let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9, cx = 0, cz = 0;
+  for (const p of poly) { cx += p[0]; cz += p[1]; }
+  cx /= poly.length; cz /= poly.length;
+  for (const p of poly) {
+    const u = (p[0] - cx) * ca - (p[1] - cz) * sa, v = (p[0] - cx) * sa + (p[1] - cz) * ca;
+    u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v);
+  }
+  const mu = (u0 + u1) / 2, mv = (v0 + v1) / 2;
+  return { cx: cx + mu * Math.cos(rot) - mv * Math.sin(rot), cz: cz + mu * Math.sin(rot) + mv * Math.cos(rot),
+           w: u1 - u0, l: v1 - v0, rot };
+}
+function polyContains(P, x, z) {
+  let ins = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    if ((P[i][1] > z) !== (P[j][1] > z) && x < (P[j][0] - P[i][0]) * (z - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) ins = !ins;
+  }
+  return ins;
+}
+
 const B = [];            // building records
 const SEG = [];          // street segments for canvas + traffic: {x0,z0,x1,z1,w,kind}
 const cellIndex = new Map(); // "cx,cz" -> [building indices]
@@ -529,13 +631,14 @@ function makeBuilding(cx, cz, w, d, rot, rec, R, opts = {}) {
 }
 
 // ---- fill one block with lots
-function fillBlock(cx, cz, bw, bl, rot, R) {
-  // bw: extent along x(local), bl: along z(local)
+function fillBlock(cx, cz, bw, bl, rot, R, inside = null) {
+  // bw: extent along x(local), bl: along z(local); inside: real block polygon gate
   const rec = recipeAt(cx, cz);
   const cosr = Math.cos(rot), sinr = Math.sin(rot);
   const place = (lx, lz, w, d, opts) => {
     const wx = cx + lx * cosr - lz * sinr;
     const wz = cz + lx * sinr + lz * cosr;
+    if (inside && !inside(wx, wz)) return; // irregular blocks: OBB corners fall outside the face
     makeBuilding(wx, wz, w, d, rot, rec, R, opts);
   };
   const towers = clusterK(cx, cz) > 2.1 && R() < 0.55;
@@ -670,19 +773,33 @@ function genZone(z0, z1, ang, sw, aw, xMin, xMax, seedK, jitter, eastOfBway) {
 }
 
 function generateCity() {
-  genGrid();
-  genSuperblocks();
-  // downtown tangle: angle rotates as the tip tapers
-  genZone(-100, 1500, 0.42, 95, 105, -900, 900, 11, 0.3, undefined);
-  genZone(1500, 2800, 0.18, 100, 120, -950, 1050, 12, 0.22, undefined);
-  // village (west of broadway) + soho
-  genZone(2800, GRID_Z0, -0.24, 95, 150, -1150, 1e4, 13, 0.12, false);
-  // LES between tangle and EV grid, east of broadway
-  genZone(2800, EV_Z0, 0.06, 90, 130, -1e4, 2100, 14, 0.1, true);
-  // canal + other named crossings for the canvas
-  SEG.push({ x0: coastAt(2620).w + 10, z0: 2620, x1: coastAt(2620).e - 10, z1: 2620, w: 24, kind: 'st' });
-  SEG.push({ x0: coastAt(1900).w + 10, z0: 1900, x1: coastAt(1900).e - 10, z1: 1900, w: 20, kind: 'st' });
-  SEG.push({ x0: coastAt(3480).w + 10, z0: 3480, x1: 300, z1: 3480, w: 20, kind: 'st' }); // houston west
+  /* STREET-TRUTH Manhattan: real CSCL edges → SEG (canvas + traffic),
+     real block faces → perimeter-lot fills. genGrid/genZone (the old
+     stylized 1811-grid + lattice generators above) are retired; the
+     district/height/palette model in makeBuilding is untouched — it is
+     position-based and now receives true positions. */
+  let segN = 0, blkN = 0;
+  for (const e of G_EDGES) {
+    if (e.bo !== 1 || e.rw === 4) continue;               // Manhattan only; tunnels undrawn
+    const kind = e.rw >= 1 && e.rw <= 3 && e.w >= 20 ? 'ave' : e.w >= 15 ? 'st' : 'lane';
+    for (let i = 0; i < e.p.length - 1; i++) {
+      const a = e.p[i], b = e.p[i + 1];
+      if (!onLand((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue; // bridges/ramps leaving the island
+      SEG.push({ x0: a[0], z0: a[1], x1: b[0], z1: b[1], w: e.w, kind });
+      segN++;
+    }
+  }
+  for (const blk of G_BLOCKS) {
+    const o = blockOBB(blk.p);
+    if (!onLand(o.cx, o.cz)) continue;                    // Manhattan blocks only (boroughs fill in 19x)
+    if (o.w < 22 || o.l < 22) continue;                   // traffic-island slivers
+    const R = rng(iHash(Math.round(o.cx), Math.round(o.cz)));
+    const bw = Math.min(o.w, 400), bl = Math.min(o.l, 400); // megablock guard (piers/parks)
+    fillBlock(o.cx, o.cz, bw - 14, bl - 14, o.rot, R, (x, z) => polyContains(blk.p, x, z));
+    blkN++;
+  }
+  genSuperblocks(); // towers-in-the-park zones keep their bespoke fills (block fill is gated out by inSuper)
+  console.log('[manhattan] real fabric:', segN, 'street segments,', blkN, 'blocks filled,', B.length, 'buildings');
 }
 generateCity();
 
@@ -1728,90 +1845,9 @@ const midMeshes = [];
       pushBoxG(SG, jx, jz, 1.9, 5 + R() * 6, s, s, R() * 3, [0.15 + R() * 0.06, 0.28 + R() * 0.08, 0.13 + R() * 0.05], R(), -1);
     }
   }
-  // ---- arterials: dark asphalt ribbons over the land
-  for (const [nm, pts] of BK.roads) {
-    if (nm.includes('Bridge')) continue;
-    const wide = /Parkway|Boulevard|Atlantic|Flatbush|Queens/.test(nm) ? 26 : 19;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const a = pts[i], b = pts[i + 1];
-      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
-      if (!bkContains(mx, mz)) continue;
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      if (L < 10) continue;
-      pushBoxG(SG, mx, mz, 1.55, 0.45, L + wide * 0.5, wide, Math.atan2(b[1] - a[1], b[0] - a[0]), [0.16, 0.155, 0.15], 0, -1, [0.16, 0.155, 0.15]);
-    }
-  }
-  // ---- neighborhood block fill at the TRUE grid angles
-  const REC = { //          lot pitch, row pitch, h range,  glass%, palette, extras
-    greenpoint:  { su: 58, sv: 108, h0: 9,  h1: 16, gl: 0.03, pal: 'brick' },
-    wburgN:      { su: 60, sv: 112, h0: 10, h1: 22, gl: 0.10, pal: 'brick', wf: 1.0 },
-    wburgS:      { su: 58, sv: 108, h0: 9,  h1: 18, gl: 0.05, pal: 'brick', wf: 0.6 },
-    bushwick:    { su: 64, sv: 116, h0: 7,  h1: 13, gl: 0.02, pal: 'brick', ind: 0.14 },
-    bedstuy:     { su: 56, sv: 104, h0: 10, h1: 15, gl: 0.01, pal: 'stone' },
-    clintonhill: { su: 56, sv: 104, h0: 10, h1: 16, gl: 0.03, pal: 'stone' },
-    downtown:    { su: 66, sv: 118, h0: 16, h1: 46, gl: 0.45, pal: 'glass', dt: 1 },
-    parkslope:   { su: 56, sv: 102, h0: 11, h1: 16, gl: 0.01, pal: 'stone' },
-    redhook:     { su: 86, sv: 150, h0: 7,  h1: 13, gl: 0.00, pal: 'brick', ind: 0.5, skip: 0.30 },
-    sunsetpark:  { su: 62, sv: 112, h0: 9,  h1: 14, gl: 0.02, pal: 'brick', ind: 0.22 },
-    lic:         { su: 66, sv: 118, h0: 12, h1: 26, gl: 0.30, pal: 'glass', wf: 1.6 },
-    astoria:     { su: 56, sv: 104, h0: 8,  h1: 13, gl: 0.01, pal: 'brick' },
-    gowanus:     { su: 72, sv: 130, h0: 7,  h1: 12, gl: 0.02, pal: 'brick', ind: 0.38 },
-    crownhts:    { su: 56, sv: 106, h0: 10, h1: 15, gl: 0.02, pal: 'stone' },
-    kensington:  { su: 58, sv: 108, h0: 8,  h1: 13, gl: 0.02, pal: 'brick' },
-    bayridge:    { su: 58, sv: 108, h0: 8,  h1: 14, gl: 0.02, pal: 'brick' },
-    ridgewood:   { su: 58, sv: 106, h0: 8,  h1: 13, gl: 0.01, pal: 'brick' }
-  };
-  const hoodNames = Object.keys(BK.hoods);
-  const nearestHood = (x, z) => { let best = null, bd = 1e18;
-    for (const h of hoodNames) { const c = BK.hoods[h].c;
-      const d = (x - c[0]) * (x - c[0]) + (z - c[1]) * (z - c[1]);
-      if (d < bd) { bd = d; best = h; } }
-    return best; };
-  // landmark exclusion zones (filled by bespoke geometry below)
+  // (arterials + hood fills retired: section 19d builds streets and blocks from the REAL graph)
   const M = BK.marks;
-  const excl = [[M.bkTower, 220], [M.wsb, 120], [M.barclays, 170], [M.domino, 260], [M.navyYardDock, 330],
-                [M.onePierrepont, 180], [M.queensPlazaTowers, 260], [M.hunterspointTowers, 300],
-                [M.redHookPier, 260], [M.industryCity, 320]];
-  const inExcl = (x, z) => { for (const [c, r] of excl) { const dx = x - c[0], dz = z - c[1]; if (dx * dx + dz * dz < r * r) return true; } return false; };
   let bkCount = 0;
-  for (const h of hoodNames) {
-    const cfg = REC[h], hd = BK.hoods[h];
-    const ux = hd.u[0], uz = hd.u[1], vx = -uz, vz = ux; // street dir + cross dir
-    for (let t = -4700; t <= 4700; t += cfg.sv) {
-      for (let s = -4700; s <= 4700; s += cfg.su) {
-        const x = hd.c[0] + ux * s + vx * t + (R() - 0.5) * 8;
-        const z = hd.c[1] + uz * s + vz * t + (R() - 0.5) * 8;
-        if (cfg.skip && R() < cfg.skip) continue;
-        if (R() < 0.10) continue; // vacancy
-        // westward probe: the bucket-min shoreline under-measures on diagonal stretches
-        // (Wallabout, the creek mouth) — the whole footprint must be on land
-        if (!bkContains(x, z) || !bkContains(x - 45, z) || !bkContains(x, z + 45) || !bkContains(x, z - 45)) continue;
-        if (nearestHood(x, z) !== h) continue;
-        if (inAnyPark(x, z) || inExcl(x, z) || nearRoad(x, z, 17)) continue;
-        const shore = bkShoreX(z);
-        if (shore !== null && x - shore < 26) continue; // and never west of the sampled shoreline
-        let hgt = cfg.h0 + R() * (cfg.h1 - cfg.h0);
-        let kind = R() < cfg.gl ? 1 : 0;
-        let w = cfg.su * (0.78 + R() * 0.16), d = 20 + R() * 14;
-        // industrial: wide flat windowless sheds
-        if (cfg.ind && R() < cfg.ind) { w = cfg.su * 1.15; d = 34 + R() * 26; hgt = 6.5 + R() * 4.5; kind = -1; }
-        // waterfront boost: new glass towers rise near the river (Williamsburg/LIC skylines)
-        if (cfg.wf && shore !== null) {
-          const dsh = x - shore;
-          if (dsh < 460 && R() < 0.30 * cfg.wf) { hgt = 40 + R() * R() * 110 * cfg.wf; kind = 1; w = 26 + R() * 12; d = 24 + R() * 10; }
-        }
-        // downtown cluster: office tower bump around the Flatbush/DeKalb core
-        if (cfg.dt) { const k = 1 + 5.2 * gauss2(x, z, 2620, 640, 430, 430); hgt = Math.min(hgt * k, 190); if (hgt > 60) kind = 1; }
-        const pal = kind === 1 ? PAL.glass : (cfg.pal === 'stone' ? PAL.stone : PAL.brick);
-        const col = pal[(R() * pal.length) | 0];
-        const fade = 0.80 + R() * 0.3;
-        pushBoxG(SC, x, z, 1.25, hgt, w, d, Math.atan2(uz, ux) + (R() - 0.5) * 0.02,
-          kind === -1 ? [0.52 + R() * 0.1, 0.50 + R() * 0.08, 0.47 + R() * 0.06] : [col[0] * fade, col[1] * fade, col[2] * fade],
-          R(), kind);
-        bkCount++;
-      }
-    }
-  }
   // ---- landmarks (bespoke silhouettes at their true anchors)
   const lm = (c, dx, dz) => [c[0] + dx, c[1] + dz];
   // Brooklyn Tower (9 DeKalb): dark slender hexagonal shaft
@@ -1852,7 +1888,7 @@ const midMeshes = [];
     mesh.matrixAutoUpdate = false;
     scene.add(mesh);
   }
-  console.log('[brooklyn] built', bkCount, 'buildings across', hoodNames.length, 'neighborhoods');
+  console.log('[brooklyn] parks/landmarks layer built (fills live in 19d)');
 }
 
 const NECKLACE = []; // bridge/arch light positions (consumed by section 21's emissive points)
@@ -1927,18 +1963,7 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
       pushBoxG(SG, jx, jz, 1.9, 5 + R() * 6, s, s, R() * 3, [0.15 + R() * 0.06, 0.28 + R() * 0.08, 0.13 + R() * 0.05], R(), -1);
     }
   }
-  // ---- arterials ----
-  for (const [nm, pts] of roads) {
-    const wide = /Boulevard|Concourse|Bruckner|Avenue$/.test(nm) ? 24 : 18;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const a = pts[i], b = pts[i + 1];
-      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
-      if (!owned(mx, mz)) continue;
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      if (L < 10) continue;
-      pushBoxG(SG, mx, mz, 1.55, 0.45, L + wide * 0.5, wide, Math.atan2(b[1] - a[1], b[0] - a[0]), [0.16, 0.155, 0.15], 0, -1, [0.16, 0.155, 0.15]);
-    }
-  }
+  // (arterials retired: real graph ribbons in 19d)
   // ---- hood recipes ----
   const REC = {
     sunnyside:  { su: 58, sv: 106, h0: 8,  h1: 13, gl: 0.02, pal: 'brick' },
@@ -1971,71 +1996,8 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
   const okCell = (x, z) =>
     owned(x, z) && owned(x - 45, z) && owned(x + 45, z) && owned(x, z + 45) && owned(x, z - 45) &&
     !inAnyPark(x, z) && !shoreMargin(x, z);
-  // ---- drawn street grids (the Manhattan-detail upgrade over the BK build):
-  // asphalt ribbons along each hood's true bearing, streets every row pitch and
-  // cross avenues every ~4 lots, clipped to owned land / parks / shore
-  const asph = [0.185, 0.18, 0.175];
-  let streetKm = 0;
-  for (const h of hoodNames) {
-    const cfg = REC[h], hd = QB.hoods[h];
-    const ux = hd.u[0], uz = hd.u[1], vx = -uz, vz = ux;
-    const rot = Math.atan2(uz, ux), rotV = Math.atan2(vz, vx);
-    for (const [du, dvx, dvz, pitch, w, r2] of [
-      [cfg.sv, ux, uz, cfg.sv, 7.5, rot],        // streets: run along u, spaced by sv
-      [cfg.su * 4, vx, vz, cfg.su * 4, 11, rotV] // avenues: run along v, spaced 4 lots
-    ]) {
-      const runDirX = dvx, runDirZ = dvz;
-      for (let t = -3400; t <= 3400; t += pitch) {
-        let run = null;
-        for (let s = -3400; s <= 3400 + 1e-6; s += 60) {
-          // position: t across the run direction
-          const px = du === cfg.sv ? vx : ux, pz = du === cfg.sv ? vz : uz;
-          const x = hd.c[0] + runDirX * s + px * t, z = hd.c[1] + runDirZ * s + pz * t;
-          const ok = s <= 3400 && okCell(x, z) && nearestHood(x, z) === h;
-          if (ok && !run) run = [x, z];
-          else if (!ok && run) {
-            const ex = hd.c[0] + runDirX * (s - 60) + px * t, ez = hd.c[1] + runDirZ * (s - 60) + pz * t;
-            const len = Math.hypot(ex - run[0], ez - run[1]);
-            if (len > 70) {
-              pushBoxG(SG, (run[0] + ex) / 2, (run[1] + ez) / 2, 1.45, 0.35, len, w, r2, asph, 0, -1, asph);
-              streetKm += len / 1000;
-            }
-            run = null;
-          }
-        }
-      }
-    }
-  }
-  // ---- building fill at true bearings ----
-  let qbCount = 0;
-  for (const h of hoodNames) {
-    const cfg = REC[h], hd = QB.hoods[h];
-    const ux = hd.u[0], uz = hd.u[1], vx = -uz, vz = ux;
-    for (let t = -3400; t <= 3400; t += cfg.sv) {
-      for (let s = -3400; s <= 3400; s += cfg.su) {
-        const x = hd.c[0] + ux * s + vx * t + (R() - 0.5) * 8;
-        const z = hd.c[1] + uz * s + vz * t + (R() - 0.5) * 8;
-        if (cfg.skip && R() < cfg.skip) continue;
-        if (R() < 0.10) continue;
-        if (!okCell(x, z)) continue;
-        if (nearestHood(x, z) !== h) continue;
-        if (inExcl(x, z) || nearRoad(x, z, 17)) continue;
-        let hgt = cfg.h0 + R() * (cfg.h1 - cfg.h0);
-        let kind = R() < cfg.gl ? 1 : 0;
-        let w = cfg.su * (0.78 + R() * 0.16), d = 20 + R() * 14;
-        if (cfg.ind && R() < cfg.ind) { w = cfg.su * 1.15; d = 34 + R() * 26; hgt = 6.5 + R() * 4.5; kind = -1; }
-        // towers-in-the-park public housing (South Bronx signature)
-        if (cfg.prj && R() < cfg.prj) { hgt = 42 + R() * 18; w = 26 + R() * 8; d = 24 + R() * 8; kind = 0; }
-        const pal = kind === 1 ? PAL.glass : (cfg.pal === 'stone' ? PAL.stone : PAL.brick);
-        const col = pal[(R() * pal.length) | 0];
-        const fade = 0.80 + R() * 0.3;
-        pushBoxG(SC, x, z, 1.25, hgt, w, d, Math.atan2(uz, ux) + (R() - 0.5) * 0.02,
-          kind === -1 ? [0.52 + R() * 0.1, 0.50 + R() * 0.08, 0.47 + R() * 0.06] : [col[0] * fade, col[1] * fade, col[2] * fade],
-          R(), kind);
-        qbCount++;
-      }
-    }
-  }
+  let streetKm = 0; // (street grids retired: real graph ribbons in 19d)
+  let qbCount = 0; // (hood fills retired: real block fills in 19d)
   // ---- waterfront piers (Manhattan-style, along the real shores) ----
   const pierC = [0.45, 0.42, 0.38];
   for (let z = 10500; z < 11600; z += 260 + R() * 140) { // Hallett's Cove bank (south of here the east channel is too thin for piers)
@@ -2161,6 +2123,138 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
 }
 
 /* ============================================================
+   19d. STREET-TRUTH boroughs — every drivable street as a real
+   ribbon from the CSCL graph, every building placed along the
+   faces of a REAL city block (never crossing a street again).
+   Manhattan is handled in generateCity(); this is everything else.
+   2 draw calls (ribbons + buildings).
+   ============================================================ */
+{
+  const R = rng(iHash(9099, 7));
+  const SGr = Sink();   // street ribbons (flat quads)
+  const SCb = Sink();   // block buildings
+  // parks + landmark exclusions across all boroughs
+  const parks = [...BK.parks, ...QB.QN.parks, ...QB.BX.parks];
+  const parkBB = parks.map(([, P]) => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (const p of P) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); }
+    return [x0 - 12, x1 + 12, z0 - 12, z1 + 12]; });
+  const inParkB = (x, z) => {
+    for (let i = 0; i < parks.length; i++) {
+      const b = parkBB[i];
+      if (x > b[0] && x < b[1] && z > b[2] && z < b[3] && polyContains(parks[i][1], x, z)) return true;
+    } return false; };
+  const excl = [[BK.marks.bkTower, 220], [BK.marks.wsb, 120], [BK.marks.barclays, 170], [BK.marks.domino, 260],
+    [BK.marks.navyYardDock, 330], [BK.marks.onePierrepont, 180], [BK.marks.queensPlazaTowers, 260],
+    [BK.marks.hunterspointTowers, 300], [BK.marks.redHookPier, 260], [BK.marks.industryCity, 320],
+    [QB.lm.yankee, 210], [QB.lm.bxcourt, 130], [QB.lm.hub, 150], [QB.lm.conedA, 280], [QB.lm.steinwayF, 170]];
+  const inExclB = (x, z) => { for (const [c, r] of excl) { const dx = x - c[0], dz = z - c[1]; if (dx * dx + dz * dz < r * r) return true; } return false; };
+  // land test for block content: inside a geo footprint, or on the generic plate east —
+  // but never in the bay, never west of a sampled real shoreline
+  const landB = (x, z) => {
+    if (bayContains(x, z)) return false;
+    if (bkContains(x, z) || bxContains(x, z)) return true;
+    if (qnContains(x, z) && !bkContains(x, z)) return true;
+    if (x > 8600 || z < -8400 || z > 23800) return false;
+    const s = bxShoreX(z) ?? bkShoreX(z) ?? qnShoreX(z);
+    return s === null || x > s + 12;
+  };
+  // ---- ribbons: every non-Manhattan drivable edge (bridges + tunnels excluded) ----
+  let ribKm = 0;
+  const asph = [0.17, 0.165, 0.16];
+  for (const e of G_EDGES) {
+    if (e.bo === 1 || e.rw === 3 || e.rw === 4) continue;
+    const wRib = Math.min(e.w, 32) * (e.rw === 1 ? 0.9 : 1.2);
+    for (let i = 0; i < e.p.length - 1; i++) {
+      const a = e.p[i], b = e.p[i + 1];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L < 6) continue;
+      if (!landB((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)) continue;
+      const nx = -(b[1] - a[1]) / L * wRib / 2, nz = (b[0] - a[0]) / L * wRib / 2;
+      sinkQuad(SGr, a[0] + nx, 1.45, a[1] + nz, a[0] - nx, 1.45, a[1] - nz,
+               b[0] - nx, 1.45, b[1] - nz, b[0] + nx, 1.45, b[1] + nz, 0, 1, 0, asph, 0, -1);
+      ribKm += L / 1000;
+    }
+  }
+  // ---- block fills: merged buildings along each real block face ----
+  const RECB = { // h0,h1, glass%, palette, extras — distilled from the 19b/19c hood recipes
+    greenpoint: [9, 16, .03, 'brick'], wburgN: [10, 22, .10, 'brick', 'wf'], wburgS: [9, 18, .05, 'brick', 'wf'],
+    bushwick: [7, 13, .02, 'brick'], bedstuy: [10, 15, .01, 'stone'], clintonhill: [10, 16, .03, 'stone'],
+    downtown: [16, 46, .45, 'glass', 'dt'], parkslope: [11, 16, .01, 'stone'], redhook: [7, 13, 0, 'brick', 'ind'],
+    sunsetpark: [9, 14, .02, 'brick'], lic: [12, 26, .30, 'glass', 'wf'], astoria: [8, 13, .01, 'brick'],
+    gowanus: [7, 12, .02, 'brick', 'ind'], crownhts: [10, 15, .02, 'stone'], kensington: [8, 13, .02, 'brick'],
+    bayridge: [8, 14, .02, 'brick'], ridgewood: [8, 13, .01, 'brick'],
+    sunnyside: [8, 13, .02, 'brick'], woodside: [8, 13, .01, 'brick'], ditmars: [8, 12, .01, 'brick'],
+    steinway: [8, 13, .02, 'brick', 'ind'], jacksonhts: [13, 20, .02, 'stone'],
+    motthaven: [9, 15, .02, 'brick'], portmorris: [7, 12, 0, 'brick', 'ind'], melrose: [10, 17, .02, 'brick'],
+    concourse: [16, 26, .03, 'stone'], highbridge: [12, 20, .02, 'brick'], morrisania: [9, 15, .01, 'brick'],
+    huntspoint: [7, 12, 0, 'brick', 'ind'], generic: [8, 18, .03, 'brick']
+  };
+  const HOODC = [];
+  for (const [h, d] of Object.entries(BK.hoods)) HOODC.push([h, d.c]);
+  for (const [h, d] of Object.entries(QB.hoods)) HOODC.push([h, d.c]);
+  const recipeB = (x, z) => {
+    let best = 'generic', bd = 3400 * 3400;
+    for (const [h, c] of HOODC) {
+      const d = (x - c[0]) * (x - c[0]) + (z - c[1]) * (z - c[1]);
+      if (d < bd) { bd = d; best = h; }
+    }
+    return RECB[best] || RECB.generic;
+  };
+  let blkB = 0, blkN = 0;
+  for (const blk of G_BLOCKS) {
+    const o = blockOBB(blk.p);
+    if (onLand(o.cx, o.cz)) continue;                     // Manhattan handled in generateCity
+    if (!landB(o.cx, o.cz)) continue;
+    if (blk.a < 1500 || o.w < 24 || o.l < 24) continue;   // traffic islands
+    const rec = recipeB(o.cx, o.cz);
+    const [h0, h1, gl, palN, extra] = rec;
+    blkN++;
+    const P = blk.p;
+    for (let i = 0; i < P.length; i++) {
+      const a = P[i], b = P[(i + 1) % P.length];
+      const fl = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (fl < 30) continue;
+      const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      const nx = -(b[1] - a[1]) / fl, nz = (b[0] - a[0]) / fl; // CCW ring: interior is left
+      let s = 9;
+      while (s < fl - 22) {
+        const piece = Math.min(56 + R() * 78, fl - 9 - s);
+        if (piece < 24) break;
+        const depth = 15 + R() * 9;
+        const midS = s + piece / 2;
+        const cx2 = a[0] + (b[0] - a[0]) * midS / fl + nx * (depth / 2 + 3.5);
+        const cz2 = a[1] + (b[1] - a[1]) * midS / fl + nz * (depth / 2 + 3.5);
+        s += piece + 2;
+        if (R() < 0.12) continue;                          // vacancy
+        if (!polyContains(P, cx2, cz2)) continue;          // concave corners
+        if (inParkB(cx2, cz2) || inExclB(cx2, cz2) || !landB(cx2, cz2)) continue;
+        let hgt = h0 + R() * (h1 - h0), kind = R() < gl ? 1 : 0, w = piece - 3, d = depth;
+        if (extra === 'ind' && R() < 0.5) { hgt = 6.5 + R() * 4.5; kind = -1; d = depth + 10; }
+        if (extra === 'wf') { const sh = bkShoreX(cz2) ?? qnShoreX(cz2);
+          if (sh !== null && cx2 - sh < 460 && R() < 0.3) { hgt = 40 + R() * R() * 130; kind = 1; w = 26 + R() * 12; d = 24 + R() * 10; } }
+        if (extra === 'dt') { const k = 1 + 5.2 * gauss2(cx2, cz2, 2620, 640, 430, 430); hgt = Math.min(hgt * k, 190); if (hgt > 60) kind = 1; }
+        const pal = kind === 1 ? PAL.glass : (palN === 'stone' ? PAL.stone : PAL.brick);
+        const col = pal[(R() * pal.length) | 0];
+        const fade = 0.80 + R() * 0.3;
+        pushBoxG(SCb, cx2, cz2, 1.25, hgt, w, d, ang,
+          kind === -1 ? [0.52 + R() * 0.1, 0.50 + R() * 0.08, 0.47 + R() * 0.06] : [col[0] * fade, col[1] * fade, col[2] * fade],
+          R(), kind);
+        blkB++;
+      }
+    }
+  }
+  const ribMat = patchClouds(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }), true);
+  const blkMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 0);
+  for (const [s, m] of [[SGr, ribMat], [SCb, blkMat]]) {
+    const mesh = new THREE.Mesh(sinkToGeometry(s), m);
+    mesh.matrixAutoUpdate = false;
+    scene.add(mesh);
+  }
+  console.log('[street-truth]', ribKm.toFixed(0), 'km real streets,', blkN, 'blocks,', blkB, 'buildings');
+}
+
+/* ============================================================
    20. Boroughs — honest low fill fading into haze (always on)
    ============================================================ */
 {
@@ -2193,24 +2287,8 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
   const SJ = Sink();
   fillRegion(SJ, 21, -3000, 21000, z => coastAt(clamp(z, 0, 21000)).w - hudsonW(clamp(z, 0, 21000)) - 60, 2400, -1, 0.07,
     [[-2350, 800, 300, 420, 11], [-2250, 2100, 260, 320, 5], [-2150, 4200, 500, 900, 1.2]]);
-  // Brooklyn / Queens — generic filler only OUTSIDE the geo-first build footprint
-  const SB = Sink();
-  fillRegion(SB, 22, -2300, 15200, z => coastAt(clamp(z, 0, 13600)).e + eastW(clamp(z, 0, 13600)) + 60, 5400, 1, -0.05,
-    [[2350, 1150, 340, 380, 8], [2150, 3800, 260, 420, 2.4], [2500, 8300, 320, 380, 6]],
-    120, 95, (x, z) => { // skip inside ANY geo-first footprint, river strips, and the bay
-      if (bkContains(x, z) || qnContains(x, z) || bxContains(x, z) || bayContains(x, z)) return true;
-      const bs = bkShoreX(z), qs = qnShoreX(z);
-      return (bs !== null && x < bs + 20) || (qs !== null && x < qs + 20);
-    });
-  // Bronx — generic filler only beyond the geo-first South Bronx build
-  const SX = Sink();
-  fillRegion(SX, 23, 15500, 23600, z => (z > 21520 ? -1100 : coastAt(Math.min(z, 21400)).e + 220), 3400, 1, 0.1,
-    [[900, 16900, 500, 600, 1.4]],
-    120, 95, (x, z) => {
-      if (bxContains(x, z)) return true;
-      const bs = bxShoreX(z);
-      return bs !== null && x < bs + 20;
-    });
+  // (Brooklyn/Queens/Bronx generic fillers retired: 19d fills REAL blocks everywhere)
+  const SB = Sink(), SX = Sink();
   // (Yankee Stadium + Roosevelt Island now built for real in section 19c)
   for (const s of [SJ, SB, SX]) {
     const m = new THREE.Mesh(sinkToGeometry(s), boroughMat);
