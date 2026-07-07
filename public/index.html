@@ -5380,7 +5380,11 @@ const buses = (() => {
     _bpart(new THREE.BoxGeometry(3.1, 3.0, 13.5).translate(0, 2.0, 0), 0.93, 0.94, 0.95),  // body
     _bpart(new THREE.BoxGeometry(3.2, 0.9, 13.6).translate(0, 0.9, 0), 0.05, 0.32, 0.65),  // blue skirt
     _bpart(new THREE.BoxGeometry(3.15, 0.9, 12.2).translate(0, 2.9, 0), 0.14, 0.16, 0.2),  // windows
-    _bpart(new THREE.BoxGeometry(2.6, 0.25, 12.4).translate(0, 3.65, 0), 0.6, 0.62, 0.64)  // roof units
+    _bpart(new THREE.BoxGeometry(2.6, 0.25, 12.4).translate(0, 3.65, 0), 0.6, 0.62, 0.64),  // roof units
+    _bpart(new THREE.BoxGeometry(3.0, 1.3, 0.25).translate(0, 2.75, 6.75), 0.08, 0.10, 0.14), // windshield (+z = forward)
+    _bpart(new THREE.BoxGeometry(2.9, 0.5, 0.2).translate(0, 3.6, 6.72), 0.95, 0.75, 0.15),   // amber route sign, front
+    _bpart(new THREE.BoxGeometry(2.9, 0.35, 0.2).translate(0, 0.9, 6.75), 0.92, 0.92, 0.85),  // headlight strip
+    _bpart(new THREE.BoxGeometry(2.9, 0.35, 0.2).translate(0, 0.9, -6.75), 0.75, 0.12, 0.10)  // tail lights, rear
   ]);
   const busMesh = new THREE.InstancedMesh(busGeo, new THREE.MeshLambertMaterial({
     vertexColors: true, emissive: 0xaab6c8, emissiveIntensity: 0.18 }), BN);
@@ -5511,9 +5515,19 @@ const buses = (() => {
         if (bFollow === v) bFollow = null;
         continue;
       }
+      const px = v.pos.x, pz = v.pos.z;
       v.tgt.x += v.vx * dt; v.tgt.z += v.vz * dt;
       v.pos.x += v.vx * dt; v.pos.z += v.vz * dt;
       v.pos.lerp(v.tgt, 1 - Math.exp(-dt * 0.8));
+      // face the direction we're ACTUALLY moving (dead-reckon + correction easing can
+      // slide a bus off its reported bearing); smooth-turn via shortest angle
+      const ddx = v.pos.x - px, ddz = v.pos.z - pz;
+      if (ddx * ddx + ddz * ddz > (1.2 * dt) * (1.2 * dt)) {
+        const want = Math.atan2(ddx, ddz);
+        let da = want - (v.yaw || 0);
+        da = ((da + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+        v.yaw = (v.yaw || 0) + da * (1 - Math.exp(-dt * 5));
+      }
       _bQ.setFromAxisAngle(_bUp, v.yaw || 0);
       _bS.setScalar(2.2 * clamp(v.pos.distanceTo(camera.position) / 2200, 1, 4.5));
       _bM.compose(v.pos, _bQ, _bS);
