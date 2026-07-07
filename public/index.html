@@ -139,6 +139,13 @@
   .fybl.bike b { color:#4fd6ff; }
   .fybl.birdf { border-color:rgba(150,200,255,.35); } /* flock chips: radar-sky accent */
   .fybl.birdf b { color:#a8d4ff; }
+  /* focus mode: one dialogue at a time — everything but the weather chip and the
+     concierge steps back until the user clicks anywhere / presses Esc */
+  body.focusmode #ui, body.focusmode #hint, body.focusmode #flyhint, body.focusmode #scrub,
+  body.focusmode #lockbtn, body.focusmode #camview,
+  body.focusmode .fybl:not(#focusChip), body.focusmode .flbl { display:none !important; }
+  #focusChip { display:none; border-color:rgba(255,255,255,.4); z-index:30; }
+  #focusChip .off { color:rgba(255,255,255,.4); }
   .fybl.traffic { border-color:rgba(255,130,95,.4); } /* traffic chips: incident ember accent */
   .fybl.traffic b { color:#ff8a66; }
   .flbl b { color:#fff; font-weight:600; }
@@ -4408,6 +4415,48 @@ const BIRDS = { aloft: 0, night: false, passed: 0, pct: null };
 const FOCUS = { kind: '', label: '', data: null, at: 0 };
 function setFocus(kind, label, data) { FOCUS.kind = kind; FOCUS.label = label; FOCUS.data = data; FOCUS.at = Date.now(); }
 window.__focus = FOCUS; // dev/testing hook
+// ---- focus mode: clicking a dialogue hides all other dialogues until release ----
+// One pinned #focusChip tracks the chosen entity; body.focusmode CSS hides the rest
+// (weather chip + concierge stay). Release: click anywhere on the scene, scroll,
+// press Esc, or click the pinned chip. The traffic-camera viewer is deliberately
+// NOT wired into this (it has its own window). setFocus (agent context) is separate
+// and survives release.
+const focusui = (() => {
+  const el = document.createElement('div');
+  el.id = 'focusChip';
+  el.className = 'fybl';
+  document.body.appendChild(el);
+  const _v = new THREE.Vector3();
+  let getter = null;
+  function enter(get, html) {
+    getter = get;
+    el.innerHTML = html + '<br><span class="sub off">click anywhere or Esc to release</span>';
+    el.style.display = 'block';
+    document.body.classList.add('focusmode');
+  }
+  function exit() {
+    if (!getter) return;
+    getter = null;
+    el.style.display = 'none';
+    document.body.classList.remove('focusmode');
+  }
+  el.addEventListener('click', exit);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') exit(); });
+  renderer.domElement.addEventListener('pointerdown', exit);
+  renderer.domElement.addEventListener('wheel', exit, { passive: true });
+  function tick() { // glued to the entity every frame (called from the main loop)
+    if (!getter) return;
+    const p = getter();
+    if (!p) { exit(); return; } // entity left the scene
+    _v.set(p[0], p[1], p[2]).project(camera);
+    if (_v.z > 1) { el.style.opacity = '0'; return; }
+    el.style.opacity = '1';
+    const sx = (0.5 - _v.x * 0.5) * innerWidth, sy = (-_v.y * 0.5 + 0.5) * innerHeight; // x mirrored with the canvas
+    el.style.transform = 'translate(' + sx.toFixed(1) + 'px,' + sy.toFixed(1) + 'px) translate(-50%,-130%)';
+  }
+  return { enter, exit, tick };
+})();
+window.__focusui = focusui; // dev/testing hook
 const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][Math.min(n % 10, 4)] || 'th');
 const live = (() => {
   const FAKE = { time: null, weather: null };
@@ -5012,6 +5061,8 @@ const flights = (() => {
     setFocus('aircraft (live ADS-B)', p.cs + (p.route ? ' · ' + p.route : ''),
       { callsign: p.cs, type: p.type, route: p.route || null,
         alt_ft: Math.max(0, Math.round(p.pos.y / FT)), speed_kt: Math.round(p.spd / KT) });
+    focusui.enter(() => planes.has(p.hex) ? [p.pos.x, dispY(p.pos.y), p.pos.z] : null,
+      '<b>' + p.cs + '</b>' + (p.route ? ' · ' + p.route : p.type ? ' · ' + p.type : ''));
     follow = p;
     const sp = Math.max(1, Math.hypot(p.v.x, p.v.z));
     const bx = -p.v.x / sp, bz = -p.v.z / sp; // unit "behind" direction
@@ -5463,6 +5514,8 @@ const subway = (() => {
   function flyToBeacon(tr) {
     setFocus('subway train (live GTFS-rt)', tr.route + ' ' + (tr.dir || '') + (tr.dest ? ' → ' + tr.dest : ''),
       { route: tr.route, direction: tr.dir, destination: tr.dest, next_stop: tr.next || null });
+    focusui.enter(() => trips.get(tr.tid) === tr ? [tr.px, 70, tr.pz] : null,
+      '<b>' + tr.route + ' · ' + (tr.dir || '') + '</b>' + (tr.dest ? ' → ' + tr.dest : ''));
     follow = tr;
     followPrev.set(tr.px, 0, tr.pz);
     followOff.copy(camera.position).sub(followPrev); // approach from the camera's current bearing
@@ -5760,6 +5813,8 @@ const ferries = (() => {
     setFocus('NYC Ferry (live GPS)', v.route ? v.route + ' → ' + (v.headsign || '') : (v.label || 'ferry'),
       { vessel: v.label, route: v.route, headsign: v.headsign, next_stop: v.next,
         eta_min: v.eta, docked: !!v.docked, speed_kt: Math.round((v.spd || 0) * 1.944) });
+    focusui.enter(() => vessels.get(v.id) === v ? [v.pos.x, 30, v.pos.z] : null,
+      '<b>' + (v.route ? v.route + ' → ' + (v.headsign || '') : (v.label || 'Ferry')) + '</b>');
     fyFollow = v;
     fyFollowPrev.copy(v.pos);
     fyFollowOff.copy(camera.position).sub(v.pos); fyFollowOff.y = 0;
@@ -6099,6 +6154,8 @@ const buses = (() => {
   function flyToBus(v) {
     setFocus('MTA bus (live GPS)', (v.route || 'bus') + (v.dest ? ' → ' + v.dest : ''),
       { route: v.route, destination: v.dest, street: v.street, speed_mph: Math.round((v.spd || 0) * 2.237) });
+    focusui.enter(() => fleet.get(v.id) === v ? [v.pos.x, 20, v.pos.z] : null,
+      '<b>' + (v.route || 'Bus') + (v.dest ? ' → ' + v.dest : '') + '</b>');
     bFollow = v;
     bFollowPrev.copy(v.pos);
     bFollowOff.copy(camera.position).sub(v.pos); bFollowOff.y = 0;
@@ -6386,7 +6443,17 @@ const citibike = (() => {
     const el = document.createElement('div');
     el.className = 'fybl bike';
     document.body.appendChild(el);
-    chips.push({ el, st: null, html: '' });
+    const ch = { el, st: null, html: '' };
+    el.addEventListener('click', () => { // stations don't move: focus + a gentle dive
+      const st = ch.st; if (!st) return;
+      setFocus('Citi Bike station (live GBFS)', st.name,
+        { station: st.name, bikes: st.bikes, ebikes: st.ebikes, docks_free: st.docks, active: !!st.on });
+      focusui.enter(() => [st.x, 15, st.z], '<b>' + st.name + '</b><br><span class="sub">' +
+        (st.on ? st.bikes + ' bikes (' + st.ebikes + ' e) · ' + st.docks + ' docks' : 'offline') + '</span>');
+      camTween = { p0: camera.position.clone(), t0: controls.target.clone(),
+        p1: new THREE.Vector3(st.x + 150, 130, st.z - 280), t1: new THREE.Vector3(st.x, 8, st.z), t: 0, dur: 1.6 };
+    });
+    chips.push(ch);
   }
   let chipT = 0;
   const near = [];
@@ -6682,6 +6749,7 @@ const birds = (() => {
       heading_deg_toward: Math.round(s.dirDeg || 0), speed_ms: Math.round((s.speedMs || 0) * 10) / 10,
       mean_height_m: Math.round(s.hMeanM || 0), max_height_m: Math.round(s.hMaxM || 0),
       crossed_since_reset: Math.round(s.passed || 0), low_confidence: lowConf, rendered_birds_in_borough: NB[b.bo] || 0 });
+    focusui.enter(() => [b.x, b.y + 16, b.z], chipHTML(b));
     bfFollow = b;
     bfPrev.set(b.x, b.y, b.z);
     const P = BD[b.bo] || BD.mn;
@@ -7150,7 +7218,13 @@ const rtraffic = (() => {
     const el = document.createElement('div');
     el.className = 'fybl traffic';
     document.body.appendChild(el);
-    chips.push({ el, o: null, html: '' });
+    const ch = { el, o: null, html: '' };
+    el.addEventListener('click', () => { // static reading: focus-pin it where it stands
+      const o = ch.o; if (!o) return;
+      setFocus('traffic reading (DOT/511NY)', el.textContent.slice(0, 90), { detail: el.textContent.slice(0, 220) });
+      focusui.enter(() => [o.x, o.y, o.z], o.html);
+    });
+    chips.push(ch);
   }
   const _v = new THREE.Vector3();
   const near = [];
@@ -7340,6 +7414,8 @@ const concierge = (() => {
       el.className = 'fybl';
       document.body.appendChild(el);
       el.addEventListener('click', () => { const o = lbl[i].o; if (!o) return;
+        setFocus('map layer pin (concierge)', el.textContent.slice(0, 80), { label: el.textContent.slice(0, 160) });
+        focusui.enter(() => [o.x, 40, o.z], '<b>' + el.textContent.slice(0, 80) + '</b>');
         camTween = { p0: camera.position.clone(), t0: controls.target.clone(),
           p1: new THREE.Vector3(o.x + 80, 330, o.z - 360), t1: new THREE.Vector3(o.x, 0, o.z), t: 0, dur: 1.7 }; });
       lbl.push({ el, o: null });
@@ -7575,6 +7651,7 @@ function frame() {
   steam.tick(_focus, camY);
   flags.tick(dt, _focus, camY);
   concierge.tick(); // agent-layer label chips track their pins
+  focusui.tick();    // the pinned focus dialogue tracks its entity
   renderer.render(scene, camera);
   precipOverlay.render(); // screen-space rain/snow veil, drawn on top
   fpsN++; fpsT += dt;
