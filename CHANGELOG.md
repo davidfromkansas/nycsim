@@ -27,13 +27,20 @@ what you're following so questions like "what am I looking at?" answer themselve
 - Ask the concierge "what am I following?" after any click and it answers with the
   exact entity and its live numbers — for up to 15 minutes after the click, even after
   you've released the visual focus.
+- The concierge also knows the borough and neighborhood the clicked thing is *in* — and
+  keeps it correct as the entity moves. Click a bus in Brooklyn while the camera sits
+  over Manhattan and "what neighborhood is this bus in?" answers "Williamsburg, Brooklyn"
+  — the entity's real location, not the camera's.
 
 **How it works:** every dialogue click records a focus snapshot (kind, label, and the
-entity's current data — e.g. a flock's radar estimate or a bus's route/street/speed).
-The snapshot rides along invisibly with each concierge request, where the server
-sanitizes it and appends a "user is following: …" line to the model's context. The
-visual side is a single tracked overlay chip plus a body-level CSS state that hides
-everything else; releasing the focus never discards the agent context.
+entity's current data — e.g. a flock's radar estimate or a bus's route/street/speed),
+plus a live handle on the entity's position. The snapshot rides along invisibly with
+each concierge request, where the server sanitizes it and appends a "user is following:
+… — currently in <neighborhood>, <borough>" line to the model's context; the region is
+recomputed from the entity's own position each turn (point-in-polygon against the
+boundary set), so it tracks a moving vehicle. The visual side is a single tracked
+overlay chip plus a body-level CSS state that hides everything else; releasing the focus
+never discards the agent context.
 
 ---
 

@@ -4412,8 +4412,11 @@ const HIST = { active: false, day: '', epochS: 0, liveWx: null };
 const BIRDS = { aloft: 0, night: false, passed: 0, pct: null };
 // what the user last clicked/followed in the scene — appended to concierge requests
 // so "what am I following?" just works. Every chip/ride-along click calls setFocus.
-const FOCUS = { kind: '', label: '', data: null, at: 0 };
-function setFocus(kind, label, data) { FOCUS.kind = kind; FOCUS.label = label; FOCUS.data = data; FOCUS.at = Date.now(); }
+// posGet: a live getter returning the entity's scene position [x,y,z] (or null when it
+// leaves) — lets the concierge report the borough/neighborhood the CLICKED thing is in,
+// tracked as it moves. focusui.enter supplies it for most entities; others pass it here.
+const FOCUS = { kind: '', label: '', data: null, at: 0, posGet: null };
+function setFocus(kind, label, data, posGet) { FOCUS.kind = kind; FOCUS.label = label; FOCUS.data = data; FOCUS.at = Date.now(); FOCUS.posGet = posGet || null; }
 window.__focus = FOCUS; // dev/testing hook
 // ---- focus mode: clicking a dialogue hides all other dialogues until release ----
 // One pinned #focusChip tracks the chosen entity; body.focusmode CSS hides the rest
@@ -4430,6 +4433,7 @@ const focusui = (() => {
   let getter = null;
   function enter(get, html) {
     getter = get;
+    FOCUS.posGet = get; // the concierge reads this to name the entity's borough/neighborhood
     el.innerHTML = html + '<br><span class="sub off">click anywhere or Esc to release</span>';
     el.style.display = 'block';
     document.body.classList.add('focusmode');
@@ -6000,7 +6004,8 @@ const cams = (() => {
       (HIST.active ? ' · cameras are live-only — this is now' : '');
   }
   function open(cm) {
-    setFocus('traffic camera (live feed)', cm.name + (cm.area ? ' · ' + cm.area : ''), { name: cm.name, area: cm.area });
+    setFocus('traffic camera (live feed)', cm.name + (cm.area ? ' · ' + cm.area : ''), { name: cm.name, area: cm.area },
+      () => { const g = subway.geoRaw(cm.lat, cm.lon); return [g.x, 0, g.z]; }); // cams skip focusui.enter → pass the getter directly
     active = cm;
     title();
     vImg.removeAttribute('src');
@@ -7641,6 +7646,9 @@ const concierge = (() => {
     if (FOCUS.at && Date.now() - FOCUS.at < 900_000) { // clicked within the last 15 min
       ctx.focus_kind = FOCUS.kind; ctx.focus_label = FOCUS.label;
       ctx.focus_age_s = Math.round((Date.now() - FOCUS.at) / 1000); ctx.focus_data = FOCUS.data;
+      const fp = FOCUS.posGet && FOCUS.posGet(); // the clicked entity's OWN live position → its region
+      if (fp) { const fr = regionIndex.at(fp[0], fp[2]);
+        if (fr) { ctx.focus_neighborhood = fr.neighborhood; ctx.focus_borough = fr.borough; } }
     }
     return ctx;
   }
