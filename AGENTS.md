@@ -32,6 +32,8 @@ city state; a timeline slider scrubs the city back through the last 7 days.
 | `api/record.js` | Nightly snapshot cron (05:05 UTC): fetches own APIs, commits to `data` branch via GitHub API |
 | `lib/agent-core.js` | "City Concierge" LLM agent: read-only tools (live feeds w/ near/sort filters, buildings + street-graph queries in scene meters, history, buffer reports) + validated intents (camera, map layers, timeline scrub). Raw-fetch to Vercel AI Gateway (Anthropic-compat), per-IP rate limits. Chat UI + layer renderer = index.html §26d. Substrate JSONs lazy-load from disk locally / self-fetch of the deployed static files on Vercel. |
 | `api/agent.js` | Vercel function for POST `/api/agent` → `handleAgent` (server.js mirrors it locally) |
+| `lib/agent-log.js` | First-party Concierge usage logging → one immutable JSON blob per turn in the private `agent-logs` Vercel Blob store (raw Blob REST via fetch, zero-dep). Best-effort/time-boxed: never blocks or breaks a reply. |
+| `lib/agent-log-view.js` + `api/agent-log.js` | GET `/api/agent-log` — private usage viewer/aggregator, gated by `AGENT_LOG_KEY` (inert 404 until set). `?stats=1`, `?day=`, `?full=1`. |
 | `scripts/record.mjs` | Manual/local recorder (same frame format) |
 | `public/streets.json` | Real street graph: 86,471 CSCL edges + 57,450 nodes (see schema below) |
 | `public/blocks.json` | 27,257 real city-block faces |
@@ -47,7 +49,10 @@ node server.js            # http://localhost:4173 — that's it, no install
   `gh-data-token.json` (history playback reads the private data branch),
   `ai-gateway-key.json` or `.env.local` via `vercel env pull` (concierge agent LLM;
   on Vercel deployments the OIDC token is automatic — enable AI Gateway on the project).
-  Missing keys degrade gracefully (empty feeds; agent replies 503), nothing crashes.
+  `BLOB_READ_WRITE_TOKEN` (Concierge usage logging → private `agent-logs` Blob store;
+  auto-provisioned on the project, in `.env.local` after a pull) and `AGENT_LOG_KEY`
+  (gate for `/api/agent-log`).
+  Missing keys degrade gracefully (empty feeds; agent replies 503; logging no-ops), nothing crashes.
   **NEVER log, commit, or echo these values.**
 - Syntax-check server code before pushing: `node -e "require('./lib/api-core.js')"`.
 - Client testing hooks (browser console):
