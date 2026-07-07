@@ -37,6 +37,49 @@ everything else; releasing the focus never discards the agent context.
 
 ---
 
+## ✦ City Concierge — a spatial-intelligence agent for the twin
+
+**Shipped:** July 7, 2026
+
+**TL;DR:** A chat agent (✦ button, bottom-right) that answers questions from the twin's
+own live data, flies the camera anywhere on request, draws query results directly on the
+3D map as pins/rings/highlighted streets, and can rewind the whole city through the
+7-day archive.
+
+**What you'll see:**
+- A ✦ button bottom-right opens the chat; the ⓘ button lists ~20 tap-to-try examples in
+  seven groups (live questions, camera flights, map layers, spatial search, buffers,
+  buildings/streets, time travel).
+- "Zoom in on Times Square" flies there; "street level at the Brooklyn Bridge, looking
+  at Manhattan" lands a low camera aimed the right way.
+- "Map the 5 slowest roads in Manhattan" drops labeled pins ("FDR N 25th–63rd St ·
+  15.5 mph") and auto-frames them; "highlight Broadway end to end" draws all ~400 street
+  segments; "ring every closure with a 250 m buffer" adds circles. A "✕ layer" chip in
+  the panel header clears the drawing; clicking a pin's label dives to it.
+- "Tallest building near Wall St & Broad St" answers from the real footprint data
+  (325 m) and pins it; "how many bike docks within 300 m of each East River ferry?"
+  returns per-stop counts.
+- "Show me the city 3 days ago" scrubs the timeline; "back to live" returns.
+- After clicking any chip in the scene, "tell me about this bus/train/boat" just works
+  (focus context, see the Focus Mode entry).
+
+**How it works:** the browser sends the conversation to `/api/agent`, where a
+tool-using LLM (Anthropic Claude via [Vercel AI Gateway](https://vercel.com/docs/ai-gateway))
+runs read-only queries against the twin's own cached feeds (the same flights/subway/
+ferries/buses/Citi Bike/traffic/weather/BirdCast data the scene renders, each credited
+in its own entry), the baked NYC street graph (86k drivable [CSCL](https://data.cityofnewyork.us/City-Government/NYC-Street-Centerline-CSCL-/exjm-f27b)
+segments) and [building footprints](https://data.cityofnewyork.us/City-Government/Building-Footprints/5zhs-2jue)
+(305k boxes with real heights), plus the recorded daily snapshots. The model never
+touches the scene: it returns validated *intents* — camera target, map layers, timeline
+scrub — that the browser applies. Honest caveats: answers come only from the data above
+(no web knowledge about businesses or events); individual monuments aren't modeled, so
+the camera shows the real massing of the area instead; time travel snaps to one
+snapshot per day (~1 am ET); street questions use the drivable network, so pedestrian
+plazas (e.g. Broadway through Times Square) are genuinely absent; usage is rate-limited
+per visitor (8 messages/min, 60/day) to bound costs.
+
+---
+
 ## 🐦 Live bird migration (BirdCast radar), citywide
 
 **Shipped:** July 7, 2026
