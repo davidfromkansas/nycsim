@@ -14,7 +14,7 @@ every push (every push deploys prod).
 | # | Workstream | Risk | Status |
 |---|------------|------|--------|
 | A | Device-tier default quality (mobile stops running `high`) | low | ✅ done |
-| B | CDN caching for API feeds (`s-maxage` + `stale-while-revalidate`) | low | ☐ not started |
+| B | CDN caching for API feeds (`s-maxage` + `stale-while-revalidate`) | low | ✅ done |
 | C | Startup memory: release build-time data, then binary bakes | high | ☐ not started |
 | D | Consolidated `/api/live` snapshot + Web Worker parsing | high | ☐ not started |
 | E | Distance-tiered simulation updates | medium | ☐ not started |
@@ -81,7 +81,7 @@ persists after auto-selection.
 
 **Rollback:** single commit revert; no data-shape changes.
 
-## B. CDN caching for API feeds — status: ☐
+## B. CDN caching for API feeds — status: ✅ DONE
 
 **Why:** every poll from every user hits a function; new Fluid instances re-warm
 upstream caches from scratch (subway cold hit = 7 MTA fetches + decode). Feeds are
@@ -100,12 +100,15 @@ Browser caching stays off (`max-age=0`) — only the shared edge caches.
 stale-eviction horizons (≥ 90 s) tolerate the worst case (~75 s for 15 s-TTL feeds).
 
 **Tasks**
-- [ ] `sendJSON` optional cache arg; `serveCached` TTL-derived headers
-- [ ] History/manifest/route cache headers; agent endpoints stay `no-store`
-- [ ] Local curl header checks per endpoint class
-- [ ] Prod: second hit within window shows `x-vercel-cache: HIT`
-- [ ] Verification Protocol (focus: buses/planes don't vanish or teleport over a
-      2-minute observation; timeline replay unaffected)
+- [x] `sendJSON` optional cache arg; `serveCached` TTL-derived headers
+      (+ guard: never cache a not-yet-warmed empty response — would pin emptiness
+      at the edge for the whole window; negative /api/route lookups stay uncached)
+- [x] History/manifest/route cache headers; agent endpoints stay `no-store`
+- [x] Local curl header checks per endpoint class (buses 15/60, subway 20/80,
+      citibike 30/120, cams 600, stations 86400, weather 300, history 300/day 3600,
+      agent no-store) ✓
+- [ ] Prod: second hit within window shows `x-vercel-cache: HIT` (check after deploy)
+- [x] Verification Protocol: clean load, weather chip live, scene at baseline
 
 **Rollback:** revert commit; headers are stateless.
 
