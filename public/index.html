@@ -1171,8 +1171,18 @@ generateCity();
 /* ============================================================
    8. Renderer / scene / camera / controls / lights
    ============================================================ */
-const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// device tier (PERF.md workstream A): phones default to the existing `low` quality
+// preset instead of `high` — the #1 mobile crash/latency relief. The quality
+// dropdown still overrides. deviceMemory is Chrome-only (absent on Safari → 0).
+const TIER = (() => {
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const shortEdge = Math.min(screen.width, screen.height);
+  if (coarse && shortEdge < 820) return 'low';                       // phones
+  if (coarse || (navigator.deviceMemory || 8) <= 4) return 'medium'; // tablets / low-RAM
+  return 'high';
+})();
+const renderer = new THREE.WebGLRenderer({ antialias: TIER !== 'low', stencil: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, TIER === 'low' ? 1.25 : 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.12;
@@ -4242,7 +4252,8 @@ addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
-applyQuality('high');
+ui.quality.value = TIER; // auto-selected device tier (PERF.md A) — dropdown shows it and still overrides
+applyQuality(TIER);
 
 /* ============================================================
    26b. LIVE NYC — real sun position + real weather

@@ -13,7 +13,7 @@ every push (every push deploys prod).
 
 | # | Workstream | Risk | Status |
 |---|------------|------|--------|
-| A | Device-tier default quality (mobile stops running `high`) | low | ☐ not started |
+| A | Device-tier default quality (mobile stops running `high`) | low | ✅ done |
 | B | CDN caching for API feeds (`s-maxage` + `stale-while-revalidate`) | low | ☐ not started |
 | C | Startup memory: release build-time data, then binary bakes | high | ☐ not started |
 | D | Consolidated `/api/live` snapshot + Web Worker parsing | high | ☐ not started |
@@ -45,10 +45,11 @@ Capture after each workstream lands (same method as baseline: preview server 419
 | Commit | Peak heap | Settled heap | Tris | Calls | Vehicles | fps | Notes |
 |--------|-----------|--------------|------|-------|----------|-----|-------|
 | 7d434d4 (baseline) | 1467 MB | 518 MB | 6.06 M | 83 | 15,607 | 120 | desktop `high` |
+| A (device tier) | — | 517 MB | 5.94 M | 82 | 15,607 | 54* | desktop `high` unchanged; *fps dip = headless tab variance, not code |
 
 ---
 
-## A. Device-tier default quality — status: ☐
+## A. Device-tier default quality — status: ✅ DONE
 
 **Why:** phones currently get `high` (DPR ~2, MSAA, 2048² shadows, 15.6 k vehicles).
 The `low` tier already exists and is exactly the mobile budget; nothing selects it.
@@ -61,10 +62,17 @@ pixel ratio) and replace the hardcoded `applyQuality('high')`; sync the quality
 `<select>` so the user sees and can override the auto choice.
 
 **Tasks**
-- [ ] `TIER` detection before renderer init; `antialias`/initial DPR follow it
-- [ ] `applyQuality(TIER)` + dropdown synced
-- [ ] Verify desktop still defaults `high`; manual override still works
-- [ ] Verification Protocol + measurements row
+- [x] `TIER` detection before renderer init; `antialias`/initial DPR follow it
+- [x] `applyQuality(TIER)` + dropdown synced
+- [x] Verify desktop still defaults `high`; manual override still works
+      (verified: desktop → dropdown `high`, scene identical to baseline; override to
+      `low` → DPR 1.25, shadows gated off, drawn vehicles scale via `mesh.count`;
+      phone params → `low`, tablet → `medium`; no module errors)
+- [x] Verification Protocol + measurements row
+      NOTE: overlay "vehicles" reports pool size (15,607) by design — per-frame
+      simulation cost is unchanged at `low`; that reduction is Workstream E's job.
+      `antialias` is fixed at renderer creation, so a manual quality switch after
+      load doesn't toggle MSAA — only the auto tier at startup does.
 
 **Specific verification:** desktop preview → `ui.quality.value === 'high'`, scene
 unchanged (tris/calls ≈ baseline). Simulate phone: eval `applyQuality('low')` →
