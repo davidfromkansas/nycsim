@@ -15,7 +15,7 @@ every push (every push deploys prod).
 |---|------------|------|--------|
 | A | Device-tier default quality (mobile stops running `high`) | low | ✅ done |
 | B | CDN caching for API feeds (`s-maxage` + `stale-while-revalidate`) | low | ✅ done |
-| C | Startup memory: release build-time data (C1 ✅), then binary bakes (C2 ☐) | high | ◐ C1 done |
+| C | Startup memory: C1 release bakes ✅ · C2a typed sinks ✅ (peak −343 MB) · C2b staged parse ☐ | high | ◐ C2a done |
 | D | Consolidated `/api/live` snapshot + Web Worker parsing | high | ☐ not started |
 | E | Distance-tiered simulation updates | medium | ☐ not started |
 
@@ -46,6 +46,7 @@ Capture after each workstream lands (same method as baseline: preview server 419
 |--------|-----------|--------------|------|-------|----------|-----|-------|
 | 7d434d4 (baseline) | 1467 MB | 518 MB | 6.06 M | 83 | 15,607 | 120 | desktop `high` |
 | A (device tier) | — | 517 MB | 5.94 M | 82 | 15,607 | 54* | desktop `high` unchanged; *fps dip = headless tab variance, not code |
+| C2a (typed sinks) | **1105 MB** | 517 MB | 5.97 M | 83 | 15,607 | 55* | peak −343 MB vs baseline; post-generateCity 575→83 MB |
 
 ---
 
@@ -124,13 +125,23 @@ small arrays (every `[x,z]` a heap object), all alive while merged geometry buil
   runtime consumers first — traffic seeds? fillBlock only?), plus any other
   build-only intermediates found while measuring. Measure per-structure with heap
   snapshots before deciding stage C2 scope.
-- **C2 (high risk):** binary bake for the biggest remaining structure (street
-  polylines expected): `streets.bin` as flat Float32Array + index table, fetched as
-  ArrayBuffer (no parse). Keep `G_EDGES[i]` object shape (nm/bo/rw/td/a/b) but back
-  `p` with typed-array views **or** provide accessor helpers — decide by touching the
-  fewest `e.p` consumer sites (matchStreet, EDGE_HASH build, traffic walks, ribbon
-  builders, street layers). Server agent keeps reading `streets.json` — **both
-  artifacts regenerate from the same bake script or C2 doesn't ship.**
+- **C2a (SHIPPED — plan revised by measurement):** startup heap checkpoints showed
+  the peak was NOT the JSON parse (581 MB post-parse) but the **geometry sinks**
+  during the borough builds (+870 MB of plain JS number arrays, sections 12b–21).
+  Fix: `GrowF32` — a doubling Float32Array with the same `push(...)` contract —
+  replaces the sink arrays; `sinkToGeometry` slices exact-size buffers. Zero
+  precision change (geometry was always Float32 in the end); every push site
+  untouched (all writes funnel through sinkQuad/pushPrism/pushPoly fans).
+  **Measured: peak 1,448 → 1,105 MB; post-generateCity heap 575 → 83 MB; scene
+  byte-identical (82–83 calls, 5.9 M tris, 39,827 buildings); settle unchanged.**
+- **C2b (next):** the remaining 83 → 1,105 MB climb during borough builds is parse
+  trees held until release + three.js CPU-side attribute copies + grow transients.
+  Levers, by measurement: stage the fetches (blocks/buildings parsed only at their
+  build site, released immediately), and/or binary bake for streets polylines.
+  Original binary-bake design notes kept below for C2b:
+  `streets.bin` flat Float32Array + index table, fetched as ArrayBuffer (no parse);
+  keep `G_EDGES[i]` object shape but back `p` with typed views; server agent keeps
+  reading `streets.json` — both artifacts regenerate from one bake script.
 - Mobile-first-frame bonus if C2 lands well: defer `buildings.json` fetch until after
   first render (city appears, buildings stream in) — parity-visible, so only with
   explicit sign-off.
