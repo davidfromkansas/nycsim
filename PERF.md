@@ -15,7 +15,7 @@ every push (every push deploys prod).
 |---|------------|------|--------|
 | A | Device-tier default quality (mobile stops running `high`) | low | ✅ done |
 | B | CDN caching for API feeds (`s-maxage` + `stale-while-revalidate`) | low | ✅ done |
-| C | Startup memory: C1 release bakes ✅ · C2a typed sinks ✅ (peak −343 MB) · C2b staged parse ☐ | high | ◐ C2a done |
+| C | Startup memory: C1 ✅ · C2a typed sinks ✅ (peak −343 MB) · C2b compress+dispose ✅ (settle 517→86 MB, GPU −48%) | high | ✅ C2b done |
 | D | Consolidated `/api/live` snapshot ✅ (server) + Web Worker parsing ☐ (client) | high | ◐ server done |
 | E | Distance-tiered simulation updates | medium | ☐ not started |
 
@@ -47,6 +47,7 @@ Capture after each workstream lands (same method as baseline: preview server 419
 | 7d434d4 (baseline) | 1467 MB | 518 MB | 6.06 M | 83 | 15,607 | 120 | desktop `high` |
 | A (device tier) | — | 517 MB | 5.94 M | 82 | 15,607 | 54* | desktop `high` unchanged; *fps dip = headless tab variance, not code |
 | C2a (typed sinks) | **1105 MB** | 517 MB | 5.97 M | 83 | 15,607 | 55* | peak −343 MB vs baseline; post-generateCity 575→83 MB |
+| C2b (compress+dispose) | ~1105 MB | **86 MB** | 5.94 M | 82 | 15,607 | 52* | settle −431 MB; GPU vertex memory −48%; visuals verified noon+dusk |
 
 ---
 
@@ -137,13 +138,21 @@ small arrays (every `[x,z]` a heap object), all alive while merged geometry buil
   untouched (all writes funnel through sinkQuad/pushPrism/pushPoly fans).
   **Measured: peak 1,448 → 1,105 MB; post-generateCity heap 575 → 83 MB; scene
   byte-identical (82–83 calls, 5.9 M tris, 39,827 buildings); settle unchanged.**
-- **C2b (GATED ON MOBILE RETEST):** post-generateCity read 83 MB mid-build — most of
-  the desktop-observed "peak" is collectable garbage V8 hadn't bothered to collect
-  (4 GB headroom); memory-pressured mobile engines collect far sooner, so the true
-  mobile live-set is much lower than the desktop peak suggests. A (low tier) + C2a
-  (typed sinks) may already have fixed the crashes. **→ Retest on a real phone
-  before any further C surgery.** If crashes persist: stage the fetches
-  (blocks/buildings parsed only at their build site) and/or binary bakes.
+- **C2b (SHIPPED — retargeted after phone retest still crashed):** the killer was the
+  RESIDENT footprint, not the transient peak: three.js retains a CPU copy of every
+  attribute array (~517 MB settle), and the unindexed merged city cost 44 B/vertex on
+  CPU **and** GPU. Fix in `sinkToGeometry`: (1) attribute compression — normals Int8
+  normalized, colors Uint8 normalized, kinds Int8 (all exact/imperceptible; seeds
+  stay Float32 so window patterns are bit-identical) → 44 → 23 B/vertex on both
+  sides (~−48% GPU); (2) `onUpload(disposeArray)` frees the CPU copies right after
+  GPU upload (bounding sphere precomputed while the position array exists;
+  context-loss restore would need a reload — mobile browsers reload on loss anyway).
+  **Measured: settled JS heap 517 → 86 MB.** Visual gates: noon downtown (Lambert
+  shading/colors correct), dusk canyon (window ignition patterns intact), scene
+  stats byte-identical (82 calls, 5.94 M tris, 39,827 buildings), concierge +
+  timeline OK, no module errors.
+- **C2c (if phones STILL crash):** stage the fetches (blocks/buildings parsed only at
+  their build site) and/or binary bakes — original design notes below.
   Original binary-bake design notes kept below for C2b:
   `streets.bin` flat Float32Array + index table, fetched as ArrayBuffer (no parse);
   keep `G_EDGES[i]` object shape but back `p` with typed views; server agent keeps

@@ -1499,13 +1499,30 @@ function pushPoly(S, pts, y0, h, col, seed, kind, roofCol) {
     for (let j = 0; j < 3; j++) { S.n.push(0, 1, 0); S.c.push(rc[0], rc[1], rc[2]); S.s.push(seed); S.k.push(kind); }
   }
 }
+/* PERF.md C2b: mobile crashed on RESIDENT footprint, not just the transient peak —
+   three.js keeps a CPU copy of every attribute array forever, and the unindexed
+   merged city was 44 B/vertex on BOTH sides. Two fixes here, both visually lossless:
+   (1) compress: normals → Int8 normalized (<0.5° error on Lambert), colors → Uint8
+   normalized (1/255 albedo steps), kinds → Int8 (exact small ints; GLSL still sees
+   floats). Seeds stay Float32 so window patterns are bit-identical. 44 → 23 B/vertex.
+   (2) free the CPU copies after GPU upload (onUpload) — bounding sphere is
+   precomputed below while the position array still exists. Context-loss restore
+   would need a reload, which is what mobile browsers do on loss anyway. */
+function disposeArray() { this.array = null; }
 function sinkToGeometry(S) {
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(S.p.a.slice(0, S.p.len), 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(S.n.a.slice(0, S.n.len), 3));
-  g.setAttribute('color', new THREE.BufferAttribute(S.c.a.slice(0, S.c.len), 3));
-  g.setAttribute('aSeed', new THREE.BufferAttribute(S.s.a.slice(0, S.s.len), 1));
-  g.setAttribute('aKind', new THREE.BufferAttribute(S.k.a.slice(0, S.k.len), 1));
+  g.setAttribute('position', new THREE.BufferAttribute(S.p.a.slice(0, S.p.len), 3).onUpload(disposeArray));
+  const n8 = new Int8Array(S.n.len);
+  for (let i = 0; i < S.n.len; i++) n8[i] = Math.round(Math.max(-1, Math.min(1, S.n.a[i])) * 127);
+  g.setAttribute('normal', new THREE.BufferAttribute(n8, 3, true).onUpload(disposeArray));
+  const c8 = new Uint8Array(S.c.len);
+  for (let i = 0; i < S.c.len; i++) c8[i] = Math.round(Math.max(0, Math.min(1, S.c.a[i])) * 255);
+  g.setAttribute('color', new THREE.BufferAttribute(c8, 3, true).onUpload(disposeArray));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(S.s.a.slice(0, S.s.len), 1).onUpload(disposeArray));
+  const k8 = new Int8Array(S.k.len);
+  for (let i = 0; i < S.k.len; i++) k8[i] = S.k.a[i];
+  g.setAttribute('aKind', new THREE.BufferAttribute(k8, 1).onUpload(disposeArray));
+  g.computeBoundingSphere(); // must precede the first render — position array is freed at upload
   return g;
 }
 
