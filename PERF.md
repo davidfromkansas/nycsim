@@ -16,7 +16,7 @@ every push (every push deploys prod).
 | A | Device-tier default quality (mobile stops running `high`) | low | ✅ done |
 | B | CDN caching for API feeds (`s-maxage` + `stale-while-revalidate`) | low | ✅ done |
 | C | Startup memory: C1 release bakes ✅ · C2a typed sinks ✅ (peak −343 MB) · C2b staged parse ☐ | high | ◐ C2a done |
-| D | Consolidated `/api/live` snapshot + Web Worker parsing | high | ☐ not started |
+| D | Consolidated `/api/live` snapshot ✅ (server) + Web Worker parsing ☐ (client) | high | ◐ server done |
 | E | Distance-tiered simulation updates | medium | ☐ not started |
 
 ## Baseline (measured 2026-07-07, commit `7d434d4`, desktop Chrome via preview, local server)
@@ -134,10 +134,13 @@ small arrays (every `[x,z]` a heap object), all alive while merged geometry buil
   untouched (all writes funnel through sinkQuad/pushPrism/pushPoly fans).
   **Measured: peak 1,448 → 1,105 MB; post-generateCity heap 575 → 83 MB; scene
   byte-identical (82–83 calls, 5.9 M tris, 39,827 buildings); settle unchanged.**
-- **C2b (next):** the remaining 83 → 1,105 MB climb during borough builds is parse
-  trees held until release + three.js CPU-side attribute copies + grow transients.
-  Levers, by measurement: stage the fetches (blocks/buildings parsed only at their
-  build site, released immediately), and/or binary bake for streets polylines.
+- **C2b (GATED ON MOBILE RETEST):** post-generateCity read 83 MB mid-build — most of
+  the desktop-observed "peak" is collectable garbage V8 hadn't bothered to collect
+  (4 GB headroom); memory-pressured mobile engines collect far sooner, so the true
+  mobile live-set is much lower than the desktop peak suggests. A (low tier) + C2a
+  (typed sinks) may already have fixed the crashes. **→ Retest on a real phone
+  before any further C surgery.** If crashes persist: stage the fetches
+  (blocks/buildings parsed only at their build site) and/or binary bakes.
   Original binary-bake design notes kept below for C2b:
   `streets.bin` flat Float32Array + index table, fetched as ArrayBuffer (no parse);
   keep `G_EDGES[i]` object shape but back `p` with typed views; server agent keeps
@@ -192,7 +195,10 @@ scalability foundation.
   stops (est. −50% of 267 KB); citibike splits static info from live status.
 
 **Tasks**
-- [ ] `/api/live` route (respects B's cache headers, s-maxage=15)
+- [x] `/api/live` route (respects B's cache headers, s-maxage=15) — verified: all 9
+      feeds composed from the per-route caches with per-feed fetchedAt/stale, 6 s
+      bounded wait per feed (a slow upstream ships last-good instead of stalling the
+      snapshot), per-feed endpoints byte-identical for recorder/concierge/history
 - [ ] Worker bridge; module pollers switched one at a time (subway → buses →
       citibike → rest), each with its own verification pass
 - [ ] Subway stop-list trim + citibike static/live split
