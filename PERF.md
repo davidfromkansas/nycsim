@@ -15,7 +15,7 @@ every push (every push deploys prod).
 |---|------------|------|--------|
 | A | Device-tier default quality (mobile stops running `high`) | low | ✅ done |
 | B | CDN caching for API feeds (`s-maxage` + `stale-while-revalidate`) | low | ✅ done |
-| C | Startup memory: C1 ✅ · C2a typed sinks ✅ (peak −343 MB) · C2b compress+dispose ✅ (settle 517→86 MB, GPU −48%) | high | ✅ C2b done |
+| C | Startup memory: C1 ✅ · C2a typed sinks ✅ (peak −343 MB) · C2b compress+dispose ✅ (settle 517→86 MB, GPU −48%) | high | ✅ **MOBILE CONFIRMED FIXED** (2026-07-08, user-verified on Safari + Chrome mobile after C2b; C2c not needed) |
 | D | Consolidated `/api/live` snapshot ✅ (server) + Web Worker parsing ☐ (client) | high | ◐ server done |
 | E | Distance-tiered simulation updates | medium | ☐ not started |
 
@@ -151,8 +151,9 @@ small arrays (every `[x,z]` a heap object), all alive while merged geometry buil
   shading/colors correct), dusk canyon (window ignition patterns intact), scene
   stats byte-identical (82 calls, 5.94 M tris, 39,827 buildings), concierge +
   timeline OK, no module errors.
-- **C2c (if phones STILL crash):** stage the fetches (blocks/buildings parsed only at
-  their build site) and/or binary bakes — original design notes below.
+- **C2c: NOT NEEDED.** User confirmed 2026-07-08 the app runs on mobile Safari and
+  mobile Chrome after C2b deployed. Staged-parse/binary-bake notes kept below in
+  case future data growth reopens the budget.
   Original binary-bake design notes kept below for C2b:
   `streets.bin` flat Float32Array + index table, fetched as ArrayBuffer (no parse);
   keep `G_EDGES[i]` object shape but back `p` with typed views; server agent keeps
