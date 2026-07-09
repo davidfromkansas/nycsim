@@ -7231,8 +7231,8 @@ const personas = (() => {
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           float d = -mv.z;
           vCell = aCell;
-          vA = smoothstep(4200.0, 3000.0, d);       // people fade in as you come down to the streets
-          gl_PointSize = clamp(30000.0 / d, 9.0, 40.0) * uDpr * (aKid > 0.5 ? 0.72 : 1.0);
+          vA = smoothstep(6800.0, 4200.0, d);       // visible from browsing altitude, not just the sidewalk
+          gl_PointSize = clamp(34000.0 / d, 8.0, 42.0) * uDpr * (aKid > 0.5 ? 0.72 : 1.0);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `uniform sampler2D uMap; varying float vCell; varying float vA;
@@ -7327,7 +7327,7 @@ const personas = (() => {
     let best = null, bd = 20 * 20;
     for (const pp of PEOPLE) {
       const dx = pp.x - camera.position.x, dz = pp.z - camera.position.z;
-      if (dx * dx + dz * dz > 3500 * 3500) continue; // beyond the fade — not clickable
+      if (dx * dx + dz * dz > 5200 * 5200) continue; // beyond the fade — not clickable
       _pv.set(dx, 4.5 - camera.position.y, dz);
       if (_pv.dot(_pd) < 0) continue;
       _pv.set(pp.x, 4.5, pp.z).project(camera);
