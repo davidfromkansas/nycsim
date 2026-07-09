@@ -37,8 +37,45 @@ margin of error; and it is only published at **PUMA** (~community-district)
 resolution, so a neighborhood question actually describes the community district
 around it — the agent says so. The figures validate against known totals (8.26 M
 people, ~$75k citywide median income, 38% foreign-born, Manhattan highest / Bronx
-lowest income). Coming next: cartoony resident characters you can click, sampled
-from this same distribution.
+lowest income).
+
+---
+
+## 🧍 Meet the residents — 2,368 clickable Census personas on the streets
+
+**Shipped:** July 9, 2026
+
+**TL;DR:** Little cartoon New Yorkers now stand throughout the city — each one a
+real, anonymous Census respondent placed in their own community district. Click one
+to read who they are; the crowd's makeup matches the city's actual demographics.
+
+**What you'll see:**
+- Come down toward street level and small chibi characters fade in on the sidewalks
+  and blocks (buildings hide and reveal them as you move). Click one → a card:
+  "Medical Assistants, 49 — she lives in the Pelham Parkway / Morris Park (Bronx)
+  area — Hispanic/Latino, born in the Dominican Republic. Speaks Spanish at home.
+  High school graduate. Personal income ≈ $65k/yr. Commutes by bus or rail." Every
+  card ends with "represents ~2,000 New Yorkers · ACS 2023 PUMS."
+- The crowd is distributionally honest: ~1 character per 2,000 residents of each
+  community district, weighted-sampled so the citywide mix matches reality (sample
+  median age 38 vs 38 actual; 52% female; race/ethnicity within 1 point).
+- After clicking someone, ask the Concierge "who am I looking at?" — it narrates
+  that exact resident, and "what do the little cartoon people represent?" explains
+  the layer.
+
+**How it works:** an offline bake weighted-samples 4,128 person records from the
+[ACS 2023 1-Year PUMS](https://www.census.gov/programs-surveys/acs/microdata.html)
+(A-Res reservoir sampling by person weight) with occupations, origins, languages,
+education, income and commute decoded from the official Census data dictionary.
+The client seeds each persona inside its PUMA polygon on built land — one instanced
+draw call of canvas-drawn sprites, depth-tested so the city occludes people
+naturally. **Honest caveats:** these are real anonymized microdata records, not
+named individuals — no names are invented; the characters' looks (skin, hair,
+clothes) are RANDOM by design and never encode demographics — the data lives only
+in the card; 2,368 of 4,128 sampled records appear because personas only stand
+where the twin has built land (Staten Island and the city's far edges are
+under-represented visually — the Concierge's polling numbers remain complete and
+unaffected).
 
 ## 🚗 The ambient cars drive at measured speeds
 

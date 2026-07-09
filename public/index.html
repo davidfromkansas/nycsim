@@ -226,6 +226,21 @@
     background:rgba(232,165,88,.12); border:1px solid rgba(232,165,88,.3);
     border-radius:7px; padding:1px 7px; max-width:150px; overflow:hidden; text-overflow:ellipsis;
   }
+  #personaCard {
+    display:none; position:fixed; left:14px; top:50%; transform:translateY(-50%); z-index:25;
+    width:min(250px, 70vw); font:11px/1.5 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,.9);
+    background:rgba(10,13,20,.72); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(232,165,88,.3); border-radius:12px; padding:11px 13px;
+  }
+  #personaCard .phead { font-size:13px; font-weight:700; margin-bottom:5px; padding-right:20px; color:#f4d9b0; }
+  #personaCard .pbody { color:rgba(255,255,255,.88); }
+  #personaCard .pfoot { margin-top:7px; padding-top:6px; border-top:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.55); font-size:10px; }
+  #personaCard .x {
+    position:absolute; top:7px; right:7px; width:20px; height:20px; border-radius:50%;
+    background:rgba(255,255,255,.08); color:rgba(255,255,255,.8); border:1px solid rgba(255,255,255,.2);
+    font:10px system-ui; cursor:pointer; line-height:18px; text-align:center; padding:0;
+  }
+  body.photo #personaCard { display:none !important; }
   #choroLegend {
     display:none; position:fixed; left:14px; bottom:14px; z-index:20; min-width:150px;
     font:10px system-ui,-apple-system,sans-serif; color:rgba(255,255,255,.9);
@@ -288,6 +303,7 @@
 <button id="lockbtn" title="lock view direction">&#128275;</button>
 <div id="joy"><div id="joyK"></div></div>
 <div id="camview"><div class="ring"><img alt="live traffic camera"><div class="live"><i></i>LIVE</div><button class="x" title="close">✕</button></div><div class="name"></div></div>
+<div id="personaCard"><button class="x" title="close">✕</button><div class="phead"></div><div class="pbody"></div><div class="pfoot"></div></div>
 <div id="dbg"></div>
 <div id="chip"></div>
 <div id="scrub">
@@ -7148,6 +7164,184 @@ const birds = (() => {
 window.__birds = birds; // dev/testing hook
 
 /* ============================================================
+   25h. RESIDENTS — Census PUMS personas. 4,128 real anonymous
+   ACS person records (weighted sample, ~1 per 2,000 residents
+   per PUMA — the crowd IS the distribution) stand in the city as
+   chibi cartoon characters. Placement: seeded rejection sampling
+   inside each persona's PUMA polygon (pums.json rings → geoRaw →
+   landOK), so everyone is on land in the right community district
+   (Staten Island personas auto-skip — no land is built there).
+   One Points draw call, depth-tested so buildings occlude people.
+   Click → #personaCard side panel + focus context, so the
+   concierge knows who you met. Sprite looks are RANDOM by design —
+   demographics live in the card, never in skin/clothing colors.
+   Static demographic layer: not gated by HIST (it isn't live data).
+   ============================================================ */
+const personas = (() => {
+  const card = document.getElementById('personaCard');
+  const cardBody = card.querySelector('.pbody'), cardX = card.querySelector('.x');
+  // --- chibi sprite atlas: 8 variants, 64×96 cells, canvas-drawn (no assets) ---
+  const CELLS = 8;
+  const tex = (() => {
+    const c = document.createElement('canvas'); c.width = 64 * CELLS; c.height = 96;
+    const g = c.getContext('2d');
+    const clothes = ['#e2574c', '#4f86c6', '#59a96a', '#e8a558', '#8a6fc8', '#3aa8a0', '#d46a9e', '#95a0ad'];
+    const skins = ['#f1c9a5', '#caa27e', '#8d5a3b', '#5d3a26'];
+    const hairs = ['#2b2320', '#5a3d23', '#977a45', '#8a8f98', '#c94f4f', '#3a3f4a', '#e0d6c2', '#6e4a7e'];
+    for (let i = 0; i < CELLS; i++) {
+      const ox = i * 64;
+      g.save(); g.translate(ox, 0);
+      g.lineWidth = 3; g.strokeStyle = 'rgba(15,18,24,0.9)';
+      // legs
+      g.fillStyle = '#2e3340';
+      g.fillRect(24, 74, 7, 16); g.fillRect(33, 74, 7, 16);
+      // body (clothing)
+      g.fillStyle = clothes[i]; g.beginPath(); g.roundRect(17, 46, 30, 32, 9); g.fill(); g.stroke();
+      // head (skin tone: round-robin, deliberately unrelated to the persona's data)
+      g.fillStyle = skins[i % skins.length]; g.beginPath(); g.arc(32, 28, 17, 0, TAU); g.fill(); g.stroke();
+      // hair: alternating cap / side style
+      g.fillStyle = hairs[i]; g.beginPath();
+      if (i % 2) { g.arc(32, 24, 17, Math.PI, 0); g.fill(); }
+      else { g.arc(32, 26, 17.5, Math.PI * 0.95, Math.PI * 0.05); g.lineTo(49, 34); g.lineTo(15, 34); g.fill(); }
+      // eyes
+      g.fillStyle = '#20242c'; g.beginPath(); g.arc(26, 30, 2, 0, TAU); g.arc(38, 30, 2, 0, TAU); g.fill();
+      g.restore();
+    }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const PEOPLE = []; // { x, z, cell, kid, p:[rowRef], area, rep }
+  let D = null;      // personas.json tables
+  let mesh = null;
+  function build() {
+    const n = PEOPLE.length;
+    const pos = new Float32Array(n * 3), cell = new Float32Array(n), kid = new Float32Array(n);
+    PEOPLE.forEach((pp, i) => { pos[i * 3] = pp.x; pos[i * 3 + 1] = 4.5; pos[i * 3 + 2] = pp.z;
+      cell[i] = pp.cell; kid[i] = pp.kid; });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aCell', new THREE.BufferAttribute(cell, 1));
+    g.setAttribute('aKid', new THREE.BufferAttribute(kid, 1));
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: tex }, uDpr: { value: renderer.getPixelRatio() } },
+      transparent: true, depthTest: true, depthWrite: true, // buildings occlude people
+      vertexShader: `uniform float uDpr; attribute float aCell; attribute float aKid;
+        varying float vCell; varying float vA;
+        void main() {
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          float d = -mv.z;
+          vCell = aCell;
+          vA = smoothstep(4200.0, 3000.0, d);       // people fade in as you come down to the streets
+          gl_PointSize = clamp(30000.0 / d, 9.0, 40.0) * uDpr * (aKid > 0.5 ? 0.72 : 1.0);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `uniform sampler2D uMap; varying float vCell; varying float vA;
+        void main() {
+          if (vA < 0.03) discard;
+          // pre-flip x: the presentation mirror (scaleX(-1)) flips point sprites back
+          vec2 uv = vec2((vCell + (1.0 - gl_PointCoord.x)) / ${CELLS}.0, gl_PointCoord.y);
+          vec4 c = texture2D(uMap, uv);
+          if (c.a < 0.5) discard;
+          gl_FragColor = vec4(c.rgb, c.a * vA);
+        }`
+    });
+    mesh = new THREE.Points(g, mat);
+    mesh.frustumCulled = false; mesh.renderOrder = 5; mesh.matrixAutoUpdate = false;
+    scene.add(mesh);
+  }
+  // ---- load + placement (once; seeded → identical crowd every visit) ----
+  Promise.all([fetch('personas.json').then(r => r.json()), fetch('pums.json').then(r => r.json())])
+    .then(([pj, uj]) => {
+      D = pj;
+      const byId = new Map(uj.pumas.map(p => [p.id, p]));
+      const R = rng(2718);
+      const inRings = (lon, lat, rings) => {
+        for (const ring of rings) {
+          let inside = false;
+          for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+            if (((yi > lat) !== (yj > lat)) && (lon < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-18) + xi)) inside = !inside;
+          }
+          if (inside) return true;
+        }
+        return false;
+      };
+      const bbox = new Map(); // puma id → [x0,x1,y0,y1]
+      for (const p of uj.pumas) {
+        let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        for (const r of p.rings) for (const [x, y] of r) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+        bbox.set(p.id, [x0, x1, y0, y1]);
+      }
+      let placed = 0, ci = 0;
+      for (const row of pj.people) {
+        const pu = byId.get(row[0]); if (!pu) continue;
+        const bb = bbox.get(row[0]);
+        for (let t = 0; t < 16; t++) {
+          const lon = bb[0] + R() * (bb[1] - bb[0]), lat = bb[2] + R() * (bb[3] - bb[2]);
+          if (!inRings(lon, lat, pu.rings)) continue;
+          const g2 = subway.geoRaw(lat, lon);
+          if (!landOK(g2.x, g2.z)) continue;
+          PEOPLE.push({ x: g2.x, z: g2.z, cell: (ci++) % CELLS, kid: row[1] < 15 ? 1 : 0,
+            p: row, area: pu.name + ' (' + pu.boro + ')', rep: pj.repPer[String(row[0])] || 2000 });
+          placed++; break;
+        }
+      }
+      if (PEOPLE.length) { build(); console.log('[personas]', placed, 'of', pj.people.length, 'Census personas placed'); }
+    }).catch(e => console.error('[personas] load failed:', e.message || e));
+  // ---- persona card ----
+  const title = s => s.toLowerCase().replace(/\b[a-z]/g, ch => ch.toUpperCase());
+  function open(pp) {
+    const [, age, female, raceI, orgI, langI, eduI, occI, incK, commI, status] = pp.p;
+    const occ = occI >= 0 ? title(D.occs[occI]) : ['', 'Looking For Work', 'Retired', 'Student', ''][status] || '';
+    const head = (occ || 'Resident') + ', ' + age;
+    const lines = [];
+    lines.push((female ? 'She lives' : 'He lives') + ' in the ' + pp.area + ' area — ' + D.races[raceI] + ', born in ' + D.origins[orgI] + '.');
+    if (langI >= 0) lines.push('Speaks ' + D.langs[langI] + ' at home.');
+    if (eduI > 0) lines.push('Education: ' + D.edus[eduI] + '.');
+    if (incK >= 0) lines.push('Personal income ≈ $' + (incK).toLocaleString('en-US') + 'k/yr.');
+    if (commI > 0) lines.push('Commute: ' + D.commutes[commI] + '.');
+    if (status === 1) lines.push('Currently looking for work.');
+    if (status === 2 && occ) lines.push('Retired.');
+    card.querySelector('.phead').textContent = head;
+    cardBody.textContent = lines.join(' ');
+    card.querySelector('.pfoot').textContent = 'A real anonymous Census respondent — represents ~' +
+      pp.rep.toLocaleString('en-US') + ' New Yorkers · ACS 2023 PUMS';
+    card.style.display = 'block';
+    setFocus('resident persona (Census ACS PUMS sample)', head + ' — ' + pp.area,
+      { age, sex: female ? 'female' : 'male', raceEthnicity: D.races[raceI], bornIn: D.origins[orgI],
+        occupation: occ || null, incomeK: incK >= 0 ? incK : null, area: pp.area, representsResidents: pp.rep },
+      () => [pp.x, 6, pp.z]);
+    focusui.enter(() => [pp.x, 6, pp.z], '<b>' + head + '</b>');
+  }
+  function close() { card.style.display = 'none'; }
+  cardX.addEventListener('click', close);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  // ---- picking (cams pattern: click-not-drag → nearest sprite ≤ 20 px) ----
+  const _pv = new THREE.Vector3(), _pd = new THREE.Vector3();
+  let dX = 0, dY = 0, dT = 0;
+  renderer.domElement.addEventListener('pointerdown', (e) => { dX = e.clientX; dY = e.clientY; dT = performance.now(); });
+  renderer.domElement.addEventListener('pointerup', (e) => {
+    if (!PEOPLE.length || document.pointerLockElement) return;
+    if (performance.now() - dT > 450 || Math.hypot(e.clientX - dX, e.clientY - dY) > 7) return;
+    camera.getWorldDirection(_pd);
+    let best = null, bd = 20 * 20;
+    for (const pp of PEOPLE) {
+      const dx = pp.x - camera.position.x, dz = pp.z - camera.position.z;
+      if (dx * dx + dz * dz > 3500 * 3500) continue; // beyond the fade — not clickable
+      _pv.set(dx, 4.5 - camera.position.y, dz);
+      if (_pv.dot(_pd) < 0) continue;
+      _pv.set(pp.x, 4.5, pp.z).project(camera);
+      const sx = (_pv.x * 0.5 + 0.5) * innerWidth, sy = (-_pv.y * 0.5 + 0.5) * innerHeight;
+      const d = (sx - e.clientX) * (sx - e.clientX) + (sy - e.clientY) * (sy - e.clientY);
+      if (d < bd) { bd = d; best = pp; }
+    }
+    if (best) open(best);
+  });
+  return { list: PEOPLE, open, close };
+})();
+window.__personas = personas; // dev/testing hook
+
+/* ============================================================
    25g. LIVE TRAFFIC — measured speeds painted onto the roads,
    from three provenances (each labeled honestly in its chips):
    · /api/traffic (60 s, LIVE): DOT highway sensor links, wide
@@ -8014,7 +8208,7 @@ const concierge = (() => {
     ['Buffers + coverage', ['How many bike docks within 300 m of each East River ferry? Draw the buffers', 'Ring every road closure with a 250 m buffer']],
     ['Buildings + streets', ['How many buildings over 150 m tall are in the city?', 'Map the tallest buildings near Wall St & Broad St', 'Where do Broadway and W 4 St cross?']],
     ['Boroughs + neighborhoods', ['Outline the Bronx', 'Show me the border of Williamsburg', 'What neighborhood am I looking at?']],
-    ['Who lives here (Census)', ['Who lives in Astoria?', 'Map median household income across NYC', 'Which neighborhood is the most diverse?', 'Compare the Upper East Side and the South Bronx']],
+    ['Who lives here (Census)', ['Who lives in Astoria?', 'Map median household income across NYC', 'Which neighborhood is the most diverse?', 'What do the little cartoon people represent?']],
     ['Time travel', ['Show me the city as it was 3 days ago', 'What was the weather yesterday?', 'Back to live']]
   ];
   for (const [h, items] of USES) {
