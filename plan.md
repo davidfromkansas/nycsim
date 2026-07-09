@@ -271,7 +271,7 @@ On `hist(null)` the field snaps back to live within one rebuild.
 
 ## Explicitly out of scope
 
-- HERE/TomTom live feeds (plan Workstream C/D — awaiting user decision).
+- HERE/TomTom live feeds — user decision 2026-07-09: BACKLOGGED, not proceeding now.
 - Server-side bus-probe aggregation (note: `agent-core` already loads `streets.json`
   server-side in `substrate()`, so this is cheaper than once assumed — future task).
 - Routing / door-to-door ETAs (the agent must keep answers link-level and say so).
