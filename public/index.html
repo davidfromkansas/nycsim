@@ -226,6 +226,16 @@
     background:rgba(232,165,88,.12); border:1px solid rgba(232,165,88,.3);
     border-radius:7px; padding:1px 7px; max-width:150px; overflow:hidden; text-overflow:ellipsis;
   }
+  #choroLegend {
+    display:none; position:fixed; left:14px; bottom:14px; z-index:20; min-width:150px;
+    font:10px system-ui,-apple-system,sans-serif; color:rgba(255,255,255,.9);
+    background:rgba(10,13,20,.62); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.12); border-radius:9px; padding:7px 9px;
+  }
+  body.photo #choroLegend { display:none !important; }
+  #choroLegend .t { font-weight:600; margin-bottom:4px; }
+  #choroLegend .bar { height:8px; border-radius:4px; border:1px solid rgba(255,255,255,.15); }
+  #choroLegend .ends { display:flex; justify-content:space-between; margin-top:2px; color:rgba(255,255,255,.7); }
   #agentUses { display:none; max-height:44vh; overflow-y:auto; scrollbar-width:thin; padding:2px; }
   body.aguses #agentUses { display:block; }
   body.aguses #agentLog { display:none; }
@@ -5016,6 +5026,52 @@ const flights = (() => {
     }
   }
   scene.add(pmesh);
+  // helicopters: a second low-poly airframe (rotorcraft read: stubby cabin, long tail
+  // boom, skids, tail rotor) sharing the same FN slot pool. Backend tags each aircraft
+  // `kind` ('heli'|'jet'); update() drives exactly one of pmesh/hmesh per slot and parks
+  // the other at zero scale, so trails/lights/slot bookkeeping stay identical. +z forward.
+  const hgeo = BufferGeometryUtils.mergeGeometries([
+    _part(new THREE.BoxGeometry(3.8, 3.6, 8).translate(0, 0, 0.5), 1.0),                    // cabin
+    _part(new THREE.BoxGeometry(3.2, 2.8, 3).translate(0, -0.4, 5), 0.96),                  // sloped nose / cockpit
+    _part(new THREE.BoxGeometry(1.2, 1.2, 11).translate(0, 0.7, -8), 0.9),                  // tail boom
+    _part(new THREE.BoxGeometry(0.4, 3.4, 2.8).translate(0, 2.1, -13), 0.85),               // vertical fin
+    _part(new THREE.BoxGeometry(5, 0.4, 1.8).translate(0, 0.7, -11.8), 0.8),                // horizontal stabilizer
+    _part(new THREE.BoxGeometry(0.4, 0.4, 8.5).translate(2.4, -2.6, 0.5), 0.5),             // R skid
+    _part(new THREE.BoxGeometry(0.4, 0.4, 8.5).translate(-2.4, -2.6, 0.5), 0.5),            // L skid
+    _part(new THREE.BoxGeometry(0.35, 1.6, 0.35).translate(2.4, -1.7, 2.4), 0.5),           // R front strut
+    _part(new THREE.BoxGeometry(0.35, 1.6, 0.35).translate(-2.4, -1.7, 2.4), 0.5),          // L front strut
+    _part(new THREE.BoxGeometry(0.35, 1.6, 0.35).translate(2.4, -1.7, -1.6), 0.5),          // R rear strut
+    _part(new THREE.BoxGeometry(0.35, 1.6, 0.35).translate(-2.4, -1.7, -1.6), 0.5),         // L rear strut
+    _part(new THREE.BoxGeometry(0.9, 1.1, 0.9).translate(0, 2.5, 0.5), 0.7),                // rotor mast/hub
+    _part(new THREE.CylinderGeometry(1.5, 1.5, 0.16, 12).rotateZ(Math.PI / 2).translate(1.0, 2.1, -13.6), 0.75) // tail rotor
+  ]);
+  const hmesh = new THREE.InstancedMesh(hgeo, new THREE.MeshLambertMaterial({
+    color: 0xffffff, vertexColors: true, emissive: 0xaeb6c2, emissiveIntensity: 0.4 }), FN);
+  hmesh.frustumCulled = false; hmesh.castShadow = false;
+  // main rotor: its own instanced disc that spins about the airframe's up axis. Two crossed
+  // thin blades + a small hub read as a turning rotor; light + slightly translucent so it
+  // never hides the cabin. Rides slot-for-slot with hmesh (parked for jets).
+  const rgeo = BufferGeometryUtils.mergeGeometries([
+    new THREE.BoxGeometry(19, 0.16, 1.0),
+    new THREE.BoxGeometry(1.0, 0.16, 19),
+    new THREE.CylinderGeometry(0.9, 0.9, 0.4, 10)
+  ]);
+  const rmesh = new THREE.InstancedMesh(rgeo, new THREE.MeshLambertMaterial({
+    color: 0xd2d9e4, emissive: 0x9099a6, emissiveIntensity: 0.35,
+    transparent: true, opacity: 0.82, depthWrite: false }), FN);
+  rmesh.frustumCulled = false; rmesh.castShadow = false; rmesh.renderOrder = 2;
+  {
+    const R = rng(7311); const _c = new THREE.Color();
+    for (let i = 0; i < FN; i++) {
+      const g = 0.6 + R() * 0.16; // heli airframes read a touch darker than the airliners
+      hmesh.setColorAt(i, _c.setRGB(g, g, Math.min(1, g + 0.03)));
+      hmesh.setMatrixAt(i, _zeroM); rmesh.setMatrixAt(i, _zeroM);
+    }
+  }
+  scene.add(hmesh); scene.add(rmesh);
+  let rotorAng = 0; // shared spin phase for every rotor (a blur — exact rate is cosmetic)
+  const _hm = new THREE.Matrix4(), _hq = new THREE.Quaternion(), _hrot = new THREE.Quaternion(),
+        _hp = new THREE.Vector3(), _yAxis = new THREE.Vector3(0, 1, 0);
   // trails: preallocated segment buffer, slot-per-plane, ~50 s of path each
   const tPos = new Float32Array(FN * SEG * 2 * 3);
   const tCol = new Float32Array(FN * SEG * 2 * 3);
@@ -5030,6 +5086,7 @@ const flights = (() => {
   // nav/strobe lights: one additive Points layer, 4 lights per plane, flash logic in-shader
   const LK = 4; // L nav (red), R nav (green), top beacon (red pulse), belly strobe (white blink)
   const lOff = [[-13.4, -0.35, -0.9], [13.4, -0.35, -0.9], [0, 2.2, -0.5], [0, -2.3, 1.5]];
+  const lOffH = [[-2.6, -0.4, 1], [2.6, -0.4, 1], [0, 3.1, 0.5], [0, -2.7, 0.5]]; // heli: lights hug the cabin, beacon on the mast
   const lPos = new Float32Array(FN * LK * 3);
   for (let i = 1; i < lPos.length; i += 3) lPos[i] = -1e4; // parked out of sight
   const lCol = new Float32Array(FN * LK * 3);
@@ -5137,7 +5194,7 @@ const flights = (() => {
     freeSlots.push(p.slot);
     const base = p.slot * SEG * 2 * 3;
     tPos.fill(0, base, base + SEG * 6); tCol.fill(0, base, base + SEG * 6);
-    pmesh.setMatrixAt(p.slot, _zeroM);
+    pmesh.setMatrixAt(p.slot, _zeroM); hmesh.setMatrixAt(p.slot, _zeroM); rmesh.setMatrixAt(p.slot, _zeroM);
     for (let k = 0; k < LK; k++) lPos[(p.slot * LK + k) * 3 + 1] = -1e4; // park the lights
     lGeo.attributes.position.needsUpdate = true;
     planes.delete(p.hex);
@@ -5168,6 +5225,7 @@ const flights = (() => {
       if (!p) {
         if (!freeSlots.length) continue;
         p = { hex: a.hex, cs: (a.cs || '').trim() || a.hex.toUpperCase(), type: a.catLabel || '',
+              kind: a.kind === 'heli' ? 'heli' : 'jet', // backend-classified airframe → model picker
               slot: freeSlots.pop(),
               pos: new THREE.Vector3(fx, fy, fz), tgt: new THREE.Vector3(fx, fy, fz),
               v: new THREE.Vector3(vx, vy, vz), spd, seen: tNow, trailT: 0, th: -1, tn: 0,
@@ -5276,9 +5334,23 @@ const flights = (() => {
       const sc = 7 * clamp(_fp.distanceTo(camera.position) / 2800, 1, 4);
       _fs.setScalar(sc);
       _fm.compose(_fp, _fq, _fs);
-      pmesh.setMatrixAt(p.slot, _fm);
+      if (p.kind === 'heli') {
+        hmesh.setMatrixAt(p.slot, _fm);
+        pmesh.setMatrixAt(p.slot, _zeroM);
+        // main rotor: hub above the cabin, spun about the airframe's local up axis
+        _hp.set(0, 2.7, 0.5).multiplyScalar(sc).applyQuaternion(_fq).add(_fp);
+        _hrot.setFromAxisAngle(_yAxis, rotorAng);
+        _hq.copy(_fq).multiply(_hrot);
+        _hm.compose(_hp, _hq, _fs);
+        rmesh.setMatrixAt(p.slot, _hm);
+      } else {
+        pmesh.setMatrixAt(p.slot, _fm);
+        hmesh.setMatrixAt(p.slot, _zeroM);
+        rmesh.setMatrixAt(p.slot, _zeroM);
+      }
+      const off = p.kind === 'heli' ? lOffH : lOff;
       for (let k = 0; k < LK; k++) { // nav/beacon/strobe points ride the airframe
-        _fl.set(lOff[k][0], lOff[k][1], lOff[k][2]).multiplyScalar(sc).applyQuaternion(_fq).add(_fp);
+        _fl.set(off[k][0], off[k][1], off[k][2]).multiplyScalar(sc).applyQuaternion(_fq).add(_fp);
         const li = (p.slot * LK + k) * 3;
         lPos[li] = _fl.x; lPos[li + 1] = _fl.y; lPos[li + 2] = _fl.z;
         lScl[p.slot * LK + k] = sc / 7;
@@ -5287,9 +5359,15 @@ const flights = (() => {
       p.trailT += dt;
       if (p.trailT >= 2) { p.trailT = 0; appendPoint(p, p.pos.x, dispY(p.pos.y), p.pos.z); trailDirty = true; }
     }
-    if (dirty) { pmesh.instanceMatrix.needsUpdate = true; lGeo.attributes.position.needsUpdate = true; lGeo.attributes.aScale.needsUpdate = true; }
+    rotorAng = (rotorAng + dt * 26) % (Math.PI * 2); // rotors spin every frame (visual blur)
+    if (dirty) {
+      pmesh.instanceMatrix.needsUpdate = true; hmesh.instanceMatrix.needsUpdate = true;
+      rmesh.instanceMatrix.needsUpdate = true;
+      lGeo.attributes.position.needsUpdate = true; lGeo.attributes.aScale.needsUpdate = true;
+    }
     if (trailDirty) { tGeo.attributes.position.needsUpdate = true; tGeo.attributes.color.needsUpdate = true; }
-    pmesh.material.emissiveIntensity = 0.48 + 0.14 * (0.5 + 0.5 * Math.sin(t * 2.5)); // airframe glow
+    const glow = 0.48 + 0.14 * (0.5 + 0.5 * Math.sin(t * 2.5)); // airframe glow
+    pmesh.material.emissiveIntensity = glow; hmesh.material.emissiveIntensity = glow;
     airlife.jet.visible = list.length === 0; // decoy only when no real traffic
     if (follow) {
       if (!planes.has(follow.hex)) follow = null; // plane left the scene
@@ -5329,6 +5407,7 @@ const flights = (() => {
     // fakes keep the historical adsb shape (alt_baro ft, gs kt, baro_rate ft/min) so
     // existing test hashes stay valid — translate to the backend contract here
     const translated = acs.map(a => ({ hex: a.hex, cs: (a.flight || '').trim(), catLabel: a.t || '',
+      kind: a.kind || (a.category === 'A7' ? 'heli' : 'jet'),
       lat: a.lat, lon: a.lon, altM: typeof a.alt_baro === 'number' ? a.alt_baro * FT : NaN,
       gsMs: (a.gs || 0) * KT, track: a.track || 0, vrateMs: (a.baro_rate || 0) * FPM, route: a.route }));
     ingest(translated, Infinity); // never goes stale
@@ -5346,10 +5425,12 @@ const flights = (() => {
   // velocities damped to ε so heading survives but nothing drifts. null = back to live.
   function hist(rows) {
     for (let i = list.length - 1; i >= 0; i--) removePlane(list[i], i);
-    pmesh.instanceMatrix.needsUpdate = true; lGeo.attributes.position.needsUpdate = true;
+    pmesh.instanceMatrix.needsUpdate = true; hmesh.instanceMatrix.needsUpdate = true;
+    rmesh.instanceMatrix.needsUpdate = true; lGeo.attributes.position.needsUpdate = true;
     tGeo.attributes.position.needsUpdate = true; tGeo.attributes.color.needsUpdate = true;
     if (!rows) { nextPoll = 0; pollDelay = 20; return; }
-    ingest(rows.map(r => ({ hex: r[0], cs: r[1], lat: r[2], lon: r[3], altM: r[4], gsMs: r[5], track: r[6] })), T, 0);
+    // r[7] is the airframe kind (added to the recorded frame format); older frames omit it → jet
+    ingest(rows.map(r => ({ hex: r[0], cs: r[1], lat: r[2], lon: r[3], altM: r[4], gsMs: r[5], track: r[6], kind: r[7] })), T, 0);
     for (const p of list) { p.v.multiplyScalar(1e-4); p.tgt.copy(p.pos); }
   }
   return { update, setFake, hist, list, planes, routeCache,
@@ -7640,11 +7721,23 @@ const concierge = (() => {
       if (isFinite(p.lat) && isFinite(p.lon)) { const g = subway.geoRaw(p.lat, p.lon); return { x: g.x, z: g.z }; }
       return null;
     };
+    const legend = document.createElement('div'); legend.id = 'choroLegend'; document.body.appendChild(legend);
+    const fmtVal = (v, unit) => unit === '$' ? '$' + Math.round(v).toLocaleString('en-US') : Math.round(v) + unit;
+    function choroLegend(C) { // gradient bar min→max for the demographic map
+      const stops = [];
+      for (let i = 0; i <= 6; i++) { const t = i / 6, a = [0.14, 0.30, 0.55], b = [0.98, 0.80, 0.30];
+        stops.push('rgb(' + [0, 1, 2].map(k => Math.round((a[k] + (b[k] - a[k]) * t) * 255)).join(',') + ')'); }
+      legend.innerHTML = '<div class="t">' + C.label + '</div>' +
+        '<div class="bar" style="background:linear-gradient(90deg,' + stops.join(',') + ')"></div>' +
+        '<div class="ends"><span>' + fmtVal(C.min, C.unit) + '</span><span>' + fmtVal(C.max, C.unit) + '</span></div>';
+      legend.style.display = 'block';
+    }
     function clear() {
       for (const m of meshes) { group.remove(m); m.geometry.dispose(); m.material.dispose(); }
       meshes.length = 0;
       for (const L of lbl) { L.o = null; L.el.style.display = 'none'; }
       layerChip.style.display = 'none';
+      legend.style.display = 'none';
     }
     function show(layers) {
       clear();
@@ -7717,6 +7810,33 @@ const concierge = (() => {
             m.renderOrder = 13; m.frustumCulled = false; group.add(m); meshes.push(m);
           }
           if (cn && reg.name && labelPool.length < 10) labelPool.push({ x: cxs / cn, z: czs / cn, label: reg.name });
+        }
+        if (ly.choro) { // demographic choropleth: fill every PUMA by its value (PERF: no labels/pins, just shaded polys + legend)
+          const C = ly.choro;
+          for (const reg of C.regions) {
+            const rc = new THREE.Color(reg.color[0], reg.color[1], reg.color[2]);
+            let cxs = 0, czs = 0, cn = 0;
+            for (const ring of reg.rings || []) {
+              const pts = ring.map(([lon, lat]) => subway.geoRaw(lat, lon));
+              if (pts.length < 3) continue;
+              const shape = new THREE.Shape(pts.map(g => new THREE.Vector2(g.x, g.z)));
+              const fg = new THREE.ShapeGeometry(shape);
+              const fp = fg.attributes.position;
+              for (let i = 0; i < fp.count; i++) fp.setXYZ(i, fp.getX(i), 8, fp.getY(i));
+              const fm = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: rc, transparent: true, opacity: 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+              fm.renderOrder = 11; fm.frustumCulled = false; group.add(fm); meshes.push(fm);
+              const pos = new Float32Array(pts.length * 3);
+              pts.forEach((g, i) => { pos[i * 3] = g.x; pos[i * 3 + 1] = 10; pos[i * 3 + 2] = g.z; allXZ.push({ x: g.x, z: g.z }); cxs += g.x; czs += g.z; cn++; });
+              const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+              const m = new THREE.LineLoop(ge, new THREE.LineBasicMaterial({ color: 0x0b0e14, transparent: true, opacity: 0.5, depthTest: false }));
+              m.renderOrder = 12; m.frustumCulled = false; group.add(m); meshes.push(m);
+            }
+            if (cn && labelPool.length < 10) { // a few value labels on the biggest areas
+              const fmt = C.unit === '$' ? '$' + Math.round(reg.value).toLocaleString('en-US') : reg.value + C.unit;
+              labelPool.push({ x: cxs / cn, z: czs / cn, label: fmt });
+            }
+          }
+          choroLegend(C);
         }
       }
       for (let i = 0; i < lbl.length; i++) {
@@ -7894,6 +8014,7 @@ const concierge = (() => {
     ['Buffers + coverage', ['How many bike docks within 300 m of each East River ferry? Draw the buffers', 'Ring every road closure with a 250 m buffer']],
     ['Buildings + streets', ['How many buildings over 150 m tall are in the city?', 'Map the tallest buildings near Wall St & Broad St', 'Where do Broadway and W 4 St cross?']],
     ['Boroughs + neighborhoods', ['Outline the Bronx', 'Show me the border of Williamsburg', 'What neighborhood am I looking at?']],
+    ['Who lives here (Census)', ['Who lives in Astoria?', 'Map median household income across NYC', 'Which neighborhood is the most diverse?', 'Compare the Upper East Side and the South Bronx']],
     ['Time travel', ['Show me the city as it was 3 days ago', 'What was the weather yesterday?', 'Back to live']]
   ];
   for (const [h, items] of USES) {

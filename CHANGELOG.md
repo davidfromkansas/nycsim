@@ -6,6 +6,40 @@ the rules on adding entries.
 
 ---
 
+## 🧑‍🤝‍🧑 Ask the Concierge who lives where (Census demographics)
+
+**Shipped:** July 9, 2026
+
+**TL;DR:** The City Concierge now knows the demographics of every NYC neighborhood
+from Census microdata — income, age, race/ethnicity, origins, languages, education,
+work, and housing — and can shade the whole city by any of them as a thematic map.
+
+**What you'll see:**
+- "Who lives in Astoria?" → "~207,000 residents, 48% White / 24% Hispanic / 16%
+  Asian, 38% foreign-born (top origins Mexico, Greece, Bangladesh); typical resident
+  is 37, rents (81% renters, ~$2,080/mo), ~$81,600 household income, commutes by
+  transit" — attributed to the Census, at community-district resolution.
+- "Map median household income across NYC" shades all 55 areas on the ground with a
+  color legend (blue → amber, ~$31k to ~$186k), Manhattan glowing brightest. Works
+  for rent, median age, % foreign-born, % renters, diversity, and more.
+- "Which neighborhood is the most diverse?" / "highest rent?" ranks them; "compare
+  the Upper East Side and the South Bronx" puts two areas side by side.
+
+**How it works:** a one-time offline bake turns the U.S. Census Bureau's
+[ACS 2023 1-Year PUMS](https://www.census.gov/programs-surveys/acs/microdata.html)
+microdata (weighted individual + household records) into per-area distributions,
+joined to NYC City Planning's
+[2020 PUMA boundaries](https://data.cityofnewyork.us/City-Government/2020-Public-Use-Microdata-Areas-PUMAs-/pikk-p9nv);
+the running app just reads the baked file (no API key). New concierge tools —
+`demographics`, `compare_areas`, `rank_areas`, and a `choropleth` map layer — answer
+from it. **Honest caveats:** PUMS is a *sample*, so every number is an estimate with
+margin of error; and it is only published at **PUMA** (~community-district)
+resolution, so a neighborhood question actually describes the community district
+around it — the agent says so. The figures validate against known totals (8.26 M
+people, ~$75k citywide median income, 38% foreign-born, Manhattan highest / Bronx
+lowest income). Coming next: cartoony resident characters you can click, sampled
+from this same distribution.
+
 ## 🚗 The ambient cars drive at measured speeds
 
 **Shipped:** July 9, 2026
