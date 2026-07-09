@@ -3593,10 +3593,12 @@ const airlife = (() => {
     for (const fl of flocks) for (let k = 0; k < fl.n && i < BN; k++, i++)
       bdata.push({ fl, r: 0.3 + RR() * 0.7, a: RR() * TAU, w: (0.08 + RR() * 0.12) * (RR() < 0.5 ? 1 : -1), yo: (RR() - 0.5) * 30 });
   }
-  // voxel clouds — chunky stacked cumulus, Minecraft-style, one draw call.
-  // Columns of a 160m grid are ranked once by seeded noise; blocks are emitted
-  // strongest-core-first, so live cloud cover is simply mesh.count.
-  const CT = 26000, CCELL = 160, NCOL = Math.floor(CT / CCELL);
+  // Ghibli cumulus — sparse, big, distinct puffy masses with blue sky between them.
+  // Cloud CENTERS live on a COARSE ~640m grid (jittered) so each is a separate
+  // cauliflower, not a tile-filling sheet; ranked once by seeded noise and emitted
+  // strongest-first, so live cloud cover is simply mesh.count. Each center then
+  // grows a cluster of rounded lobes (below).
+  const CT = 26000, PGRID = 640, NCOL = Math.floor(CT / PGRID);
   let cwX = 9, cwZ = 0, cDriftX = 0, cDriftZ = 0, coverTgt = 0.13, coverCur = 0.13;
   const uDrift = { value: new THREE.Vector2(0, 0) };
   const frac = v => v - Math.floor(v);
@@ -3612,22 +3614,30 @@ const airlife = (() => {
     fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
     return lerp(lerp(jh21(ix, iy), jh21(ix + 1, iy), fx), lerp(jh21(ix, iy + 1), jh21(ix + 1, iy + 1), fx), fy);
   }
+  const RJ = rng(919);
   const cols = [];
   for (let i = 0; i < NCOL; i++) for (let j = 0; j < NCOL; j++) {
-    const px = -CT / 2 + (i + 0.5) * CCELL, pz = -CT / 2 + (j + 0.5) * CCELL;
-    const v = jvn(px * 0.00042, pz * 0.00042) * 0.7 + jvn(px * 0.0016 + 7.7, pz * 0.0016 + 3.1) * 0.3; // low frequency → big connected sheets with holes
+    const px = -CT / 2 + (i + 0.5) * PGRID + (RJ() - 0.5) * PGRID * 0.6; // jitter off the lattice
+    const pz = -CT / 2 + (j + 0.5) * PGRID + (RJ() - 0.5) * PGRID * 0.6;
+    const v = jvn(px * 0.00050, pz * 0.00050) * 0.6 + jvn(px * 0.0019 + 7.7, pz * 0.0019 + 3.1) * 0.4; // organic clumping into cloud groups
     cols.push([v, px, pz]);
   }
   cols.sort((a, b) => b[0] - a[0]);
-  const MAXCOLF = 0.04 + 0.5; // column fraction shown at 100% cover
+  const MAXCOLF = 0.04 + 0.72; // fraction of cloud CENTERS shown at 100% cover (fewer, bigger than the old sheet)
   const maxCols = Math.floor(cols.length * MAXCOLF);
   const RCV = rng(707);
-  const BH = 30; // voxel height — thin plates, Minecraft-style (wide footprint, shallow slab)
-  const cGeo = new THREE.BoxGeometry(1, 1, 1); cGeo.translate(0, 0.5, 0);
-  // opaque: Minecraft clouds are solid — no see-through, so no unsorted-alpha streaks.
+  // GHIBLI CUMULUS: rounded overlapping lobes instead of stacked boxes. The puff
+  // primitive is a low-poly icosphere (smooth radial normals → soft Lambert falloff),
+  // and each cloud column emits a CLUSTER of ellipsoid lobes arranged as a cauliflower
+  // dome — wide flattened lobes at the base, smaller ones billowing up and inward.
+  // Overlapping opaque lobes read as one puffy mass. Still one InstancedMesh / one
+  // draw call, still opaque (no alpha sorting), cover still = mesh.count via the
+  // per-column prefix sum, wind drift still wrapped in the vertex shader.
+  const CDET = TIER === 'low' ? 0 : 1;              // detail 1 = 80-tri smooth puff; low = 20-tri
+  const cGeo = new THREE.IcosahedronGeometry(1, CDET);
   // gentle emissive keeps shadowed undersides reading as bright cloud, not muddy gray.
-  const cvMat = new THREE.MeshLambertMaterial({ emissive: 0xa8c0dc, emissiveIntensity: 0.52 }); // bright pale-blue undersides
-  cvMat.customProgramCacheKey = () => 'voxcloud';
+  const cvMat = new THREE.MeshLambertMaterial({ emissive: 0xbcd0e6, emissiveIntensity: 0.55 }); // soft blue-white undersides
+  cvMat.customProgramCacheKey = () => 'ghiblipuff';
   cvMat.onBeforeCompile = (sh) => {
     sh.uniforms.uDrift = uDrift;
     sh.vertexShader = sh.vertexShader
@@ -3639,19 +3649,34 @@ const airlife = (() => {
         vec4 mvPosition = viewMatrix * modelMatrix * vec4(ip.xyz, 1.0);
         gl_Position = projectionMatrix * mvPosition;`);
   };
-  // emit blocks per column (stack height by core-strength rank), prefix-summed for count lookup
+  // per column: a cluster of rounded lobes (count + size scale by core-strength rank),
+  // prefix-summed so live cover still maps to a contiguous instance count.
+  const LOBES = TIER === 'low'
+    ? (fr => fr < 0.06 ? 5 : fr < 0.2 ? 3 : 2)
+    : (fr => fr < 0.04 ? 14 : fr < 0.10 ? 10 : fr < 0.22 ? 7 : fr < 0.45 ? 4 : 2);
   const cMats = [], cCols = [], colPrefix = [0];
   {
-    const _m = new THREE.Matrix4();
+    const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _iq = new THREE.Quaternion();
+    const G = 2.399963; // golden angle — even lobe scatter without clumping
     for (let r = 0; r < maxCols; r++) {
       const [, px, pz] = cols[r];
       const fr = r / cols.length;
-      const stack = fr < 0.05 ? 2 : 1; // mostly one thin plate; rare double at the strongest cores
-      const yb = 5200; // flat deck above the hero camera — you look UP at the blocky undersides, city stays clear below
-      for (let s = 0; s < stack; s++) {
-        _m.makeScale(CCELL, BH, CCELL); _m.setPosition(px, yb + s * BH, pz);
+      const nn = LOBES(fr);
+      const yb = 5150 + (RCV() - 0.5) * 320;                // varied cloud-base heights → real depth, not a razor deck
+      const R = PGRID * (0.30 + 0.20 * clamp(1 - fr * 3, 0, 1)); // lobe radius ~190–320 m; masses ~500–800 m across
+      for (let k = 0; k < nn; k++) {
+        const kf = nn === 1 ? 0 : k / (nn - 1);             // 0 base ring → 1 dome top
+        const ang = k * G + RCV() * 0.5;
+        const spread = k === 0 ? R * 0.25 * RCV() : R * (1.05 - 0.72 * kf) * (0.55 + RCV() * 0.6); // wide flat base, tight billowing top
+        const ox = Math.cos(ang) * spread, oz = Math.sin(ang) * spread;
+        const oy = kf * R * 1.9 + (RCV() - 0.5) * R * 0.25; // tall cauliflower dome
+        const lr = R * (1 - 0.5 * kf) * (0.78 + RCV() * 0.44); // lobes shrink toward the top
+        _p.set(px + ox, yb + oy, pz + oz);
+        _s.set(lr * 1.25, lr * (0.78 + 0.18 * kf), lr * 1.25); // flattened base lobes, rounder toward the crown
+        _m.compose(_p, _iq, _s);
         cMats.push(_m.clone());
-        cCols.push([1, 1, 1]); // flat white; Lambert + emissive do the underside shading
+        const up = 0.86 + 0.14 * kf;                        // base lobes cooler/darker, tops sunlit-white
+        cCols.push([up, up, Math.min(1, up + 0.03)]);
       }
       colPrefix.push(cMats.length);
     }
@@ -3667,7 +3692,7 @@ const airlife = (() => {
   clouds.frustumCulled = false;
   clouds.castShadow = false; clouds.receiveShadow = false;
   scene.add(clouds);
-  const cloudCountFor = c => colPrefix[Math.max(0, Math.min(maxCols, Math.floor(cols.length * (0.04 + clamp(c, 0, 1) * 0.5))))];
+  const cloudCountFor = c => colPrefix[Math.max(0, Math.min(maxCols, Math.floor(cols.length * (0.04 + clamp(c, 0, 1) * 0.72))))];
   clouds.count = cloudCountFor(coverCur);
   const _cwTgt = new THREE.Color();
 

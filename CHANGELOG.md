@@ -6,6 +6,36 @@ the rules on adding entries.
 
 ---
 
+## ☁️ Puffy Ghibli clouds
+
+**Shipped:** July 9, 2026
+
+**TL;DR:** Clouds went from flat voxel plates to big, rounded, billowing cumulus —
+distinct puffy cauliflower masses with blue sky between them.
+
+**What you'll see:**
+- Fair-weather skies now hold well-separated cumulus clouds, each a mound of soft
+  rounded lobes (~500–800 m across) doming upward from a flatter base, with real
+  blue gaps around them instead of a solid ceiling. Fly up near the cloud level
+  (~5,200 m) to see them billow in profile.
+- Lobe bases sit a touch cooler/shadowed and tops read sunlit-white, so each mass
+  looks lit and three-dimensional rather than like a cut-out.
+- Overcast still fills the sky, now as a dense field of rounded puffs; the city
+  stays clear below.
+
+**How it works:** still one instanced draw call and fully opaque (translucent
+clouds caused alpha-sorting streaks long ago), and live cloud cover still maps
+directly to how many clouds are drawn. The primitive changed from a box to a
+low-poly icosphere (smooth normals → soft shading), and cloud centers now sit on a
+coarse ~640 m jittered grid so each is a separate mass; every center grows a
+cluster of flattened, overlapping ellipsoid lobes arranged as a cauliflower dome
+(wide at the base, smaller and tighter toward the top). Cheaper than the old sheet,
+too — at most ~450 k triangles at full overcast; phones use a lower-detail puff and
+fewer lobes. Honest caveat: these are stylized rounded volumes built from
+overlapping lobes, not raymarched vapor, so up close you can see where lobes meet.
+
+---
+
 ## ⚡ The twin now runs on phones — and everything got faster
 
 **Shipped:** July 8, 2026
