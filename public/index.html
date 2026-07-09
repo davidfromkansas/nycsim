@@ -3643,10 +3643,12 @@ const airlife = (() => {
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nuniform vec2 uDrift;')
       .replace('#include <project_vertex>', `
-        vec4 ip = instanceMatrix * vec4(transformed, 1.0);
-        ip.x = mod(ip.x + uDrift.x + ${CT / 2}.0, ${CT}.0) - ${CT / 2}.0;
-        ip.z = mod(ip.z + uDrift.y + ${CT / 2}.0, ${CT}.0) - ${CT / 2}.0 + 10000.0;
-        vec4 mvPosition = viewMatrix * modelMatrix * vec4(ip.xyz, 1.0);
+        vec4 wp = instanceMatrix * vec4(transformed, 1.0);
+        vec3 ctr = instanceMatrix[3].xyz;                         // wrap each lobe by its CENTER, as one piece —
+        float wx = mod(ctr.x + uDrift.x + ${CT / 2}.0, ${CT}.0) - ${CT / 2}.0; // per-vertex mod tore lobes on the seam
+        float wz = mod(ctr.z + uDrift.y + ${CT / 2}.0, ${CT}.0) - ${CT / 2}.0 + 10000.0; // into tile-wide streaks
+        vec3 pos = vec3(wx + (wp.x - ctr.x), wp.y, wz + (wp.z - ctr.z));
+        vec4 mvPosition = viewMatrix * modelMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mvPosition;`);
   };
   // per column: a cluster of rounded lobes (count + size scale by core-strength rank),
