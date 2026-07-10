@@ -332,7 +332,6 @@
       <option value="dusk">Dusk</option>
     </select>
     <label title="Street traffic density">&#128663;<input id="traffic" type="range" min="0" max="1.5" step="0.05" value="1"></label>
-    <label title="River traffic density">&#9972;<input id="boats" type="range" min="0" max="1.5" step="0.05" value="1"></label>
     <select id="quality" title="Quality">
       <option value="low">Low</option>
       <option value="medium">Medium</option>
@@ -3544,124 +3543,8 @@ const traffic = (() => {
 window.__traffic = traffic; // dev/testing hook
 
 /* ============================================================
-   23. Rivers alive — boats, wakes, helicopters, jet, birds
+   23. Rivers alive — helicopters, jet, birds (boats = live NYC Ferry layer only, §25d)
    ============================================================ */
-const boats = (() => {
-  const RB = rng(777);
-  const list = [];
-  const add = (pts, speed, scale, col, mode) => list.push({
-    pts: pts.map(p => new THREE.Vector3(p[0], -0.45, p[1])), speed, scale, col, mode, // rides the lowered sea level
-    s: RB() * 0.9, dir: 1, wakeT: 0
-  });
-  const ferryO = [0.95, 0.45, 0.12], tour = [0.92, 0.92, 0.95], barge = [0.35, 0.3, 0.28], police = [0.2, 0.3, 0.55];
-  add([[-320, -3600], [-160, 180]], 7.5, 1.9, ferryO, 'shuttle');       // Staten Island Ferry
-  add([[-420, -3300], [-280, 120]], 7.5, 1.9, ferryO, 'shuttle');
-  add([[900, 1100], [1700, 700]], 6, 1.1, tour, 'shuttle');             // East River ferries
-  add([[850, 3600], [2050, 3320]], 6, 1.1, tour, 'shuttle');
-  add([[1000, 6600], [2100, 6900]], 6, 1.1, tour, 'shuttle');
-  add([[1050, 9700], [2250, 9400]], 6, 1.1, tour, 'shuttle');
-  add([[-1900, 900], [-1350, 1500]], 5.5, 1.1, tour, 'shuttle');        // Hudson ferries
-  add([[-2000, 5600], [-1500, 6200]], 5.5, 1.1, tour, 'shuttle');
-  add([[-2050, 12000], [-1600, 12600]], 5.5, 1.1, tour, 'shuttle');
-  add([[-2100, -1500], [-1900, 8000], [-2000, 17000]], 3, 2.6, barge, 'shuttle'); // Hudson barge
-  add([[-1750, 15000], [-1850, 2000]], 3.2, 2.4, barge, 'shuttle');
-  add([[1500, -800], [1250, 5000], [1600, 12000]], 3, 2.2, barge, 'shuttle');     // East River barge
-  add([[-2650, -3300], [-2100, -2000], [-1500, -600], [-1700, 2500]], 5, 1.0, tour, 'shuttle'); // harbor tour
-  add([[-2900, -1800], [-1200, -2600], [0, -1400], [-1600, -300]], 5, 1.0, tour, 'shuttle');
-  add([[500, -2200], [1100, -400]], 9, 0.7, police, 'shuttle');         // fast launch
-  add([[-1800, 4000], [-1950, 10000]], 8.5, 0.7, police, 'shuttle');
-  for (let i = 0; i < 8; i++) { // extra harbor + river small craft
-    const x0 = -2400 + RB() * 2600, z0 = -2800 + RB() * 1800;
-    add([[x0, z0], [x0 + (RB() - 0.5) * 2200, z0 + RB() * 2600]], 4 + RB() * 4, 0.8, RB() < 0.5 ? tour : police, 'shuttle');
-  }
-  // hull geometry
-  const hull = new THREE.BoxGeometry(7, 2.6, 24); hull.translate(0, 1.4, 0);
-  const cab = new THREE.BoxGeometry(5, 3.2, 10); cab.translate(0, 4.3, -2);
-  const geo = BufferGeometryUtils.mergeGeometries([hull, cab]);
-  const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial(), list.length);
-  mesh.frustumCulled = false;
-  const _c = new THREE.Color();
-  for (let i = 0; i < list.length; i++) mesh.setColorAt(i, _c.setRGB(list[i].col[0], list[i].col[1], list[i].col[2]));
-  scene.add(mesh);
-  // cumulative lengths
-  for (const b of list) {
-    b.cum = [0];
-    for (let i = 1; i < b.pts.length; i++) b.cum.push(b.cum[i - 1] + b.pts[i].distanceTo(b.pts[i - 1]));
-    b.len = b.cum[b.cum.length - 1];
-    b.s *= b.len;
-  }
-  // wake pool
-  const WMAX = 1500;
-  const wgeo = new THREE.PlaneGeometry(9, 9).rotateX(-Math.PI / 2);
-  wgeo.setAttribute('aBirth', new THREE.InstancedBufferAttribute(new Float32Array(WMAX).fill(-100), 1));
-  const wmat = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false,
-    uniforms: { uTime: cityUniforms.uTime, uFogColor: FOG_UNI.uFogColor, uFogDensity: FOG_UNI.uFogDensity },
-    vertexShader: `
-      attribute float aBirth; uniform float uTime; varying float vA; varying float vFog;
-      void main(){
-        float age = uTime - aBirth;
-        float k = 1.0 + age * 1.15;
-        vec3 p = position * k;
-        vA = max(0.0, 0.42 * (1.0 - age / 13.0)) * step(0.0, age);
-        vec4 mv = viewMatrix * modelMatrix * instanceMatrix * vec4(p, 1.0);
-        vFog = -mv.z;
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: `
-      varying float vA; varying float vFog; uniform vec3 uFogColor; uniform float uFogDensity;
-      void main(){
-        float f = 1.0 - exp(-pow(vFog * uFogDensity, 2.0));
-        gl_FragColor = vec4(mix(vec3(0.92, 0.97, 1.0), uFogColor, f), vA);
-      }`
-  });
-  const wakes = new THREE.InstancedMesh(wgeo, wmat, WMAX);
-  wakes.frustumCulled = false;
-  scene.add(wakes);
-  let wCursor = 0;
-  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
-  const YAXIS = new THREE.Vector3(0, 1, 0);
-  let active = list.length;
-  function update(t, dt) {
-    let spawned = false;
-    for (let i = 0; i < list.length; i++) {
-      const b = list[i];
-      if (i >= active) { _m.makeScale(0.001, 0.001, 0.001); mesh.setMatrixAt(i, _m); continue; }
-      b.s += b.speed * b.dir * dt;
-      if (b.s > b.len) { b.s = b.len; b.dir = -1; }
-      if (b.s < 0) { b.s = 0; b.dir = 1; }
-      let seg = 0;
-      while (seg < b.cum.length - 2 && b.s > b.cum[seg + 1]) seg++;
-      const a = b.pts[seg], c = b.pts[seg + 1];
-      const segl = b.cum[seg + 1] - b.cum[seg] || 1;
-      const f = (b.s - b.cum[seg]) / segl;
-      const dx = (c.x - a.x) * b.dir, dz = (c.z - a.z) * b.dir;
-      _p.set(a.x + (c.x - a.x) * f, 0.4 + Math.sin(t * 1.2 + i * 2.1) * 0.25, a.z + (c.z - a.z) * f);
-      const head = Math.atan2(dx, dz);
-      _q.setFromAxisAngle(YAXIS, head);
-      _s.set(b.scale, b.scale, b.scale);
-      _m.compose(_p, _q, _s);
-      mesh.setMatrixAt(i, _m);
-      // drop wakes
-      b.wakeT -= dt;
-      if (b.wakeT <= 0 && b.s > 1 && b.s < b.len - 1) {
-        b.wakeT = 5.5 / b.speed;
-        _p.y = -0.35;
-        _s.set(b.scale, 1, b.scale);
-        _m.compose(_p, _q, _s);
-        wakes.setMatrixAt(wCursor, _m);
-        wgeo.attributes.aBirth.array[wCursor] = t;
-        wCursor = (wCursor + 1) % WMAX;
-        spawned = true;
-      }
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    if (spawned) { wakes.instanceMatrix.needsUpdate = true; wgeo.attributes.aBirth.needsUpdate = true; }
-  }
-  function setDensity(d) { active = Math.round(list.length * clamp(d, 0, 1.5) / 1.5 * 1.5); active = Math.min(active, list.length); }
-  return { update, setDensity };
-})();
-
 // helicopters tracking the shorelines + one jet on approach + birds + clouds
 const airlife = (() => {
   const helis = [
@@ -4352,17 +4235,15 @@ function applyQuality(name) {
 }
 function applyDensities() {
   traffic.setDensity(parseFloat(ui.traffic.value) * qual.tK);
-  boats.setDensity(parseFloat(ui.boats.value) * qual.bK);
 }
 // UI wiring
 const ui = {
-  traffic: document.getElementById('traffic'), boats: document.getElementById('boats'),
+  traffic: document.getElementById('traffic'),
   light: document.getElementById('light'), quality: document.getElementById('quality'),
   photo: document.getElementById('photo'), hint: document.getElementById('hint'), dbg: document.getElementById('dbg')
 };
 document.querySelectorAll('#presets button').forEach(b => b.addEventListener('click', () => flyTo(b.dataset.p)));
 ui.traffic.addEventListener('input', applyDensities);
-ui.boats.addEventListener('input', applyDensities);
 ui.quality.addEventListener('change', () => applyQuality(ui.quality.value));
 function setMode(name) {
   modeName = name;
@@ -8589,7 +8470,6 @@ function frame() {
   sun.target.position.set(sx, 0, sz);
   const camY = camera.position.y;
   traffic.update(T, dt);
-  boats.update(T, dt);
   airlife.update(T, dt);
   flights.update(T, dt);
   subway.update(T, dt);
