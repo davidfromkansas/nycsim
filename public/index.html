@@ -8,7 +8,7 @@
   html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#141720; }
   canvas { display:block; }
   #ui {
-    position:fixed; left:50%; bottom:14px; transform:translateX(-50%);
+    position:fixed; left:50%; bottom:42px; transform:translateX(-50%); /* clears the 34 px #ticker strip */
     display:flex; gap:10px; align-items:center; z-index:10;
     font:11px/1.4 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.85);
     background:rgba(10,13,20,.55); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
@@ -125,6 +125,35 @@
     font-size:9.5px; color:#6c88b0; }
   #chip .off { opacity:.65; }
   @media (max-width: 820px) { #hud { transform:scale(.72); transform-origin:top left; } }
+  #wxAlerts { /* NWS active-alert card — in the #hud stack below the slider, absent unless NYC has alerts */
+    display:none; font:11px/1.4 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+    color:#5c3a08; user-select:none;
+    background:linear-gradient(180deg,rgba(255,251,240,.92),rgba(255,238,205,.92));
+    border:2px solid #fff; border-left:6px solid #e8a020; border-radius:14px; padding:6px 11px;
+    box-shadow:0 5px 16px rgba(8,20,50,.35), inset 0 1px 0 #fff;
+  }
+  #wxAlerts.sev { border-left-color:#d9482b; }
+  #wxAlerts .wxr { display:flex; gap:7px; align-items:baseline; padding:1px 0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #wxAlerts .wxr b { color:#7a2d12; flex:none; }
+  #ticker { /* live NYC headlines (amNY + THE CITY) — strip flush with the screen bottom (#ui floats above) */
+    position:fixed; left:0; right:0; bottom:0; z-index:9; height:34px; display:none;
+    overflow:hidden; user-select:none;
+    font:12.5px/34px 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+    background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(226,237,251,.72));
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.75); border-bottom:1px solid rgba(180,200,230,.5);
+  }
+  #ticker .tkin { display:inline-flex; white-space:nowrap; will-change:transform;
+    animation:tkscroll linear infinite; }
+  #ticker:hover .tkin { animation-play-state:paused; }
+  #ticker a { color:#17418a; text-decoration:none; padding:0 14px; }
+  #ticker a:hover { text-decoration:underline; }
+  #ticker .src { color:#7a93bb; font-size:10px; margin-right:7px; letter-spacing:.4px; }
+  #ticker i.sep { color:#9fb6da; font-style:normal; }
+  @keyframes tkscroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+  body.photo #ticker, body.focusmode #ticker, body.manual #ticker { display:none !important; }
+  @media (max-width: 700px) { #ticker { display:none !important; } #ui { bottom:14px; } } /* no ticker on phones → bar drops back */
   .flbl {
     position:fixed; left:0; top:0; z-index:9; display:none; pointer-events:auto; cursor:pointer;
     font:10px/1.35 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.85);
@@ -169,6 +198,7 @@
   #focusChip { display:none; border-color:rgba(255,255,255,.4); z-index:30; }
   #focusChip .off { color:rgba(255,255,255,.4); }
   .fybl.traffic { border-color:rgba(255,130,95,.4); } /* traffic chips: incident ember accent */
+  .fybl.n311 { border-color:rgba(150,190,255,.4); } /* 311 chips: civic blue accent */
   .fybl.traffic b { color:#ff8a66; }
   .flbl b { color:#fff; font-weight:600; }
   .flbl .sub { color:rgba(255,255,255,.55); }
@@ -305,6 +335,32 @@
     font:10px system-ui; cursor:pointer; line-height:18px; text-align:center; padding:0;
   }
   body.photo #personaCard { display:none !important; }
+  /* 25t. thought bubbles — Sims-style icon clouds over residents (zoomed-in, live-mode only) */
+  .thoughtB {
+    position:fixed; left:0; top:0; z-index:8; display:none; pointer-events:auto; cursor:default;
+    font:600 14px/1.2 system-ui, -apple-system, sans-serif; color:#20242c;
+    background:rgba(255,255,255,.95); border:2px solid #20242c; border-radius:11px;
+    padding:2px 7px 3px; white-space:nowrap; will-change:transform;
+  }
+  .thoughtB::after { /* comic thought-tail: two shrinking dots toward the head */
+    content:''; position:absolute; left:9px; bottom:-10px; width:7px; height:7px;
+    background:rgba(255,255,255,.95); border:2px solid #20242c; border-radius:50%;
+  }
+  .thoughtB::before {
+    content:''; position:absolute; left:2px; bottom:-17px; width:4px; height:4px;
+    background:rgba(255,255,255,.95); border:2px solid #20242c; border-radius:50%;
+  }
+  .thoughtB .tx { display:none; font:600 11px/1.25 system-ui, sans-serif; margin-left:5px;
+    white-space:normal; max-width:150px; vertical-align:middle; }
+  .thoughtB:hover .tx, .thoughtB.near .tx { display:inline-block; }
+  body.photo .thoughtB, body.focusmode .thoughtB { display:none !important; }
+  #plumbob { position:fixed; left:0; top:0; z-index:8; display:none; pointer-events:none; will-change:transform; }
+  #plumbob i {
+    display:block; width:13px; height:21px; background:#41c536;
+    clip-path:polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    animation:plspin 1.5s linear infinite;
+  }
+  @keyframes plspin { from { transform:rotateY(0deg); } to { transform:rotateY(360deg); } }
   #choroLegend {
     display:none; position:fixed; left:14px; bottom:14px; z-index:20; min-width:150px;
     font:10px system-ui,-apple-system,sans-serif; color:rgba(255,255,255,.9);
@@ -378,8 +434,10 @@
   </div>
   <button id="timeReset" title="Back to now">now</button>
 </div>
+<div id="wxAlerts"></div>
 </div>
 <div id="vitals"></div>
+<div id="ticker"><div class="tkin"></div></div>
 <div id="rotDial"><!-- rotation module: orbit left/right, tilt over/under -->
   <svg viewBox="0 0 120 120">
     <circle cx="60" cy="60" r="58" fill="url(#cdM)"/>
@@ -885,8 +943,8 @@ const LMK = [
   { n: 'owtc',      x: -520, z: 1060, pad: 130, h: 541 },
   { n: 'wtc_kids',  x: -430, z: 1220, pad: 90,  h: 300 },
   { n: 'woolworth', x: -260, z: 1400, pad: 55,  h: 241 },
-  { n: 'downtown1', x: -220, z: 760,  pad: 70,  h: 283 }, // 40 Wall-ish
-  { n: 'downtown2', x: -60,  z: 880,  pad: 65,  h: 259 }, // 70 Pine deco
+  // downtown1/downtown2 (40 Wall / 70 Pine approximations) retired — the FiDi core
+  // renders real DCP massing from fidi.json (FIDI_RING + loader in buildLandmarks)
   { n: 'flatiron',  x: -18,  z: 5290, pad: 55,  h: 87 },
   { n: 'esb',       x: -60,  z: 6140, pad: 95,  h: 381 },
   { n: 'chrysler',  x: 380,  z: 6790, pad: 65,  h: 319 },
@@ -918,6 +976,21 @@ const LMK = [
 function inPad(x, z) {
   for (const l of LMK) { if (!l.pad) continue; const dx = x - l.x, dz = z - l.z; if (dx * dx + dz * dz < l.pad * l.pad) return true; }
   return false;
+}
+// Financial District core: real DCP massing (fidi.json) replaces the box fabric inside
+// this ring. Two carve-outs keep the hand-built WTC ensemble and the real WTC block's
+// footprint boxes; fidi.json was baked with the same ring + carve-outs — keep in sync.
+const FIDI_RING = [[-89, 100], [-150, 734], [-173, 1025], [-235, 1329], [-129, 1481], [105, 1700], [595, 1810], [603, 959], [343, 247]];
+function inFidi(x, z) {
+  if (x < -560 || x > 610 || z < 90 || z > 1820) return false;
+  if (x > -560 && x < -360 && z > 850 && z < 1290) return false;
+  if ((x + 170) * (x + 170) + (z - 1553) * (z - 1553) < 170 * 170) return false;
+  let ins = false;
+  for (let i = 0, j = FIDI_RING.length - 1; i < FIDI_RING.length; j = i++) {
+    const x1 = FIDI_RING[i][0], z1 = FIDI_RING[i][1], x2 = FIDI_RING[j][0], z2 = FIDI_RING[j][1];
+    if ((z1 > z) !== (z2 > z) && x < (x2 - x1) * (z - z1) / (z2 - z1) + x1) ins = !ins;
+  }
+  return ins;
 }
 
 /* ============================================================
@@ -1310,6 +1383,7 @@ function generateCity() {
   for (let i = 0; i < BLDG.n; i++) {
     const x = BLDG.x[i], z = BLDG.z[i];
     if (!onLand(x, z)) continue;
+    if (inFidi(x, z)) continue; // FiDi core renders real DCP massing (fidi.json) instead
     const R = rng(iHash(BLDG.bin[i] | 0, 3));
     makeBuilding(x, z, BLDG.w[i], BLDG.d[i], BLDG.r[i] / 1000, recipeAt(x, z), R,
       { h: Math.max(4, BLDG.h[i]), real: true });
@@ -2007,26 +2081,44 @@ function eastW(z) { return z < 2400 ? 820 : z < 5200 ? 620 : z < 8000 ? 700 : 98
   strip(-3400, 21600, 320, z => coastAt(clamp(z, Z_TIP_S + 40, Z_TIP_N - 40)).w - hudsonW(clamp(z, 0, 21000)) + (z < Z_TIP_S ? -300 : 0), -4800);
   // Brooklyn / Queens — west edge follows the REAL shoreline where the geo-first
   // build exists (bkShoreX), old stylized formula beyond it; extended south to Bay Ridge
-  strip(-8500, 15300, 300, z => {
-    // westmost land edge at this z: South Bronx shore once it begins (the water
-    // between it and Queens is painted by the bay overlay), else the real
-    // Brooklyn/Queens shoreline, else the old stylized formula
-    const xs = bxShoreX(z);
-    if (xs !== null) return Math.max(xs, coastAt(clamp(z, Z_TIP_S + 40, Z_TIP_N - 40)).e + 120) + 15;
-    const bs = bkShoreX(z), qs = qnShoreX(z);
-    if (bs !== null || qs !== null) return Math.min(bs ?? 1e9, qs ?? 1e9) + 15;
-    return coastAt(clamp(z, Z_TIP_S + 40, Z_TIP_N - 40)).e + eastW(clamp(z, 0, 13800)) + (z < 0 ? 500 + (0 - z) * 0.7 : 0);
-  }, 8800); // extends under the whole geo-first build (Bushwick/Highland reach x≈8200)
+  strip(-8500, 15300, 300, plateEdgeBKQN, 8800); // extends under the whole geo-first build (Bushwick/Highland reach x≈8200)
   // Bronx (wraps around the island's north tip) — west edge = real Harlem River bank
   // where baked (clamped east of the stylized Manhattan coast to keep the channel open)
-  strip(15400, 24200, 300, z => {
-    const xs = bxShoreX(z);
-    const styl = z > 21520 ? -1400 : coastAt(Math.min(z, 21400)).e + 170;
-    return xs !== null ? Math.max(xs, coastAt(Math.min(z, 21000)).e + 40) + 15 : styl;
-  }, 8600); // extends over the REAL East Bronx (real buildings/streets fill it; LI Sound past 8600)
+  strip(15400, 24200, 300, plateEdgeBX, 8600); // extends over the REAL East Bronx (real buildings/streets fill it; LI Sound past 8600)
   const m = new THREE.Mesh(sinkToGeometry(S), boroughGndMat);
   m.matrixAutoUpdate = false;
   scene.add(m);
+}
+// east-plate west edges — named so the strips above and onPlate() below share ONE
+// formula (the real borough rings can bulge west of the painted plate: Riverdale
+// past the clamped Harlem channel, pier stubs past the sampled shoreline — so a
+// landOK pass alone doesn't guarantee painted ground under a box)
+function plateEdgeBKQN(z) {
+  // westmost land edge at this z: South Bronx shore once it begins (the water
+  // between it and Queens is painted by the bay overlay), else the real
+  // Brooklyn/Queens shoreline, else the old stylized formula
+  const xs = bxShoreX(z);
+  if (xs !== null) return Math.max(xs, coastAt(clamp(z, Z_TIP_S + 40, Z_TIP_N - 40)).e + 120) + 15;
+  const bs = bkShoreX(z), qs = qnShoreX(z);
+  if (bs !== null || qs !== null) return Math.min(bs ?? 1e9, qs ?? 1e9) + 15;
+  return coastAt(clamp(z, Z_TIP_S + 40, Z_TIP_N - 40)).e + eastW(clamp(z, 0, 13800)) + (z < 0 ? 500 + (0 - z) * 0.7 : 0);
+}
+function plateEdgeBX(z) {
+  const xs = bxShoreX(z);
+  const styl = z > 21520 ? -1400 : coastAt(Math.min(z, 21400)).e + 170;
+  return xs !== null ? Math.max(xs, coastAt(Math.min(z, 21000)).e + 40) + 15 : styl;
+}
+// is (x,z) on an actual east ground-plate quad? mirrors strip()'s row geometry exactly
+// (each row spans [z0, z0+step] with a straight west edge between its two sampled xNear)
+function onPlate(x, z) {
+  const seg = (zA, zB, step, edge, xFar) => {
+    if (z < zA || x >= xFar) return false;
+    const z0 = zA + Math.floor((z - zA) / step) * step;
+    if (z0 >= zB) return false;
+    const e0 = edge(z0);
+    return x > e0 + (edge(z0 + step) - e0) * (z - z0) / step;
+  };
+  return seg(-8500, 15300, 300, plateEdgeBKQN, 8800) || seg(15400, 24200, 300, plateEdgeBX, 8600);
 }
 // small islands — Roosevelt/Governors/Randalls/Rikers use their REAL baked rings
 // (the old hand-placed ellipses sat up to ~1 km from where live data lands).
@@ -2109,6 +2201,7 @@ const waterUni = {
   uTime: cityUniforms.uTime, uSunDir: cityUniforms.uSunDir, uSunColor: cityUniforms.uSunColor,
   uDeep: { value: new THREE.Color(MODES.golden.waterDeep) }, uHor: { value: new THREE.Color(MODES.golden.skyHor) },
   uZen: skyUni.uZen, uSparkle: { value: 1 }, uWaterW: WIND_UNI.uWaterW,
+  uFX: { value: 1 }, // desktop-only wave detail (quality-tier gated, like uSparkle)
   uFogColor: FOG_UNI.uFogColor, uFogDensity: FOG_UNI.uFogDensity
 };
 const waterMat = new THREE.ShaderMaterial({
@@ -2124,7 +2217,7 @@ const waterMat = new THREE.ShaderMaterial({
     }`,
   fragmentShader: `
     varying vec3 vW; varying float vFog;
-    uniform float uTime, uSparkle, uFogDensity, uWaterW;
+    uniform float uTime, uSparkle, uFogDensity, uWaterW, uFX;
     uniform vec3 uSunDir, uSunColor, uDeep, uHor, uZen, uFogColor;
     float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
     float vn(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f);
@@ -2134,15 +2227,40 @@ const waterMat = new THREE.ShaderMaterial({
       float t = uTime * uWaterW;
       float n1 = vn(p * 0.020 + vec2(t * 0.06, t * 0.03));
       float n2 = vn(p * 0.061 - vec2(t * 0.05, t * 0.083));
-      vec3 N = normalize(vec3((n1 - 0.5) + (n2 - 0.5) * 0.6, 6.0, (n2 - 0.5) + (n1 - 0.5) * 0.5));
+      vec2 g = vec2((n1 - 0.5) + (n2 - 0.5) * 0.6, (n2 - 0.5) + (n1 - 0.5) * 0.5);
+      float cap = 0.0;
+      if (uFX > 0.5) { // desktop-only detail (uFX = 0 on low/medium tiers)
+        // two finer octaves riding a slow south-drifting domain warp: long rollers
+        // with chop on top, and the rivers read as flowing downstream
+        vec2 w = vec2(vn(p * 0.006 + vec2(t * 0.013, -t * 0.048)),
+                      vn(p * 0.006 + vec2(-t * 0.011, -t * 0.052))) * 26.0;
+        float n3 = vn((p + w) * 0.135 + vec2(t * 0.11, -t * 0.06));
+        float n4 = vn((p + w) * 0.340 - vec2(t * 0.14, t * 0.19));
+        g += vec2((n3 - 0.5) * 0.55 + (n4 - 0.5) * 0.28, (n3 - 0.5) * 0.45 + (n4 - 0.5) * 0.33);
+        g *= 0.55 + uWaterW * 0.45; // live wind drives the chop (uWaterW: 0.5 calm .. 2 gale)
+        cap = smoothstep(1.25, 1.9, uWaterW) * smoothstep(0.80, 0.96, n3 * 0.62 + n4 * 0.38);
+      }
+      vec3 N = normalize(vec3(g.x, 6.0, g.y));
       vec3 V = normalize(cameraPosition - vW);
-      float fres = pow(1.0 - max(V.y, 0.0), 3.0);
+      float fres = pow(1.0 - max(mix(V.y, dot(V, N), uFX), 0.0), 3.0);
       // from above: deep blue; at grazing angles: warm sky reflection
       vec3 col = mix(mix(uDeep, uZen, 0.28), mix(uZen, uHor, 0.62), fres * 0.88);
       vec3 R = reflect(-V, N);
-      float sd = max(dot(R, normalize(uSunDir)), 0.0);
-      col += uSunColor * pow(sd, 8.0) * 0.42;
-      col += uSunColor * pow(sd, 30.0) * 0.55;
+      vec3 SD = normalize(uSunDir);
+      float sd = max(dot(R, SD), 0.0);
+      if (uFX > 0.5) {
+        // real sun-glitter is a streak stretched along the sun's azimuth, not a
+        // disc: squash the reflection across-azimuth before the broad glow lobes
+        vec2 sa = normalize(SD.xz + vec2(1e-4, 0.0));
+        vec2 pp = vec2(-sa.y, sa.x);
+        vec2 rxz = R.xz - pp * dot(R.xz, pp) * 0.72;
+        float sdA = max(dot(normalize(vec3(rxz.x, R.y, rxz.y)), SD), 0.0);
+        col += uSunColor * pow(sdA, 8.0) * 0.34;
+        col += uSunColor * pow(sdA, 30.0) * 0.62;
+      } else {
+        col += uSunColor * pow(sd, 8.0) * 0.42;
+        col += uSunColor * pow(sd, 30.0) * 0.55;
+      }
       float spec = pow(sd, 420.0);
       vec2 twc = mod(floor(p * 0.55), 271.0); // wrap cells: avoids float-precision column artifacts
       float tw = step(0.986 - uSparkle * 0.012, h21(twc + mod(floor(t * 2.6) * 7.0, 91.0)));
@@ -2151,6 +2269,8 @@ const waterMat = new THREE.ShaderMaterial({
       vec2 flc = mod(floor(p * 0.8), 283.0);
       float fleck = step(0.997, h21(flc + mod(floor(t * 2.2) * 13.0, 97.0)));
       col += uSunColor * fleck * 0.5 * uSparkle;
+      // sparse whitecaps once real wind passes ~13 mph (sky-lit, so night stays dark)
+      col = mix(col, (uHor * 0.7 + uZen * 0.3) * 1.3, cap * 0.4);
       float fog = 1.0 - exp(-pow(vFog * uFogDensity, 2.0));
       col = mix(col, uFogColor, fog);
       gl_FragColor = vec4(col, 1.0);
@@ -2823,6 +2943,7 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
     const x = BLDG.x[i], z = BLDG.z[i];
     if (onLand(x, z)) continue;                            // Manhattan boxes feed B in generateCity
     if (!landB(x, z)) continue;
+    if (!onPlate(x, z) && !islets.some(([P]) => polyContains(P, x, z))) continue; // iron rule 2: painted plate or islet under every box
     const [h0, h1, gl, palN] = recipeB(x, z);
     const R2 = rng(iHash(BLDG.bin[i] | 0, 5));
     const h = Math.max(4, BLDG.h[i]);
@@ -2864,6 +2985,7 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
         if (R() < 0.12) continue;                          // vacancy
         if (!polyContains(P, cx2, cz2)) continue;          // concave corners
         if (inParkB(cx2, cz2) || inExclB(cx2, cz2) || !landB(cx2, cz2)) continue;
+        if (!onPlate(cx2, cz2) && !islets.some(([P]) => polyContains(P, cx2, cz2))) continue; // iron rule 2: painted plate or islet only
         let hgt = h0 + R() * (h1 - h0), kind = R() < gl ? 1 : 0, w = piece - 3, d = depth;
         if (extra === 'ind' && R() < 0.5) { hgt = 6.5 + R() * 4.5; kind = -1; d = depth + 10; }
         if (extra === 'wf') { const sh = bkShoreX(cz2) ?? qnShoreX(cz2);
@@ -3040,9 +3162,27 @@ function buildLandmarks() {
   lbox(-480, 900, 0, 208, 44, 44, [0.32, 0.40, 0.48], 1);
   lbox(-260, 1400, 0, 88, 66, 42, C_TERRA); lbox(-260, 1400, 88, 120, 26, 26, C_TERRA);
   lprism(-260, 1400, 208, 33, 14, 0.8, 4, [0.32, 0.5, 0.38]);         // Woolworth green cap
-  lbox(-220, 760, 0, 178, 40, 32, C_STONE); lprism(-220, 760, 178, 32, 15, 0.5, 4, [0.32, 0.5, 0.38]); // 40 Wall
-  lbox(-60, 880, 0, 130, 48, 40, C_STONE); lbox(-60, 880, 130, 76, 30, 26, C_STONE);
-  lbox(-60, 880, 206, 40, 16, 16, C_STONE); lprism(-60, 880, 246, 13, 6, 0.4, 8, C_STONE); // 70 Pine
+  // — Financial District: real DCP massing (fidi.json — every building south of Fulton
+  //   St with true setbacks/crowns: 40 Wall, 70 Pine, 20 Exchange, One Chase plaza...).
+  //   Baked to scene coords via a geoRaw-fitted affine; aSeed/aKind feed the city
+  //   window shader so night lights match the procedural fabric. The old hand-built
+  //   40 Wall / 70 Pine approximations retired with it.
+  fetch('fidi.json').then(r => r.json()).then(j => {
+    const u8 = s2 => { const a = atob(s2), u = new Uint8Array(a.length); for (let i = 0; i < a.length; i++) u[i] = a.charCodeAt(i); return u; };
+    const q = new Uint16Array(u8(j.v).buffer), p2 = new Float32Array(q.length);
+    for (let i = 0; i < q.length; i += 3) for (let k = 0; k < 3; k++) p2[i + k] = q[i + k] / 65535 * j.scale[k] + j.off[k];
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(p2, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(u8(j.c), 3, true));
+    g.setAttribute('aSeed', new THREE.BufferAttribute(u8(j.s), 1));
+    g.setAttribute('aKind', new THREE.BufferAttribute(u8(j.k), 1));
+    const iraw = u8(j.i);
+    g.setIndex(new THREE.BufferAttribute(j.i32 ? new Uint32Array(iraw.buffer) : new Uint16Array(iraw.buffer), 1));
+    g.computeVertexNormals();
+    const m2 = new THREE.Mesh(g, patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), 0));
+    m2.matrixAutoUpdate = false;
+    scene.add(m2);
+  }).catch(() => {});
   // — Flatiron —
   pushPoly(LS, [[-42, 5232], [4, 5232], [-15, 5352]], LAND_Y, 87, C_TERRA, 0.6, 0);
   // — Empire State —
@@ -4258,10 +4398,10 @@ renderer.domElement.addEventListener('wheel', () => { camTween = null; }, { pass
 // quality
 let shadowSize = 2048;
 const QUAL = {
-  low: { dpr: 1.25, shadow: 0, win: 0.35, glint: 0.5, sparkle: 0, tK: 0.35, bK: 0.6, pK: 0.3 },
-  medium: { dpr: 1.5, shadow: 1024, win: 0.7, glint: 1, sparkle: 0.6, tK: 0.65, bK: 1, pK: 0.6 },
-  high: { dpr: 1.75, shadow: 2048, win: 1, glint: 1, sparkle: 1, tK: 1, bK: 1, pK: 1 },
-  ultra: { dpr: 2, shadow: 4096, win: 1, glint: 1, sparkle: 1, tK: 1.4, bK: 1.5, pK: 1 }
+  low: { dpr: 1.25, shadow: 0, win: 0.35, glint: 0.5, sparkle: 0, wfx: 0, tK: 0.35, bK: 0.6, pK: 0.3 },
+  medium: { dpr: 1.5, shadow: 1024, win: 0.7, glint: 1, sparkle: 0.6, wfx: 0, tK: 0.65, bK: 1, pK: 0.6 },
+  high: { dpr: 1.75, shadow: 2048, win: 1, glint: 1, sparkle: 1, wfx: 1, tK: 1, bK: 1, pK: 1 },
+  ultra: { dpr: 2, shadow: 4096, win: 1, glint: 1, sparkle: 1, wfx: 1, tK: 1.4, bK: 1.5, pK: 1 }
 };
 let qual = QUAL.high;
 let refreshFXHook = null; // set by the live controller (defined later)
@@ -4271,6 +4411,7 @@ function applyQuality(name) {
   cityUniforms.uWinDetail.value = qual.win;
   cityUniforms.uGlint.value = qual.glint;
   waterUni.uSparkle.value = qual.sparkle;
+  waterUni.uFX.value = qual.wfx; // desktop-only wave detail (phones/tablets keep the flat cheap water)
   shadowSize = qual.shadow;
   if (qual.shadow > 0) {
     if (sun.shadow.mapSize.x !== qual.shadow) {
@@ -4735,7 +4876,8 @@ window.__focusui = focusui; // dev/testing hook
 const liveBridge = (() => {
   const EP = { subway: '/api/subway', buses: '/api/buses', ferries: '/api/ferries', flights: '/api/flights',
     citibike: '/api/citibike', traffic: '/api/traffic', trafficEvents: '/api/traffic-events',
-    birds: '/api/birds', weather: '/api/weather' };
+    birds: '/api/birds', weather: '/api/weather',
+    nyc311: '/api/nyc311', nwsalerts: '/api/nwsalerts', headlines: '/api/headlines' };
   async function direct(feed) {
     const r = await fetch(EP[feed]);
     if (!r.ok) throw new Error(feed + ' http ' + r.status);
@@ -5105,13 +5247,14 @@ const timeline = (() => {
     buses.hist(frame.buses || []); subway.hist(frame.subway); citibike.hist(frame.bikes || []);
     birds.hist(frame.birds || { aloft: 0 }); // pre-birds snapshots replay a quiet sky
     rtraffic.hist(frame.traffic || [], frame.trafficEvents || []);
+    nyc311.hist(frame.nyc311 || []); // pre-311 snapshots replay an empty layer
     setBadge('past', LBL_FMT.format(new Date(midday(day))));
   }
   function exit() {
     if (!HIST.active) return;
     HIST.active = false; HIST.day = '';
     flights.hist(null); ferries.hist(null); buses.hist(null); subway.hist(null); citibike.hist(null);
-    birds.hist(null); rtraffic.hist(null);
+    birds.hist(null); rtraffic.hist(null); nyc311.hist(null);
     if (HIST.liveWx) live.applyWeather(HIST.liveWx);
   }
   async function apply(off) {
@@ -7591,6 +7734,342 @@ const personas = (() => {
 window.__personas = personas; // dev/testing hook
 
 /* ============================================================
+   25t. THOUGHT BUBBLES — Sims-style icon clouds over residents
+   (plan-thought-bubbles.md Phase 1). A rotating, spread-apart
+   set of ≤8 on-screen walkers shows a white cloud bubble with an
+   ICON; hover (or very close zoom) reveals a short seeded thought.
+   Content = Source 1 only for now: identity pools selected by the
+   persona's real census fields (commute mode, income, age, status,
+   area) + REACTIVE pools reading the live feed state the scene
+   already holds (live.W weather, NYC hour, birds aloft) — live
+   data picks WHO reacts, intersected with census attributes.
+   HTML overlay (chip pattern, Iron Rule 3: x mirrored like
+   focusui.tick). Anchored to the SHADER walk position via
+   personas.posAt + the same ×1–4 distance-grow. Gates: zoomed in
+   AND !HIST.active (the layer simply does not exist in history
+   mode — no recorder fields, Iron Rule 5) AND not photo/focusmode
+   (CSS). Plumbob: green rotating diamond over the focused
+   resident (reads FOCUS + body.focusmode; zero edits to §25h).
+   Phase 2 will mix in public/thoughts.json (baked sheet).
+   ============================================================ */
+const thoughts = (() => {
+  const MAXB = 8, CYCLE_MS = 6000, SEP = 140;       // bubble count / rotation / min screen spread
+  const ZOOM_Y = 520, NEAR_Y = 240;                 // camY gates: show bubbles / auto-show text
+  const RANGE = 1500, FADE0 = 1000, FADE1 = 1500;   // world-distance prefilter + opacity fade band
+  const mul32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const pick = (rng, arr) => arr[(rng() * arr.length) | 0];
+  // ---- thought pools: [icon, [lines…]]. Short (≤9 words), unnamed, first person. ----
+  const WX = {
+    rain: ['☔', ['forgot my umbrella, of course', 'rain again. classic.', 'my shoes are soaked', 'should have checked the forecast', 'the whole city smells like rain']],
+    snow: ['❄️', ['snow day energy', 'these boots were a good call', 'the city goes quiet in snow', 'shoveling later, dreading it']],
+    hot:  ['🥵', ['too hot for the platform today', 'the subway is a sauna', 'ice cream counts as dinner, right?', 'summer in the city is no joke']],
+    cold: ['🥶', ['this wind is personal', 'my coat is not enough', 'why do I live here. oh right.', 'cold enough to see my breath']],
+    wind: ['💨', ['nearly lost my hat back there', 'this wind owns the avenue', 'umbrella graveyard weather']],
+  };
+  const TOD = {
+    food:  ['🍕', ['dollar slice or the good place?', "lunch is the day's high point", 'halal cart line is worth it', 'thinking about dumplings again']],
+    night: ['😴', ['long day. longer night.', 'city never sleeps. I might.', 'last train home, almost there']],
+    coffee:['☕', ['need coffee before anything else', 'the bodega coffee is fine, actually', 'running on caffeine and hope']],
+  };
+  const COMMUTE = { // personas.json commutes: ['', subway, bus or rail, car, bike, walks, wfh]
+    1: ['🚇', ['waiting on the platform again', 'my line was packed this morning', 'showtime dancers on my car today', 'one seat. I just want one seat.']],
+    2: ['🚌', ['the bus takes forever but the view', 'express bus was almost on time', 'two buses and a prayer']],
+    3: ['🚗', ['parking here is a blood sport', 'alternate side parking ruins my week', 'traffic on the bridge. again.']],
+    4: ['🚲', ['bike lane blocked. every time.', 'best commute in the city, honestly', 'my chain needs oil']],
+    5: ['🚶', ['walking beats the train some days', 'twenty blocks clears the head']],
+    6: ['🏠', ['pants optional. meeting in five.', 'commute: bed to desk, four steps']],
+  };
+  const MONEY = ['💸', ['rent eats half my check', 'everything costs more this month', 'groceries used to be cheaper', 'two jobs and still counting pennies']];
+  const RICH  = ['💰', ['thinking about the summer place', 'my accountant keeps calling', 'the market did something today']];
+  const YOUNG = ['💭', ['trying to make it here', 'first apartment, third roommate', 'this city is a lot. I love it.', 'building a life, one shift at a time']];
+  const OLD   = ['🏙️', ['this city has changed so much', 'lived here for decades, still surprised', 'miss the old neighborhood spots', 'so many new towers now']];
+  const STATUS = {
+    1: ['💼', ['the job hunt continues', 'another interview tomorrow. hopeful.', 'updating the resume again']],
+    2: ['🏙️', ['retirement suits me fine', 'park bench, good coffee, no rush', 'the grandkids visit sunday']],
+    3: ['📚', ['exam week is coming for me', 'the library is my second home', 'student discount is my superpower']],
+  };
+  const WORK = ['💼', ['another day, another shift', 'my boss emails too much', 'living for the weekend', 'the overtime pays the bills']];
+  // ---- one thought per (persona, rotation): reactive first, then identity ----
+  let nycHour = 12; // refreshed each rotation, not each call
+  function refreshHour() {
+    try { nycHour = parseInt(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()), 10) || 12; } catch { nycHour = new Date().getHours(); }
+  }
+  function makeThought(idx, pp, salt) {
+    const rng = mul32((idx >>> 0) * 2654435761 + salt * 97 + 5);
+    const [, age, , , , , , occI, incK, commI, status] = pp.p;
+    const W = live.W;
+    // reactive: live weather → anyone (age-weighted temps); the mood sweeps the crowd
+    const wx = W.isSnow ? WX.snow : W.isRain ? WX.rain
+      : W.tempC >= 30 ? WX.hot : W.tempC <= -2 ? WX.cold
+      : W.windKmh > 35 ? WX.wind : null;
+    const wxP = (wx === WX.hot || wx === WX.cold) && age > 64 ? 0.7 : 0.55;
+    if (wx && rng() < wxP) return { ic: wx[0], t: pick(rng, wx[1]) };
+    // reactive: NYC clock → occupation/status-matched slices of the crowd
+    if (nycHour >= 7 && nycHour < 10 && commI >= 1 && commI <= 5 && status === 0 && rng() < 0.4) {
+      const c = COMMUTE[commI]; return { ic: c[0], t: pick(rng, c[1]) };
+    }
+    if (nycHour >= 11 && nycHour < 14 && rng() < 0.3) return { ic: TOD.food[0], t: pick(rng, TOD.food[1]) };
+    if ((nycHour >= 23 || nycHour < 5) && rng() < 0.45) return { ic: TOD.night[0], t: pick(rng, TOD.night[1]) };
+    if (nycHour >= 5 && nycHour < 7 && rng() < 0.4) return { ic: TOD.coffee[0], t: pick(rng, TOD.coffee[1]) };
+    // reactive: migration nights (rare flavor)
+    try { const b = birds.data(); if (b && b.aloft > 100000 && (nycHour >= 20 || nycHour < 5) && rng() < 0.2) return { ic: '🐦', t: 'so many birds over the city tonight' }; } catch { /* birds state optional */ }
+    // identity: census fields pick the pool (weighted candidates, then one draw)
+    const cand = [];
+    if (STATUS[status]) cand.push([STATUS[status], 3]);
+    if (commI >= 1 && COMMUTE[commI]) cand.push([COMMUTE[commI], 2]);
+    if (incK >= 0 && incK < 35) cand.push([MONEY, 3]);
+    if (incK >= 150) cand.push([RICH, 2]);
+    if (age < 28) cand.push([YOUNG, 2]);
+    if (age > 64) cand.push([OLD, 2]);
+    if (occI >= 0 && status === 0) cand.push([WORK, 2]);
+    if (pp.area) cand.push([['🏙️', ['quiet day in ' + pp.area, pp.area + ' is home', 'nowhere beats ' + pp.area, 'they keep changing ' + pp.area]], 1]);
+    if (!cand.length) cand.push([WORK, 1]);
+    let tot = 0; for (const c of cand) tot += c[1];
+    let x = rng() * tot, chosen = cand[0][0];
+    for (const c of cand) { x -= c[1]; if (x <= 0) { chosen = c[0]; break; } }
+    return { ic: chosen[0], t: pick(rng, chosen[1]) };
+  }
+  // ---- overlay pool (chip pattern): 8 bubbles + 1 plumbob, created once ----
+  const els = [];
+  for (let i = 0; i < MAXB; i++) {
+    const el = document.createElement('div');
+    el.className = 'thoughtB';
+    const ic = document.createElement('span'); ic.className = 'ic';
+    const tx = document.createElement('span'); tx.className = 'tx';
+    el.appendChild(ic); el.appendChild(tx);
+    document.body.appendChild(el);
+    els.push({ el, ic, tx, pp: null });
+  }
+  const plum = document.createElement('div');
+  plum.id = 'plumbob'; plum.appendChild(document.createElement('i'));
+  document.body.appendChild(plum);
+  let nextRotate = 0, salt = 0;
+  const _v = new THREE.Vector3();
+  function hideAll() { for (const b of els) { if (b.pp) { b.pp = null; b.el.style.display = 'none'; } } }
+  // ---- rotation: shuffle on-screen walkers, greedily pick spread-apart ones ----
+  function rotate() {
+    refreshHour();
+    salt++;
+    const list = personas.list, cx = camera.position.x, cz = camera.position.z;
+    const cand = [];
+    for (let i = 0; i < list.length; i++) {
+      const pp = list[i];
+      const dx0 = pp.ax - cx, dz0 = pp.az - cz;                 // cheap prefilter on the path anchor
+      if (dx0 * dx0 + dz0 * dz0 > (RANGE + 200) * (RANGE + 200)) continue;
+      const [px, pz] = personas.posAt(pp);
+      _v.set(px, 6, pz).project(camera);
+      if (_v.z > 1) continue;
+      const sx = (0.5 - _v.x * 0.5) * innerWidth, sy = (-_v.y * 0.5 + 0.5) * innerHeight;
+      if (sx < 70 || sx > innerWidth - 70 || sy < 140 || sy > innerHeight - 80) continue;
+      cand.push({ i, pp, sx, sy });
+    }
+    for (let k = cand.length - 1; k > 0; k--) { const j = (Math.random() * (k + 1)) | 0; [cand[k], cand[j]] = [cand[j], cand[k]]; }
+    const picked = [];
+    for (const c of cand) {
+      if (picked.length >= MAXB) break;
+      if (picked.every((p) => Math.hypot(p.sx - c.sx, p.sy - c.sy) > SEP)) picked.push(c);
+    }
+    for (let k = 0; k < els.length; k++) {
+      const b = els[k], c = picked[k];
+      if (!c) { b.pp = null; b.el.style.display = 'none'; continue; }
+      const th = makeThought(c.i, c.pp, salt);
+      b.pp = c.pp; b.ic.textContent = th.ic; b.tx.textContent = th.t;
+      b.el.style.display = 'block';
+    }
+  }
+  // ---- per-frame: glue bubbles to the shader walk position (≤8 projections) ----
+  function tick() {
+    const camY = camera.position.y;
+    if (HIST.active || camY > ZOOM_Y || !personas.list.length) { hideAll(); plum.style.display = 'none'; nextRotate = 0; return; }
+    const now = performance.now();
+    if (now > nextRotate) { nextRotate = now + CYCLE_MS; rotate(); }
+    const near = camY < NEAR_Y;
+    for (const b of els) {
+      if (!b.pp) continue;
+      const [px, pz] = personas.posAt(b.pp);
+      const dx = px - camera.position.x, dz = pz - camera.position.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const scale = Math.min(Math.max(dist / 900, 1), 4);        // match the walkers' distance-grow
+      _v.set(px, 8.6 * scale, pz).project(camera);
+      if (_v.z > 1 || dist > FADE1) { b.el.style.opacity = '0'; continue; }
+      const sx = (0.5 - _v.x * 0.5) * innerWidth, sy = (-_v.y * 0.5 + 0.5) * innerHeight; // x mirrored with the canvas
+      b.el.style.opacity = dist < FADE0 ? '1' : String(1 - (dist - FADE0) / (FADE1 - FADE0));
+      b.el.style.transform = 'translate(' + sx.toFixed(1) + 'px,' + sy.toFixed(1) + 'px) translate(-50%,-130%)';
+      b.el.classList.toggle('near', near);
+    }
+    // plumbob over the focused resident (focus pin active + persona focus context)
+    if (document.body.classList.contains('focusmode') && FOCUS.posGet && FOCUS.kind && FOCUS.kind.indexOf('resident persona') === 0) {
+      const p = FOCUS.posGet();
+      if (p) {
+        const dx = p[0] - camera.position.x, dz = p[2] - camera.position.z;
+        const scale = Math.min(Math.max(Math.sqrt(dx * dx + dz * dz) / 900, 1), 4);
+        _v.set(p[0], 9.4 * scale, p[2]).project(camera);
+        if (_v.z <= 1) {
+          const sx = (0.5 - _v.x * 0.5) * innerWidth, sy = (-_v.y * 0.5 + 0.5) * innerHeight;
+          plum.style.transform = 'translate(' + sx.toFixed(1) + 'px,' + sy.toFixed(1) + 'px) translate(-50%,-100%)';
+          plum.style.display = 'block';
+        } else plum.style.display = 'none';
+      } else plum.style.display = 'none';
+    } else plum.style.display = 'none';
+  }
+  return { tick, _rotate: rotate, _make: makeThought };
+})();
+window.__thoughts = thoughts; // dev/testing hook
+
+/* ============================================================
+   25i. LIVE NYC 311 — the newest 250 service requests of the
+   last 48 h (NYC Open Data erm2-nwe9), pinned where they were
+   reported. One tinted Points layer (traffic-events pattern);
+   chips are DOM. Pins outside the modeled land (Staten Island,
+   deep Queens) are dropped — honest scene-coverage limit.
+   ============================================================ */
+const nyc311 = (() => {
+  const MAX = 250;
+  const R = []; // { x, y, z, type, desc, addr, boro, status, tMin }
+  let liveRows = [];
+  function bucket(type) { // complaint family → tint (legend lives in the chip text itself)
+    const t = (type || '').toLowerCase();
+    if (t.includes('noise')) return [0.72, 0.45, 1.0];
+    if (t.includes('parking') || t.includes('vehicle') || t.includes('driveway')) return [0.35, 0.62, 1.0];
+    if (t.includes('water') || t.includes('sewer') || t.includes('flood') || t.includes('plumbing')) return [0.30, 0.90, 1.0];
+    if (t.includes('heat') || t.includes('hot water')) return [1.0, 0.55, 0.20];
+    if (t.includes('street') || t.includes('sidewalk') || t.includes('curb') || t.includes('pothole')) return [1.0, 0.85, 0.30];
+    if (t.includes('sanitation') || t.includes('rodent') || t.includes('dirty') || t.includes('trash') || t.includes('litter')) return [0.55, 0.85, 0.40];
+    return [0.85, 0.88, 0.95];
+  }
+  const pos = new Float32Array(MAX * 3), col = new Float32Array(MAX * 3);
+  for (let i = 1; i < pos.length; i += 3) pos[i] = -1e4; // parked out of sight
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const tex = (() => { // white disc + dark ring + "311" — white body takes the per-point tint
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2);
+    g.fillStyle = '#fff'; g.fill();
+    g.lineWidth = 5; g.strokeStyle = 'rgba(15,18,26,0.92)'; g.stroke();
+    g.fillStyle = 'rgba(15,18,26,0.92)';
+    g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('311', 32, 34);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uMap: { value: tex }, uDpr: { value: renderer.getPixelRatio() } },
+    transparent: true, depthTest: false, depthWrite: false, vertexColors: true,
+    vertexShader: `uniform float uDpr; varying vec3 vC;
+      void main() {
+        vC = color;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = clamp(14000.0 / -mv.z, 5.0, 24.0) * uDpr;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `uniform sampler2D uMap; varying vec3 vC;
+      void main() {
+        // pre-flip x: the presentation mirror (scaleX(-1)) flips point sprites back
+        vec4 c = texture2D(uMap, vec2(1.0 - gl_PointCoord.x, gl_PointCoord.y));
+        if (c.a < 0.08) discard;
+        gl_FragColor = vec4(c.rgb * vC, c.a);
+      }`
+  });
+  const mesh = new THREE.Points(geo, mat);
+  mesh.frustumCulled = false; mesh.renderOrder = 6; mesh.matrixAutoUpdate = false;
+  scene.add(mesh);
+  function ingest(rows) {
+    R.length = 0;
+    for (const r of rows) {
+      if (R.length >= MAX) break;
+      const g = subway.geoRaw(r[0], r[1]);
+      if (g.x < -2700 || g.x > 3000 || g.z < -3400 || g.z > 22000) continue; // outside the modeled city
+      if (!onLand(g.x, g.z) && !landOK(g.x, g.z)) continue; // never pin the water
+      R.push({ x: g.x, y: 14, z: g.z, type: r[2], desc: r[3], addr: r[4], boro: r[5], status: r[6], tMin: r[7] });
+    }
+    for (let i = 0; i < MAX; i++) {
+      if (i < R.length) {
+        pos[i * 3] = R[i].x; pos[i * 3 + 1] = R[i].y; pos[i * 3 + 2] = R[i].z;
+        const c = bucket(R[i].type);
+        col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+      } else pos[i * 3 + 1] = -1e4;
+    }
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.color.needsUpdate = true;
+  }
+  /* --- polling (gated on !HIST.active in update) --- */
+  let poll = 10, delay = 300, busy = false;
+  function doPoll() {
+    busy = true;
+    liveBridge.get('nyc311')
+      .then(j => {
+        if (!Array.isArray(j.rows)) throw 0;
+        liveRows = j.rows;
+        if (!HIST.active) ingest(liveRows); // a poll landing mid-scrub must not stomp the replay
+        delay = 300;
+      })
+      .catch(() => { delay = Math.min(delay * 2, 1200); })
+      .finally(() => { busy = false; poll = T + delay; });
+  }
+  /* --- chips (pool of 4, traffic-chip pattern) --- */
+  const chips = [];
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElement('div');
+    el.className = 'fybl n311';
+    document.body.appendChild(el);
+    const ch = { el, o: null, html: '' };
+    el.addEventListener('click', () => {
+      const o = ch.o; if (!o) return;
+      setFocus('311 service request (NYC Open Data)', el.textContent.slice(0, 90), o.data);
+      focusui.enter(() => [o.x, o.y, o.z], o.html);
+    });
+    chips.push(ch);
+  }
+  const _v = new THREE.Vector3();
+  const near = [];
+  const age = (tMin) => {
+    const m = Math.max(0, Math.round((HIST.active ? HIST.epochS * 1000 : Date.now()) / 60000 - tMin));
+    return m < 60 ? m + ' min ago' : m < 2880 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago';
+  };
+  function assignChips() {
+    near.length = 0;
+    for (const e of R) {
+      const d = _v.set(e.x, e.y, e.z).distanceTo(camera.position);
+      if (d >= 4200) continue;
+      _v.set(e.x, e.y + 4, e.z).project(camera);
+      if (_v.z > 1 || _v.x < -1 || _v.x > 1 || _v.y < -1 || _v.y > 1) continue;
+      const dsc = [e.desc, e.addr, age(e.tMin), e.status].filter(Boolean).join(' · ');
+      near.push({ d, x: e.x, y: e.y + 4, z: e.z,
+        data: { complaint: e.type, descriptor: e.desc, address: e.addr, borough: e.boro, status: e.status },
+        html: '<b>311 · ' + e.type + '</b><br><span class="sub">' +
+          (dsc.length > 92 ? dsc.slice(0, 91) + '…' : dsc) + '</span>' });
+    }
+    near.sort((a, b) => a.d - b.d);
+    for (let i = 0; i < chips.length; i++) {
+      const ch = chips[i], o = i < near.length ? near[i] : null;
+      ch.o = o;
+      if (!o) { if (ch.html) { ch.html = ''; ch.el.style.display = 'none'; } continue; }
+      if (o.html !== ch.html) { ch.html = o.html; ch.el.innerHTML = o.html; ch.el.style.display = 'block'; } // .fybl base CSS is display:none
+    }
+  }
+  let chipT = 0;
+  function update(t, dt) {
+    if (!busy && t >= poll && !HIST.active) doPoll();
+    if (!R.length) return;
+    if (t > chipT) { chipT = t + 0.6; assignChips(); }
+    for (const ch of chips) { // glue chips to their anchors every frame
+      if (!ch.o) continue;
+      _v.set(ch.o.x, ch.o.y, ch.o.z).project(camera);
+      const sx = (0.5 - _v.x * 0.5) * innerWidth, sy = (-_v.y * 0.5 + 0.5) * innerHeight; // x mirrored with the canvas
+      ch.el.style.transform = 'translate(' + sx.toFixed(1) + 'px,' + sy.toFixed(1) + 'px) translate(-50%,-130%)';
+    }
+  }
+  function hist(rows) { // replay recorded rows; null = purge + resume live
+    if (rows === null) { ingest(liveRows); poll = 0; return; }
+    ingest(rows); // old snapshots without the field replay as an empty (honest) layer
+  }
+  return { update, hist, list: R };
+})();
+window.__nyc311 = nyc311; // dev/testing hook
+
+/* ============================================================
    25g. LIVE TRAFFIC — measured speeds painted onto the roads,
    from three provenances (each labeled honestly in its chips):
    · /api/traffic (60 s, LIVE): DOT highway sensor links, wide
@@ -8526,11 +9005,13 @@ function frame() {
   citibike.update(T, dt);
   birds.update(T, dt);
   rtraffic.update(T, dt);
+  nyc311.update(T, dt);
   cells.tick(T, dt, _focus, camY);
   steam.tick(_focus, camY);
   flags.tick(dt, _focus, camY);
   concierge.tick(); // agent-layer label chips track their pins
   focusui.tick();    // the pinned focus dialogue tracks its entity
+  thoughts.tick();   // §25t Sims-style thought bubbles over residents
   renderer.render(scene, camera);
   precipOverlay.render(); // screen-space rain/snow veil, drawn on top
   fpsN++; fpsT += dt;
@@ -8598,6 +9079,55 @@ function frame() {
   }
   updateVitals();
   setInterval(updateVitals, 2000);
+}
+// ---- NWS alert card (#wxAlerts): below the time slider, present only while NYC has
+// active watches/warnings (api.weather.gov, five-borough filter server-side).
+{
+  const el = document.getElementById('wxAlerts');
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let wxAlerts = [];
+  function renderWx() {
+    if (!wxAlerts.length || HIST.active) { el.style.display = 'none'; return; } // "now" info: hidden during replay
+    el.classList.toggle('sev', wxAlerts.some(a => /severe|extreme/i.test(a.severity || '')));
+    el.innerHTML = wxAlerts.slice(0, 4).map(a =>
+      '<div class="wxr"><b>⚠️ ' + esc(a.event) + '</b><span>' + esc(a.headline || '') + '</span></div>').join('');
+    el.style.display = 'block';
+  }
+  function pollWx() {
+    liveBridge.get('nwsalerts')
+      .then(j => { wxAlerts = Array.isArray(j.alerts) ? j.alerts : []; renderWx(); })
+      .catch(() => { /* keep last-good card */ });
+  }
+  pollWx();
+  setInterval(pollWx, 300000);
+  setInterval(renderWx, 5000); // follow HIST in/out without waiting for the next poll
+  window.__wxalerts = (fake) => { wxAlerts = fake || []; renderWx(); }; // dev/testing hook
+}
+// ---- headline ticker (#ticker): amNY + THE CITY, slow marquee, click → article in a new tab
+{
+  const tk = document.getElementById('ticker'), tin = tk.querySelector('.tkin');
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  let sig = '';
+  function build(items) {
+    const seq = items.map(it =>
+      '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' +
+      '<span class="src">' + esc(it.src) + '</span>' + esc(it.t) + '</a><i class="sep">✦</i>').join('');
+    tin.innerHTML = seq + seq; // doubled content: the −50% keyframe wraps seamlessly
+    tin.style.animationDuration = Math.max(60, items.length * 9) + 's'; // ~9 s per headline: readable
+    tk.style.display = 'block';
+  }
+  function pollNews() {
+    liveBridge.get('headlines')
+      .then(j => {
+        const items = Array.isArray(j.items) ? j.items : [];
+        if (!items.length) return; // never blank an already-running ticker
+        const s = items.map(i => i.url).join('|');
+        if (s !== sig) { sig = s; build(items); } // unchanged list → don't restart the scroll
+      })
+      .catch(() => { /* keep scrolling last-good headlines */ });
+  }
+  pollNews();
+  setInterval(pollNews, 600000);
 }
 frame();
 </script>

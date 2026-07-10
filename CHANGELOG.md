@@ -6,6 +6,99 @@ the rules on adding entries.
 
 ---
 
+## 🌊 Living water (desktop)
+
+**Shipped:** July 10, 2026
+
+**TL;DR:** The rivers and harbor now roll — long wave swells with fine chop riding on
+them, a sun-glitter streak that stretches along the sun's azimuth like real water, and
+chop that stiffens with the live wind, breaking into sparse whitecaps past ~13 mph.
+Desktop only; phones and tablets keep the flat, cheap water.
+
+**What you'll see:** From any harbor or river camera at `high`/`ultra` quality: the
+water surface has visible rolling structure instead of a flat glitter sheet, and the
+rivers read as flowing downstream. At golden hour the sun's reflection is an elongated
+streak toward the horizon rather than a round glow. On a windy day the surface gets
+visibly choppier and flecks with whitecaps; on a calm day it settles. Night water stays
+dark and calm-looking. On phones (and the `low`/`medium` quality settings) nothing
+changes.
+
+**How it works:** shader-only — no new downloads, textures, meshes, or draw calls, so
+load latency is untouched. Two extra procedural noise octaves ride a slow south-drifting
+domain warp on the existing one-plane water shader, gated behind a `uFX` uniform that
+the quality-tier system sets exactly like the existing sparkle knob (`low`/`medium` = 0,
+so the mobile fragment path is unchanged). Wave amplitude and whitecap coverage scale
+with the live wind factor already fed to the shader from the
+[Open-Meteo weather feed](https://open-meteo.com/); the glitter streak squashes the
+sun reflection across-azimuth. Whitecaps are lit by the sky colors, so they fade out
+naturally at night. Verified at noon, golden hour, and night, plus a forced-wind
+whitecap check; the FX-off path was screenshot-verified identical to the old look.
+
+## 📰 Live city news: 311 pins, weather alerts + a headline ticker
+
+**Shipped:** July 10, 2026
+
+**TL;DR:** Three live news layers land at once — the newest 250 NYC 311 complaints
+pinned where they were reported, an NWS weather-alert card that appears only when the
+five boroughs have active alerts, and a scrolling bottom ticker of amNewYork and
+THE CITY headlines.
+
+**What you'll see:**
+- **311 pins:** small "311" discs across the city, tinted by complaint family (purple
+  noise, blue parking, cyan water/sewer, orange heat, yellow street condition, green
+  sanitation). Fly close and chips name the newest ones — "311 · Illegal Fireworks ·
+  126 POST AVENUE · 2 h ago · In Progress"; click a chip to focus-pin it. At 1 AM the
+  map is honestly dominated by purple noise complaints.
+- **Weather alerts:** when the National Weather Service has an active watch/warning
+  for NYC, an amber card (red-edged for Severe/Extreme) lists it below the timeline
+  slider. No alerts → no card.
+- **Headlines:** a frosted strip above the control bar auto-scrolls headlines at
+  reading pace (hover pauses it); each one opens the article in a new tab, tagged
+  amNY or THE CITY.
+
+**How it works:** three new cached server routes join the consolidated live snapshot.
+311 comes from [NYC Open Data's 311 dataset](https://data.cityofnewyork.us/Social-Services/311-Service-Requests-Last-5-Years/8ciy-qg3k)
+(keyless Socrata; newest 250 geo-tagged requests of the last 48 h, refreshed every
+5 min) — pins are placed through the scene's calibrated geo pipeline and gated to
+modeled land, so requests in Staten Island and deep Queens/Brooklyn are dropped
+(roughly 100 of 250 land in-scene). Alerts come from the
+[NWS API](https://www.weather.gov/documentation/services-web-api), filtered
+server-side to the five boroughs' counties. Headlines merge the RSS feeds of
+[amNewYork](https://www.amny.com/) and [THE CITY](https://www.thecity.nyc/)
+(headline + link only, refreshed every 10 min — a newsroom cadence, not a wire).
+311 pins are recorded in the nightly snapshot and replay with the timeline; the
+alert card and ticker are "now" surfaces and hide during replay.
+
+## 🏦 The Financial District, building by building
+
+**Shipped:** July 10, 2026
+
+**TL;DR:** Everything south of Fulton Street now renders the city's real 3D building
+massing — true setbacks, crowns, and courtyards for ~700 buildings — replacing the
+extruded-box fabric and the old hand-built 40 Wall / 70 Pine stand-ins.
+
+**What you'll see:** From the Harbor preset or any downtown flyover: 40 Wall Street's
+pyramid crown, 70 Pine's telescoping deco setbacks, 20 Exchange Place, One Chase
+Manhattan Plaza's slab, the Stone Street / Seaport low-rise fabric, Castle Clinton in
+the Battery — each at its surveyed position and shape. At night the new buildings
+light up with the same procedural windows as the rest of the city; masonry towers
+read limestone and brick, postwar slabs read dark glass. The hand-built One WTC
+ensemble is untouched.
+
+**How it works:** massing comes from the
+[NYC DCP 3D city model](https://www.nyc.gov/site/planning/data-maps/open-data/dwn-nyc-3d-model-download.page)
+(tile `nyc_3dmodel_mn01`): ~20k facade/rooftop surfaces inside a Financial District
+polygon, baked offline to scene coordinates via an affine fitted against the scene's
+frozen `geoRaw` calibration, per-block grade-rebased, welded and u16-quantized into
+`public/fidi.json` (~1.4 MB, one lazy-fetched mesh, one draw call). Baked per-vertex
+`aSeed`/`aKind` attributes plug the mesh into the existing city window shader, so
+night lights, dusk glint, and cloud shadows match the procedural fabric seamlessly.
+The box generator now skips footprints inside the same polygon (two carve-outs keep
+the hand-built WTC ensemble and the real WTC block unchanged). Style split is a
+height-plus-hash heuristic (DCP carries no materials): tall simple slabs read as
+glass, everything else masonry — a reasonable guess for a district whose skyline is
+mostly pre-war stone.
+
 ## 🏝️ Governors Island, for real
 
 **Shipped:** July 10, 2026
@@ -126,29 +219,36 @@ actually sailing.
 "river traffic density" slider that drove them. The live NYC Ferry layer (real vessel
 GPS, dead-reckoned between snapshots) is unchanged.
 
-## 🌊 No more buildings in Upper Bay
+## 🌊 No more buildings standing in the water
 
 **Shipped:** July 10, 2026
 
-**TL;DR:** The decorative New Jersey building fill no longer spills boxes onto the
-water — the floating buildings visible in Upper Bay near Liberty Island are gone, and
-so are the ones that overshot Jersey's far western edge into open sea.
+**TL;DR:** Every building box now has painted ground under it. The floaters are gone
+from Upper Bay near Liberty Island (stray New Jersey fill), from the Harlem River and
+Spuyten Duyvil at the island's north tip (~116 real Riverdale/Marble Hill footprints),
+and from a few spots along the East River.
 
-**What you'll see:** From a top-down or harbor camera near Liberty Island, the water
-between the Jersey waterfront and the Statue of Liberty is clean open bay — previously
-a scatter of isolated building boxes floated there. The Jersey shoreline reads as a
-crisp land/water edge along the whole Hudson, and the fill now also stops flush at the
-land slab's western limit instead of running past it onto the sea.
+**What you'll see:** Clean open water everywhere buildings used to float. Near Liberty
+Island, the bay between the Jersey waterfront and the statue is empty; the Jersey
+shoreline reads as a crisp land/water edge along the whole Hudson and stops flush at
+its western limit instead of running onto the sea. Around Inwood and the north tip,
+the Harlem River channel no longer has a scatter of building boxes standing in it.
+About 120 of ~249,000 borough buildings are dropped — imperceptible density loss.
 
-**How it works:** The Jersey fill generator seeded its rows from a shoreline formula
-that diverged from the ground slab's own edge south of the Battery (where the slab
-pulls back an extra 300 m as the Hudson opens into Upper Bay), so box columns landed
-east of the land they were meant to sit on. The fill now derives its east edge from
-the slab's exact formula with a 60 m inset, and a skip gate drops any box west of the
-slab's x = −4800 far edge. Verified numerically (worst-case box jitter and rotation
-stay ≥35 m inside the slab) and visually with top-down screenshots at Liberty Island,
-the south and mid-Hudson waterfront, and the western sea edge. Purely procedural —
-no external data.
+**How it works:** Two placement bugs, one principle: box generators trusted shoreline
+formulas that diverged from the ground actually painted. The Jersey fill's east edge
+drifted from the Jersey slab's own edge south of the Battery (where the slab pulls
+back 300 m as the Hudson opens into Upper Bay); it now derives from the slab's exact
+formula, plus a gate at the slab's western limit. For the boroughs, the real Bronx and
+Queens land polygons can bulge west of the painted ground plates (Riverdale genuinely
+reaches the Hudson, but the rendered Bronx plate is clamped east to keep the stylized
+Harlem channel open), so real building footprints passed the land test yet rendered on
+water. Both borough building passes are now gated by an `onPlate` test that mirrors
+the ground-plate quads' exact geometry, with the small-island rings (Roosevelt,
+Governors, Randalls, Rikers) as the only exception. Verified numerically against all
+305k baked footprints and with daylight top-down screenshots at Liberty Island, the
+Jersey waterfront, the East River, and the north tip. Purely procedural — no external
+data.
 
 ## 🎛️ On-screen camera controls
 

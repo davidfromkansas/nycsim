@@ -41,11 +41,11 @@ const Y = now.getUTCFullYear(), M = pad(now.getUTCMonth() + 1), D = pad(now.getU
 const q = Math.floor(now.getUTCMinutes() / 15) * 15;
 const stamp = `${pad(now.getUTCHours())}${pad(q)}`;
 
-const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds] = await Promise.all([
+const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds, n311] = await Promise.all([
   tryGet('/api/buses'), tryGet('/api/citibike'), tryGet('/api/ferries'),
   tryGet('/api/flights'), tryGet('/api/weather'),
   DAILY ? tryGet('/api/subway') : Promise.resolve(null),
-  tryGet('/api/traffic'), tryGet('/api/traffic-events'), tryGet('/api/birds')
+  tryGet('/api/traffic'), tryGet('/api/traffic-events'), tryGet('/api/birds'), tryGet('/api/nyc311')
 ]);
 
 const frame = {
@@ -68,13 +68,15 @@ const frame = {
   traffic: (traffic?.links ?? []).map(l => [l.id, l.speed, l.tt]),
   trafficEvents: (trafficEvents?.events ?? []).map(e => [e.id, e.kind, e.sev,
     e.road || '', e.dir || '', r5(e.lat), r5(e.lon), e.desc || '']),
+  nyc311: n311?.rows ?? [], // already compact rows straight off /api/nyc311
   schema: {
     buses: 'id,route,lat,lon,bearing,speedMs,dest',
     bikes: 'stationId,bikes,ebikes,docks,on',
     ferries: 'id,label,lat,lon,heading,speedMs,route,headsign,docked',
     flights: 'hex,callsign,lat,lon,altM,gsMs,track,kind',
     traffic: 'linkId,speedMph,travelTimeS',
-    trafficEvents: 'id,kind,severity,road,direction,lat,lon,desc'
+    trafficEvents: 'id,kind,severity,road,direction,lat,lon,desc',
+    nyc311: 'lat,lon,type,descriptor,address,borough,status,createdEpochMin'
   }
 };
 if (DAILY && subway) frame.subway = { trips: subway.trips, vehStatus: subway.vehStatus };
