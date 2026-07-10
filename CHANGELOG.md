@@ -6,6 +6,38 @@ the rules on adding entries.
 
 ---
 
+## 💭 Resident thought bubbles + click-to-meet
+
+**Shipped:** July 10, 2026
+
+**TL;DR:** The 12,703 Census residents now think. Below browsing altitude, a rotating
+handful of walkers show Sims-style thought bubbles — an icon at a glance (🚇 💸 ☔ 😴),
+the full one-line thought on hover or up close. Thoughts come from each resident's real
+ACS profile (job, commute, income, age) intersected with the live city: real rain sweeps
+umbrella thoughts through the crowd, 2 AM brings night thoughts, morning rush hits the
+commuters. Click a bubble (or any walker) and the camera glides down and rides along as
+they walk, with their info card and a spinning voxel portrait of that exact figure.
+
+**What you'll see:** Zoom below ~1,500 m in live mode: white cloud bubbles with icons
+pop over up to 8 spread-apart residents, rotating every ~6 s. Hover (or get to street
+level) for the text. Click one: the camera swoops to the resident and follows them,
+their census card opens with a turntable 3D portrait beside it, and a green plumbob
+marks them. Grab the view, scroll, or press Esc to release the camera. Bubbles never
+appear while the timeline is scrubbed — thoughts are a live-city feature.
+
+**How it works:** §25t/§25u in [public/index.html](public/index.html), per
+[plan-thought-bubbles.md](plan-thought-bubbles.md) Phase 1 — zero server changes, zero
+LLM calls. Thoughts are seeded client-side from the persona's PUMS fields plus the live
+feed state the scene already holds (`live.W` weather, NYC clock, birds aloft); live data
+picks WHO reacts (subway grumbles go to subway commuters, temperature extremes weight
+older residents). Bubbles are mirror-aware HTML chips glued to the shader walk position
+(`personas.posAt` + the walkers' own ×1–4 distance-grow), so anchoring costs ≤8
+projections/frame. The card portrait reuses the exact §25h voxel geometry + palettes
+(`personas._fig`) with colors re-derived from the same `ci` formulas — the portrait IS
+the sprite. Follow-cam reuses the preset `camTween` glide then applies the walker's
+per-frame delta; release rides the existing focus-mode exits. Phase 2 (a one-time baked
+LLM "thought sheet" per resident) is planned in plan-thought-bubbles.md.
+
 ## 🌊 Living water (desktop)
 
 **Shipped:** July 10, 2026

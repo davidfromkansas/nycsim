@@ -335,9 +335,15 @@
     font:10px system-ui; cursor:pointer; line-height:18px; text-align:center; padding:0;
   }
   body.photo #personaCard { display:none !important; }
+  #pcAv { /* §25u: turntable voxel portrait floating to the card's right */
+    display:none; position:absolute; right:-124px; top:50%; transform:translateY(-50%);
+    width:110px; height:145px; border-radius:12px;
+    background:rgba(10,13,20,.72); border:1px solid rgba(232,165,88,.3);
+  }
+  @media (max-width: 640px) { #pcAv { display:none !important; } } /* no room beside the card on phones */
   /* 25t. thought bubbles — Sims-style icon clouds over residents (zoomed-in, live-mode only) */
   .thoughtB {
-    position:fixed; left:0; top:0; z-index:8; display:none; pointer-events:auto; cursor:default;
+    position:fixed; left:0; top:0; z-index:8; display:none; pointer-events:auto; cursor:pointer;
     font:600 14px/1.2 system-ui, -apple-system, sans-serif; color:#20242c;
     background:rgba(255,255,255,.95); border:2px solid #20242c; border-radius:11px;
     padding:2px 7px 3px; white-space:nowrap; will-change:transform;
@@ -422,7 +428,7 @@
 <button id="lockbtn" title="lock view direction">&#128275;</button>
 <div id="joy"><div id="joyK"></div></div>
 <div id="camview"><div class="ring"><img alt="live traffic camera"><div class="live"><i></i>LIVE</div><button class="x" title="close">✕</button></div><div class="name"></div></div>
-<div id="personaCard"><button class="x" title="close">✕</button><div class="phead"></div><div class="pbody"></div><div class="pfoot"></div></div>
+<div id="personaCard"><button class="x" title="close">✕</button><div class="phead"></div><div class="pbody"></div><div class="pfoot"></div><canvas id="pcAv"></canvas></div>
 <div id="dbg"></div>
 <div id="hud">
 <div id="chip"></div>
@@ -7698,13 +7704,41 @@ const personas = (() => {
     card.querySelector('.pfoot').textContent = 'A real anonymous Census respondent — represents ~' +
       pp.rep.toLocaleString('en-US') + ' New Yorkers · ACS 2023 PUMS';
     card.style.display = 'block';
+    if (window.__personaAvatar) window.__personaAvatar.show(pp); // §25u card portrait
     setFocus('resident persona (Census ACS PUMS sample)', head + ' — ' + pp.area,
       { age, sex: female ? 'female' : 'male', raceEthnicity: D.races[raceI], bornIn: D.origins[orgI],
         occupation: occ || null, incomeK: incK >= 0 ? incK : null, area: pp.area, representsResidents: pp.rep },
       () => { const [px, pz] = posAt(pp); return [px, 6, pz]; });
     focusui.enter(() => { const [px, pz] = posAt(pp); return [px, 6, pz]; }, '<b>' + head + '</b>');
+    startFollow(pp); // glide in + ride along as they walk
   }
-  function close() { card.style.display = 'none'; }
+  function close() { card.style.display = 'none'; if (window.__personaAvatar) window.__personaAvatar.hide(); }
+  // ---- follow-cam (bus/ferry/flock ride-along pattern): clicking a resident glides
+  // the camera in and keeps them centered as they walk. Release = whatever releases
+  // focus mode (grab the view, scroll, Esc) — followTick polls body.focusmode so the
+  // existing focusui release paths hand the camera back with zero extra listeners.
+  let follow = null; // { pp, lx, lz } — last person pos, for per-frame camera deltas
+  function startFollow(pp) {
+    const [px, pz] = posAt(pp);
+    let dx = camera.position.x - px, dz = camera.position.z - pz;
+    const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;   // keep the current bearing
+    camTween = {
+      p0: camera.position.clone(), p1: new THREE.Vector3(px + dx * 62, 34, pz + dz * 62),
+      t0: controls.target.clone(), t1: new THREE.Vector3(px, 5, pz),
+      t: 0, dur: Math.min(Math.max(0.6 + d / 2500, 0.8), 2.2), // farther click = longer glide
+    };
+    follow = { pp, lx: px, lz: pz };
+  }
+  function followTick() {
+    if (!follow) return;
+    if (!document.body.classList.contains('focusmode')) { follow = null; return; } // view released
+    const [px, pz] = posAt(follow.pp);
+    const dx = px - follow.lx, dz = pz - follow.lz;
+    follow.lx = px; follow.lz = pz;
+    if (camTween) return;                 // still gliding in; tracking picks up after
+    camera.position.x += dx; camera.position.z += dz;   // move with the walker
+    controls.target.set(px, 5, pz);                     // keep them centered
+  }
   cardX.addEventListener('click', close);
   addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   // ---- picking (cams pattern: click-not-drag → nearest sprite ≤ 20 px) ----
@@ -7729,7 +7763,9 @@ const personas = (() => {
     }
     if (best) open(best);
   });
-  return { list: PEOPLE, open, close, posAt };
+  // _fig: shared voxel geometry + palettes so §25u can render a card portrait
+  // of the exact same figure (colors derive from pp.ci the same way build() does).
+  return { list: PEOPLE, open, close, posAt, followTick, _fig: { GEO, SHIRTS, PANTS, SKINS, HAIRS, SHOES, EYE } };
 })();
 window.__personas = personas; // dev/testing hook
 
@@ -7754,8 +7790,8 @@ window.__personas = personas; // dev/testing hook
    ============================================================ */
 const thoughts = (() => {
   const MAXB = 8, CYCLE_MS = 6000, SEP = 140;       // bubble count / rotation / min screen spread
-  const ZOOM_Y = 520, NEAR_Y = 240;                 // camY gates: show bubbles / auto-show text
-  const RANGE = 1500, FADE0 = 1000, FADE1 = 1500;   // world-distance prefilter + opacity fade band
+  const ZOOM_Y = 1500, NEAR_Y = 240;                // camY gates: show bubbles / auto-show text
+  const RANGE = 3400, FADE0 = 2800, FADE1 = 3400;   // world-distance prefilter + opacity fade band
   const mul32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const pick = (rng, arr) => arr[(rng() * arr.length) | 0];
   // ---- thought pools: [icon, [lines…]]. Short (≤9 words), unnamed, first person. ----
@@ -7838,7 +7874,9 @@ const thoughts = (() => {
     const tx = document.createElement('span'); tx.className = 'tx';
     el.appendChild(ic); el.appendChild(tx);
     document.body.appendChild(el);
-    els.push({ el, ic, tx, pp: null });
+    const rec = { el, ic, tx, pp: null };
+    el.addEventListener('click', () => { if (rec.pp) personas.open(rec.pp); }); // bubble → persona card
+    els.push(rec);
   }
   const plum = document.createElement('div');
   plum.id = 'plumbob'; plum.appendChild(document.createElement('i'));
@@ -7915,6 +7953,70 @@ const thoughts = (() => {
   return { tick, _rotate: rotate, _make: makeThought };
 })();
 window.__thoughts = thoughts; // dev/testing hook
+
+/* ============================================================
+   25u. PERSONA AVATAR — the resident's own voxel figure, rendered
+   as a slow turntable portrait in a small canvas floating beside
+   #personaCard. Uses the EXACT §25h geometry + palettes via
+   personas._fig, and derives colors/hair/height from pp.ci with
+   the same formulas as build() — so the portrait IS the sprite
+   you clicked (looks stay random-by-design, never demographic).
+   Self-contained: its own tiny renderer + rAF loop that only runs
+   while the card is open (started by open() via window hook,
+   stopped by close()). Plain Lambert materials — the walk-cycle
+   shader materials need iSeg/iWalk and are not reused here.
+   ============================================================ */
+const personaAvatar = (() => {
+  const cv = document.getElementById('pcAv');
+  let rd = null, sc = null, cm = null, grp = null, raf = 0;
+  const MATS = {}; // one material per part, recolored per show()
+  function ensure() {
+    if (rd) return;
+    rd = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+    rd.setPixelRatio(Math.min(devicePixelRatio, 2));
+    rd.setSize(110, 145, false); // CSS keeps the display size
+    sc = new THREE.Scene();
+    cm = new THREE.PerspectiveCamera(28, 110 / 145, 0.1, 100);
+    cm.position.set(0, 5.6, 16.5); cm.lookAt(0, 3.9, 0);
+    sc.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const d = new THREE.DirectionalLight(0xffffff, 1.1);
+    d.position.set(3, 6, 5); sc.add(d);
+    for (const k of ['skin', 'eyes', 'shirt', 'legs', 'shoes', 'hair']) MATS[k] = new THREE.MeshLambertMaterial();
+  }
+  function show(pp) {
+    if (!personas._fig || innerWidth <= 640) return; // CSS hides it on phones anyway
+    ensure();
+    const F = personas._fig, ci = pp.ci;
+    if (grp) sc.remove(grp);
+    grp = new THREE.Group();
+    const add = (geo, mat, col) => { mat.color.copy(col); grp.add(new THREE.Mesh(geo, mat)); };
+    add(F.GEO.skin, MATS.skin, F.SKINS[ci % F.SKINS.length]);
+    add(F.GEO.eyes, MATS.eyes, F.EYE);
+    add(F.GEO.shirt, MATS.shirt, F.SHIRTS[ci % F.SHIRTS.length]);
+    add(F.GEO.legs, MATS.legs, F.PANTS[(ci * 5 + 2) % F.PANTS.length]);
+    add(F.GEO.shoes, MATS.shoes, F.SHOES[ci % F.SHOES.length]);
+    const style = ci % 7 === 3 ? -1 : ci % 3; // same 1-in-7-bald rule as build()
+    if (style >= 0) add(F.GEO['hair' + style], MATS.hair, F.HAIRS[(ci * 3 + 1) % F.HAIRS.length]);
+    const s = pp.kid ? 0.55 : 0.92 + (ci % 5) * 0.045; // same height variety as build()
+    grp.scale.set(s * pp.w, s, s * pp.w);
+    grp.rotation.y = 0.5;
+    sc.add(grp);
+    cv.style.display = 'block';
+    if (!raf) loop();
+  }
+  function loop() {
+    raf = requestAnimationFrame(loop);
+    if (!grp) return;
+    grp.rotation.y += 0.012; // slow turntable
+    rd.render(sc, cm);
+  }
+  function hide() {
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    cv.style.display = 'none';
+  }
+  return { show, hide };
+})();
+window.__personaAvatar = personaAvatar; // called by §25h open()/close()
 
 /* ============================================================
    25i. LIVE NYC 311 — the newest 250 service requests of the
@@ -9012,6 +9114,7 @@ function frame() {
   concierge.tick(); // agent-layer label chips track their pins
   focusui.tick();    // the pinned focus dialogue tracks its entity
   thoughts.tick();   // §25t Sims-style thought bubbles over residents
+  personas.followTick(); // §25h follow-cam rides along with the clicked resident
   renderer.render(scene, camera);
   precipOverlay.render(); // screen-space rain/snow veil, drawn on top
   fpsN++; fpsT += dt;
