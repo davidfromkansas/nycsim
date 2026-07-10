@@ -100,7 +100,7 @@
     display:flex; flex-direction:column; align-items:stretch; gap:8px;
   }
   #chip { /* Sims-style status panel: glossy white segments (time/temp/weather/wind) + city-radio speaker */
-    display:flex; align-items:center; flex-wrap:wrap; justify-content:flex-end;
+    display:flex; align-items:center; flex-wrap:wrap; justify-content:space-evenly;
     font:12px/1.2 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
     color:#1d4f9c; user-select:none; transition:opacity .4s; white-space:nowrap;
     background:linear-gradient(180deg,#fff 0%,#f3f8fe 45%,#e2edfb 100%);
@@ -2583,7 +2583,12 @@ const midMeshes = [];
   // Domino: brick refinery + stack + the new waterfront trio
   pushBoxG(SC, M.domino[0], M.domino[1], 1.9, 36, 84, 44, 0.32, [0.48, 0.26, 0.18], 0.2, 0);
   pushPrism(SC, M.domino[0] + 30, M.domino[1] + 30, 1.9, 62, 4.5, 3.5, 8, 0, [0.42, 0.24, 0.17], 0.3, -1);
-  for (let i = 0; i < 3; i++) pushBoxG(SC, ...lm(M.domino, -40 + (R() - 0.5) * 30, -150 - i * 130), 1.9, 82 + R() * 46, 30, 26, 0.32, PAL.glass[i % PAL.glass.length], R(), 1);
+  // trio x clamps east of the SAMPLED shoreline: the real-coast fix moved the shore
+  // east of these hand offsets, which left the towers standing in the East River
+  // (iron rule 2). Same R() call count/order — the seeded sequence must not shift.
+  for (let i = 0; i < 3; i++) { const tz = M.domino[1] - 150 - i * 130;
+    const tx = Math.max(M.domino[0] - 40 + (R() - 0.5) * 30, (bkShoreX(tz) ?? -1e9) + 32);
+    pushBoxG(SC, tx, tz, 1.9, 82 + R() * 46, 30, 26, 0.32, PAL.glass[i % PAL.glass.length], R(), 1); }
   // Navy Yard: dry-dock sheds + gantry cranes
   for (let i = 0; i < 2; i++) pushBoxG(SC, ...lm(M.navyYardDock, i * 150 - 60, i * 40 - 30), 1.9, 18 + i * 4, 130, 54, 0.5, [0.55, 0.56, 0.58], R(), -1, [0.48, 0.5, 0.52]);
   for (let i = 0; i < 2; i++) { const cx = M.navyYardDock[0] - 90 + i * 210, cz = M.navyYardDock[1] + 90;
