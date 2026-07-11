@@ -6,6 +6,32 @@ the rules on adding entries.
 
 ---
 
+## ⚽ Click a soccer ball, meet its LinkNYC kiosk
+
+**Shipped:** July 11, 2026
+
+**TL;DR:** The floating soccer balls are now clickable — click one and the camera
+glides down to that specific LinkNYC kiosk, marked by a small glowing cyan ring
+pulsing on the sidewalk.
+
+**What you'll see:** Click any of the ~200 spinning soccer balls and the view dives
+to street level beside that kiosk (a 1.6 s glide). A cyan halo breathes gently around
+the kiosk's spot — deliberately kiosk-sized (~19 m across, smaller than the ball
+overhead) since the real object is only phone-booth scale. A pinned chip names it
+("⚽ LinkNYC kiosk · 34-24 30th Ave."), and the concierge knows what you're looking
+at. Click anywhere, scroll, or press Esc to release — the ring disappears with the
+focus.
+
+**How it works:** the kiosk list now keeps each ball's street address; picking reuses
+the traffic-camera pattern (click-not-drag, nearest projected ball within 30 px,
+mirror-aware). The dive is the same `camTween` glide every entity flight uses, wired
+into the shared focus system (`setFocus` + the pinned chip), so the auto-tour and
+other follow-cams hand off cleanly. The ring is one additive `RingGeometry` mesh
+whose pulse runs in the vertex shader off the scene clock — zero per-frame CPU, the
+same trick as the balls' spin. Kiosk locations are the same static
+[LinkNYC city list](https://data.cityofnewyork.us/) bake (`public/linknyc.json`);
+no new data.
+
 ## 🏙️ Long Island City, building by building (Queens goes real — part 1)
 
 **Shipped:** July 11, 2026
