@@ -6,6 +6,56 @@ the rules on adding entries.
 
 ---
 
+## 🏙️ Long Island City, building by building (Queens goes real — part 1)
+
+**Shipped:** July 11, 2026
+
+**TL;DR:** Long Island City, Court Square, Hunters Point and Dutch Kills now render
+the city's real 3D building massing — every tower, warehouse and rowhouse at its
+surveyed shape and position — the pilot for rebuilding all of western Queens from
+the DCP model.
+
+**What you'll see:** From the harbor or a Queens flyover: One Court Square at its
+true height and spot, the Court Square tower cluster, Hunters Point's mixed
+industrial/rowhouse fabric — real setbacks and real block shapes instead of
+procedural boxes, with the same night windows as the rest of the city.
+
+**How it works:** massing from the
+[NYC DCP 3D city model](https://www.nyc.gov/site/planning/data-maps/open-data/dwn-nyc-3d-model-download.page)
+(2017–18 tile `QN02`): ~20k facade/rooftop surfaces inside the LIC ring, placed by an
+**exact offline replica of the scene's geoRaw calibration** (0.007 m max error vs 38
+live samples — the piecewise calibration makes fitted affines wrong in Queens by up
+to 17 m), welded and u16-quantized into `public/qn-lic.json` (~1.4 MB, one draw call),
+with per-vertex seed/kind feeding the city window shader. The box generators skip
+footprints inside the ring (`QN_RINGS`/`inQnDcp`); a shared `loadBakedMesh` helper
+replaces the per-asset loader copies. Honest caveats: the 2017 snapshot predates the
+Court Square/Hunters Point tower boom (no Skyline Tower), and Queensbridge north of
+the ring is still procedural until the next chunk lands.
+
+## 🌊 The East River gets its real Queens bank
+
+**Shipped:** July 11, 2026
+
+**TL;DR:** The empty gray shelf between the Queens waterfront and Roosevelt Island is
+gone — the shoreline from Hunters Point to Hallets Point is now the surveyed bank, and
+the East Channel is water.
+
+**What you'll see:** Facing Roosevelt Island from Queens (or vice versa): water where
+water belongs. The LIC/Queensbridge/Ravenswood waterfront buildings now stand ~20 m
+from the river's edge, the Broadway cove and the Hallets Point jut read as real
+geography, and no building — and no resident — stands in the river.
+
+**How it works:** the stylized Queens shore ran ~350 m west into the river (and the
+baked Brooklyn polygon overshoots north up the channel, classifying it as land), so
+the ground plate filled the gap. The new `QW_SHX` table is the real bank from the DCP
+tiles' own Shoreline linework (~7k surveyed points through the exact-geoRaw
+transform); one table drives the land test and the plate edge, so ground, building
+placement, walkers and traffic all agree. Verified: zero buildings west of the bank,
+zero personas placed on water. Honest caveat: the rendered Roosevelt Island is
+historically shifted ~300 m west of its true position while its buildings sit at true
+coordinates — two narrow ground shelves keep that content dry until the island is
+un-shifted (recorded as follow-up in plan-queens-dcp.md).
+
 ## 💭 Resident thought bubbles + click-to-meet
 
 **Shipped:** July 10, 2026

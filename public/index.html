@@ -1973,11 +1973,16 @@ const qnShoreX = makeShoreX(QB.QN.shx), bxShoreX = makeShoreX(QB.BX.shx);
 // landOK-governed footprint box loses its ground. It converges with the stylized shore
 // at Astoria (z~10500) where that one was already accurate; QB.QN.bnd/shx stay
 // untouched. Roosevelt Island is exempt from the carve (its buildings ride landOK too).
+// Two shelf dips (z 8120-8360 and 9740-10160) keep ground under the Roosevelt Island
+// content that spills EAST of the channel-fitted islet ring (Cornell Tech landmark,
+// Coler-area real footprints, the island lighthouse): the islet mesh is refit ~300 m
+// west of its geoRaw position, but its buildings are placed at real coordinates and
+// sat on the old phantom plate. Un-shifting the island retires these dips.
 const QW_SHX = [[6450, 1760], [6600, 1739], [6750, 1760], [6900, 1728], [7050, 1715],
   [7200, 1717], [7350, 1741], [7500, 1781], [7650, 1784], [7800, 1797], [7950, 1814],
-  [8100, 1832], [8250, 1836], [8400, 1845], [8550, 1852], [8700, 1856], [8850, 1860],
-  [9000, 1870], [9150, 1874], [9300, 1876], [9450, 1880], [9600, 1896], [9750, 1915],
-  [9900, 1955], [10050, 2054], [10200, 2124], [10350, 1857], [10500, 1778]];
+  [8080, 1830], [8120, 1528], [8360, 1528], [8420, 1845], [8550, 1852], [8700, 1856],
+  [8850, 1860], [9000, 1870], [9150, 1874], [9300, 1876], [9450, 1880], [9600, 1896],
+  [9700, 1908], [9740, 1610], [10160, 1610], [10220, 2090], [10350, 1857], [10500, 1778]];
 function qwShoreX(z) {
   if (z < QW_SHX[0][0] || z > QW_SHX[QW_SHX.length - 1][0]) return null;
   for (let i = 0; i < QW_SHX.length - 1; i++) {
