@@ -158,9 +158,9 @@
   @media (max-width: 700px) { /* no ticker on phones → bar drops back; toolbar scrolls instead of clipping */
     #ticker { display:none !important; }
     #ui {
-      bottom:calc(10px + env(safe-area-inset-bottom, 0px));
-      left:8px; transform:none; /* hug the left — the concierge owns the right corner */
-      max-width:calc(100vw - 106px); overflow-x:auto; overflow-y:hidden;
+      bottom:0; left:0; transform:none; border-radius:0; /* flush with the bottom edge, full width */
+      max-width:100vw; padding-bottom:calc(7px + env(safe-area-inset-bottom, 0px)); /* buttons clear the home bar */
+      overflow-x:auto; overflow-y:hidden;
       -webkit-overflow-scrolling:touch; scrollbar-width:none; scroll-snap-type:x proximity;
       -webkit-mask-image:linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
       mask-image:linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
@@ -185,7 +185,7 @@
   #thoughtTicker .th .ic { margin-right:6px; text-decoration:none; display:inline-block; }
   #thoughtTicker .th .who { color:#7a93bb; font-size:10px; margin-left:7px; letter-spacing:.3px; }
   #thoughtTicker i.sep { color:#9fb6da; font-style:normal; }
-  body.thticker #ui { bottom:74px; } /* the bar clears both strips while thoughts scroll */
+  @media (min-width: 701px) { body.thticker #ui { bottom:74px; } } /* clears both strips; phones hide the tickers + dock the bar flush */
   body.photo #thoughtTicker, body.focusmode #thoughtTicker, body.manual #thoughtTicker { display:none !important; }
   @media (max-width: 700px) { #thoughtTicker { display:none !important; } }
   .flbl {
@@ -289,11 +289,10 @@
   #camDial .db:active, #rotDial .db:active { fill:#5f77bd; }
   #camDial .ic, #rotDial .ic { pointer-events:none; }
   body.agent #camDial, body.photo #camDial, body.agent #rotDial, body.photo #rotDial { display:none !important; }
-  @media (max-width: 600px) {
-    #camDial { width:66px; height:66px; right:8px; bottom:calc(176px + env(safe-area-inset-bottom, 0px)); }
-    #rotDial { width:66px; height:66px; right:8px; bottom:calc(248px + env(safe-area-inset-bottom, 0px)); }
+  @media (max-width: 600px) { /* phones: drop the dials entirely — joystick + drag-to-look cover navigation */
+    #camDial, #rotDial { display:none !important; }
   }
-  @media (hover: none) { /* touch devices: dials idle at low opacity, wake on use */
+  @media (min-width: 601px) and (hover: none) { /* touch tablets keep the dials, idling at low opacity */
     #camDial, #rotDial { opacity:.42; transition:opacity .35s; }
     body.dialing #camDial, body.dialing #rotDial { opacity:1; }
   }
