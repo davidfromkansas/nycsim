@@ -7706,6 +7706,71 @@ const birds = (() => {
 window.__birds = birds; // dev/testing hook
 
 /* ============================================================
+   25w. LinkNYC kiosks — a slowly rotating 3D soccer ball floats
+   above each kiosk location. Coords come from public/linknyc.json
+   (lat/lon), placed via subway.geoRaw and gated to modeled land
+   (iron rule 2). The ball is one InstancedMesh sharing a
+   soccer-pattern icosphere (12 black patches at the icosahedron
+   vertices = a truncated-icosahedron read); each ball spins in
+   place in the vertex shader off cityUniforms.uTime, so the whole
+   set costs one draw call and zero per-frame CPU.
+   ============================================================ */
+const linknyc = (() => {
+  const R = 9, BALL_Y = LAND_Y + 48;                 // radius + float height: a clear floating marker above the street
+  // --- soccer-pattern geometry: white sphere, black patches toward the 12 icosa vertices ---
+  const geo = new THREE.IcosahedronGeometry(R, 2).toNonIndexed();
+  const pos = geo.attributes.position;
+  const t = (1 + Math.sqrt(5)) / 2;
+  const V = [[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]]
+    .map(v => { const l = Math.hypot(v[0],v[1],v[2]); return [v[0]/l,v[1]/l,v[2]/l]; }); // 12 unit dirs
+  const col = new Float32Array(pos.count * 3);
+  const WHITE = [0.95, 0.95, 0.96], BLACK = [0.08, 0.08, 0.1];
+  const _c = [0,0,0];
+  for (let f = 0; f < pos.count; f += 3) { // per triangle: centroid dir → nearest icosa vertex
+    _c[0] = (pos.getX(f)+pos.getX(f+1)+pos.getX(f+2))/3;
+    _c[1] = (pos.getY(f)+pos.getY(f+1)+pos.getY(f+2))/3;
+    _c[2] = (pos.getZ(f)+pos.getZ(f+1)+pos.getZ(f+2))/3;
+    const l = Math.hypot(_c[0],_c[1],_c[2]) || 1;
+    let best = -1; for (const v of V) best = Math.max(best, (_c[0]*v[0]+_c[1]*v[1]+_c[2]*v[2])/l);
+    const c = best > 0.94 ? BLACK : WHITE;            // dot>0.94 ≈ within ~20° of a vertex → black patch
+    for (let k = 0; k < 3; k++) { col[(f+k)*3]=c[0]; col[(f+k)*3+1]=c[1]; col[(f+k)*3+2]=c[2]; }
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  // --- unlit material (always visible day/night) + shader spin-in-place off uTime ---
+  const mat = new THREE.MeshBasicMaterial({ vertexColors: true });
+  mat.customProgramCacheKey = () => 'linkball';
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = cityUniforms.uTime;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float uTime;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        float _a = uTime * 0.5;                                   // slow spin
+        float _cs = cos(_a), _sn = sin(_a);
+        transformed = mat3(_cs,0.0,_sn, 0.0,1.0,0.0, -_sn,0.0,_cs) * transformed;                 // yaw
+        transformed = mat3(1.0,0.0,0.0, 0.0,0.924,-0.383, 0.0,0.383,0.924) * transformed;`);       // fixed ~22° tilt → tumbling axis
+  };
+  let mesh = null;
+  const placed = [];
+  fetch('linknyc.json').then(r => r.json()).then(rows => {
+    const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(1,1,1);
+    for (const k of rows) {
+      const g = subway.geoRaw(k.la, k.lo);
+      if (!onLand(g.x, g.z) && !landOK(g.x, g.z)) continue; // off the modeled scene → skip
+      placed.push([g.x, g.z]);
+    }
+    if (!placed.length) return;
+    mesh = new THREE.InstancedMesh(geo, mat, placed.length);
+    mesh.frustumCulled = false; mesh.matrixAutoUpdate = false;
+    placed.forEach(([x, z], i) => { _p.set(x, BALL_Y, z); _m.compose(_p, _q, _s); mesh.setMatrixAt(i, _m); });
+    mesh.instanceMatrix.needsUpdate = true;
+    scene.add(mesh);
+    console.log('[linknyc]', placed.length, 'of', rows.length, 'kiosk balls placed');
+  }).catch(e => console.warn('[linknyc] load failed', e));
+  return { count: () => mesh ? mesh.count : 0, _pos: () => placed, ballY: BALL_Y };
+})();
+window.__linknyc = linknyc; // dev/testing hook
+
+/* ============================================================
    25h. RESIDENTS — Census PUMS personas. 12,703 real anonymous
    ACS person records (weighted sample, ~1 per 650 residents per
    PUMA — the crowd IS the distribution) stand in the city as
