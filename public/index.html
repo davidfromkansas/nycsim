@@ -330,11 +330,12 @@
   }
   body.agent #agentPanel { display:flex; }
   body.agent #agentFab { display:none; } /* the panel owns the corner while open; ✕ closes */
-  @media (max-width: 600px) {
+  @media (max-width: 700px) {
     /* phone: the concierge becomes a BOTTOM SHEET — its best answers are camera
-       flights and map layers, so the scene must stay visible above the chat */
+       flights and map layers, so the scene must stay visible above the chat.
+       width:100vw + border-box: explicitly the full device width, no side gap */
     #agentPanel {
-      top:auto; left:0; right:0; bottom:0; width:auto; height:48vh;
+      top:auto; left:0; right:auto; bottom:0; width:100vw; box-sizing:border-box; height:48vh;
       border-left:none; border-top:1px solid rgba(140,190,255,.25);
       border-radius:16px 16px 0 0;
       padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
@@ -4544,19 +4545,33 @@ const autoPan = (() => {
     on = true;
   }
   function stop() { on = false; }
+  const _apE = new THREE.Euler(0, 0, 0, 'YXZ');
   function tick(dt) {
     if (!on) return;
-    if (camTween || fly.st.on) { stop(); return; } // someone else took the camera
+    if (camTween) { stop(); return; } // someone else took the camera (entity flights, presets, clicks)
     az += dt * 0.028;                              // ~3.7 min per lap
-    const r = 3900 + Math.sin(az * 0.7) * 500;     // gentle radius/height breathing
-    const h = 1500 + Math.sin(az * 1.3) * 260;
+    const r = 2300 + Math.sin(az * 0.7) * 350;     // 50% closer: towers fill the frame
+    const h = 850 + Math.sin(az * 1.3) * 160;
     camera.position.set(C.x + Math.sin(az) * r, h, C.z + Math.cos(az) * r);
-    controls.target.set(C.x, 120, C.z);
+    if (fly.st.on) {
+      // touch devices live permanently in fly mode (enter(false) at load) — st.on is
+      // their RESTING state, not "the user took the camera". Drive the fly camera:
+      // aim it and sync yaw/pitch so fly.tick renders the same orientation next frame
+      // and a user grab picks up seamlessly. Real input stops the tour via the
+      // canvas/joystick/dial pointer hooks instead.
+      camera.lookAt(C.x, 320, C.z);
+      _apE.setFromQuaternion(camera.quaternion, 'YXZ');
+      fly.st.yaw = _apE.y; fly.st.pitch = _apE.x;
+      fly.st.vel.set(0, 0, 0);
+    } else {
+      controls.target.set(C.x, 320, C.z);          // aim above the rooftops: sky + skyline vantage
+    }
   }
   return { start, stop, tick, active: () => on };
 })();
 renderer.domElement.addEventListener('pointerdown', autoPan.stop);
 renderer.domElement.addEventListener('wheel', autoPan.stop, { passive: true });
+document.getElementById('joy').addEventListener('pointerdown', autoPan.stop); // mobile fly joystick = user input
 // live-entity buttons: each click jumps to a REAL plane/train/ferry/bus/station/flock
 // and rides along via that module's own tuned _fly (glide + focus chip + follow).
 // A RANDOM qualifying entity each click (nearest would re-pick what you already ride).
