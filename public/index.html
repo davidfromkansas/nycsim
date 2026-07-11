@@ -8204,6 +8204,41 @@ const thoughts = (() => {
 window.__thoughts = thoughts; // dev/testing hook
 
 /* ============================================================
+   25v. CHIP LIMITER — phones only. The scene's floating transit/
+   incident dialogues (.fybl: subway, bus, ferry, 311, closures,
+   bikes, flocks) pile up fast on a small screen. Each frame, keep
+   only the 5 nearest screen-center visible and hide the rest via
+   `visibility` — an overlay that never touches each module's own
+   `display` logic, so nothing fights and it self-corrects as the
+   camera moves. Air-traffic labels (.flbl) and persona bubbles
+   (.thoughtB) are different classes, so they're never capped.
+   Positions are read from the inline transform (no forced layout).
+   ============================================================ */
+const chipLimiter = (() => {
+  const MOBILE = matchMedia('(max-width: 700px)').matches;
+  const MAX = 5;
+  const re = /translate\(\s*([-\d.]+)px,\s*([-\d.]+)px/;
+  function tick() {
+    if (!MOBILE) return;
+    const all = document.getElementsByClassName('fybl');
+    const cx = innerWidth / 2, cy = innerHeight / 2;
+    const shown = [];
+    for (let i = 0; i < all.length; i++) {
+      const c = all[i];
+      if (c.id === 'focusChip' || c.style.display !== 'block') continue; // module hid it, or it's the pinned focus
+      const m = re.exec(c.style.transform);
+      const x = m ? +m[1] : cx, y = m ? +m[2] : cy;
+      const dx = x - cx, dy = y - cy;
+      shown.push({ c, d: dx * dx + dy * dy });
+    }
+    if (shown.length <= MAX) { for (const s of shown) s.c.style.visibility = ''; return; }
+    shown.sort((a, b) => a.d - b.d);
+    for (let i = 0; i < shown.length; i++) shown[i].c.style.visibility = i < MAX ? '' : 'hidden';
+  }
+  return { tick };
+})();
+
+/* ============================================================
    25u. PERSONA AVATAR — the resident's own voxel figure, rendered
    as a slow turntable portrait in a small canvas floating beside
    #personaCard. Uses the EXACT §25h geometry + palettes via
@@ -9403,6 +9438,7 @@ function frame() {
   focusui.tick();    // the pinned focus dialogue tracks its entity
   thoughts.tick();   // §25t Sims-style thought bubbles over residents
   personas.followTick(); // §25h follow-cam rides along with the clicked resident
+  chipLimiter.tick(); // phones: cap on-screen transit/incident dialogues at 5
   renderer.render(scene, camera);
   precipOverlay.render(); // screen-space rain/snow veil, drawn on top
   fpsN++; fpsT += dt;
