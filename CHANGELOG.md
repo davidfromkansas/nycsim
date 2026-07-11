@@ -6,6 +6,35 @@ the rules on adding entries.
 
 ---
 
+## ✈️ Airports + parks: real JFK, LaGuardia, Flushing Meadows & Forest Park
+
+**Shipped:** July 11, 2026
+
+**TL;DR:** JFK and LaGuardia now have their real terminal buildings, hangars and control
+towers dropped onto the existing calibrated runways, and Flushing Meadows–Corona Park
+(NY State Pavilion towers, the museums) and Forest Park's structures are in — all from
+the city's dedicated parks/airports 3D tile.
+
+**What you'll see:** at JFK, the real terminal ring and its 321-ft control tower on the
+true runway layout (the flights layer already lands there); at LaGuardia, the terminal
+buildings and tower; at Flushing Meadows, the two NY State Pavilion observation towers
+(~67 m) and the museum/pavilion structures beside the old fairgrounds; and Forest Park's
+low buildings. The placeholder hangar boxes at both airports are gone — the real
+buildings replaced them.
+
+**How it works:** geometry from the NYC DCP **parks/airports** tile
+([NYC 3D model](https://www.nyc.gov/site/planning/data-maps/open-data/dwn-nyc-3d-model-download.page)),
+which — unlike the borough tiles — is authored in **millimeters** (a 304.8 unit-scale
+was needed on top of the exact-geoRaw transform) and mixes two layer-naming schemes, so
+it uses a simpler full-mesh bake (~17k surfaces → 4 chunks, ~1.2 MB total) with tarmac
+ground under the airports and green under the parks. The chunks join the same proximity
+streaming as the rest of Queens (nothing loads until you fly out there). The hand-built
+runways, aprons, towers and jet-bridge gates stay — only the generic hangar placeholders
+were retired. **Caveats:** Gateway National Recreation Area / Jamaica Bay is almost
+entirely marsh and water with very few structures in this tile, so it's effectively
+natural area, not built; and the 2018 snapshot predates LaGuardia's finished new
+terminals.
+
 ## 📡 LinkNYC kiosks become real 3D markers
 
 **Shipped:** July 11, 2026

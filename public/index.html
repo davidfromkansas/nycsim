@@ -3295,6 +3295,12 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
   registerDcpChunk('qn-collegept.json', 8460, 16065, 2318); // College Point / Malba
   registerDcpChunk('qn-whitestone.json', 11307, 16530, 2911);// Whitestone / Beechhurst / Clearview
   registerDcpChunk('qn-bayside.json', 11941, 13131, 992);   // Auburndale / Bay Terrace
+  // Parks + airports (DCP parks/airports tile): real terminals on the existing runways,
+  // and the park monuments (NY State Pavilion, museums, Forest Park structures).
+  registerDcpChunk('qn-jfk.json', 17587, 4825, 3261);       // JFK terminals / hangars / control tower / TWA
+  registerDcpChunk('qn-lga.json', 5496, 12664, 974);        // LaGuardia terminals + tower
+  registerDcpChunk('qn-flushmeadows.json', 9081, 11723, 1263); // Flushing Meadows: NY State Pavilion, museums
+  registerDcpChunk('qn-forestpark.json', 10406, 6645, 1107);   // Forest Park structures
   window.__dcp = DCP_CHUNKS; // dev: streaming state
   streamDcpChunks();                    // initial pass (loads only chunks near the start camera)
   setInterval(streamDcpChunks, 700);    // stream as the camera moves
@@ -3406,8 +3412,8 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
     pushPrism(SCa, x, z, 1.7, h, 4.2, 3.0, 8, 0, [0.85, 0.84, 0.80], 0.3, -1);
     pushBoxG(SCa, x, z, h + 1.7, 6, 11, 11, 0.3, [0.20, 0.28, 0.36], 0.5, 1);
   }
-  for (let i = 0; i < 4; i++) pushBoxG(SCa, 6250 + (i % 2) * 160, 14550 + ((i / 2) | 0) * 140, 1.7, 16, 120, 70, 0.4, [0.62, 0.63, 0.65], R(), -1, [0.55, 0.56, 0.58]);
-  for (let i = 0; i < 6; i++) pushBoxG(SCa, 16050 + (i % 3) * 240, 2700 + ((i / 3) | 0) * 260, 1.7, 18, 170, 90, -0.15, [0.60, 0.61, 0.63], R(), -1, [0.53, 0.54, 0.56]);
+  // (generic hangar boxes retired — real LGA/JFK terminals + hangars now stream from
+  //  qn-lga.json / qn-jfk.json onto these aprons; runways, towers and gates stay hand-built)
   const gate = (cx, cz, rot) => {
     pushBoxG(SCa, cx, cz, 2.2, 4.5, 40, 4.5, rot, [0.92, 0.93, 0.95], 0.2, -1);
     pushBoxG(SCa, cx, cz, 2.6, 1.2, 6, 34, rot, [0.85, 0.86, 0.88], 0.2, -1);
