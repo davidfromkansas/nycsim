@@ -34,9 +34,12 @@ placement — and suppresses the ~1,800 stray boxes there. Geometry via the exac
 replica from all three eastern tiles (QN05–07), which ship without render meshes, so every
 surface is sampled from its NURBS plane. **Honest caveats:** this is a heavy add (~26 MB
 across 8 lazy-loaded chunks — the eastern half of a borough is a lot of buildings); the
-low fabric is flat-topped extrusions; the 2017–18 snapshot predates recent Flushing towers;
-and a follow-up LOD/decimation pass could lighten the download (recorded in
-plan-queens-dcp.md).
+low fabric is flat-topped extrusions and the 2017–18 snapshot predates recent Flushing
+towers. **Memory:** all 16 Queens DCP chunks (~32 MB) now stream by camera proximity —
+nothing loads at startup or during Manhattan use, chunks fetch in as you approach a
+neighborhood and dispose when you leave, hard-capped on mobile (3 resident) so the
+fixed mobile-crash memory budget is preserved; desktop keeps a wide radius so a borough
+stays whole when zoomed out.
 
 ## 📍 The Concierge learns every place name: "take me to Black Cat LES" just works
 

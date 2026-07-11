@@ -363,6 +363,16 @@ and doesn't represent.
    dense block can put a facade 1 m outside its chunk's nominal polygon. Cosmetically
    invisible; noted for anyone diffing rings against assets.
 
+## 7b. Memory: proximity streaming (shipped)
+
+All baked DCP chunks register with a proximity streamer (`registerDcpChunk` /
+`streamDcpChunks` in index.html) instead of loading unconditionally: a 700 ms tick
+loads the nearest chunks within a tier-scaled radius (high 13 km / medium 4.8 km /
+low 3.2 km) up to a resident cap (high 16 / medium 6 / low 3) and disposes the rest
+(geometry freed). Startup + Manhattan use load zero Queens geometry, protecting the
+PERF.md workstream-C mobile-crash fix. Future borough bakes just call
+`registerDcpChunk` — memory stays bounded no matter how many chunks exist.
+
 ## 8. Shipping rules (violations burned us three times this week)
 
 - **The JSON assets must be in the SAME commit as their loader code.** Loaders

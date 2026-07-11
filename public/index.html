@@ -1117,23 +1117,66 @@ function inQnDcp(x, z) {
 }
 // Shared decoder for baked DCP meshes (u16 pos + u8 RGB + u8 seed/kind + u16|u32 index).
 // Used by the Queens chunks; the liberty/govisland/fidi loaders predate it and stay as-is.
+// Baked-mesh decoder (u16 pos + u8 color + u8 seed/kind + u16|u32 index).
+function decodeBakedMesh(j) {
+  const u8 = s => { const a = atob(s), u = new Uint8Array(a.length); for (let i = 0; i < a.length; i++) u[i] = a.charCodeAt(i); return u; };
+  const q = new Uint16Array(u8(j.v).buffer), pos = new Float32Array(q.length);
+  for (let i = 0; i < q.length; i += 3) for (let k = 0; k < 3; k++) pos[i + k] = q[i + k] / 65535 * j.scale[k] + j.off[k];
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(u8(j.c), 3, true));
+  if (j.s) g.setAttribute('aSeed', new THREE.BufferAttribute(u8(j.s), 1));
+  if (j.k) g.setAttribute('aKind', new THREE.BufferAttribute(u8(j.k), 1));
+  const ir = u8(j.i);
+  g.setIndex(new THREE.BufferAttribute(j.i32 ? new Uint32Array(ir.buffer) : new Uint16Array(ir.buffer), 1));
+  g.computeVertexNormals();
+  return g;
+}
+// One-shot loader (used for the always-resident harbor/Manhattan landmarks).
 function loadBakedMesh(url, tier) {
   fetch(url).then(r => r.json()).then(j => {
-    const u8 = s => { const a = atob(s), u = new Uint8Array(a.length); for (let i = 0; i < a.length; i++) u[i] = a.charCodeAt(i); return u; };
-    const q = new Uint16Array(u8(j.v).buffer), pos = new Float32Array(q.length);
-    for (let i = 0; i < q.length; i += 3) for (let k = 0; k < 3; k++) pos[i + k] = q[i + k] / 65535 * j.scale[k] + j.off[k];
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('color', new THREE.BufferAttribute(u8(j.c), 3, true));
-    if (j.s) g.setAttribute('aSeed', new THREE.BufferAttribute(u8(j.s), 1));
-    if (j.k) g.setAttribute('aKind', new THREE.BufferAttribute(u8(j.k), 1));
-    const ir = u8(j.i);
-    g.setIndex(new THREE.BufferAttribute(j.i32 ? new Uint32Array(ir.buffer) : new Uint16Array(ir.buffer), 1));
-    g.computeVertexNormals();
-    const m = new THREE.Mesh(g, patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), tier || 0));
-    m.matrixAutoUpdate = false;
-    scene.add(m);
+    const m = new THREE.Mesh(decodeBakedMesh(j), patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), tier || 0));
+    m.matrixAutoUpdate = false; scene.add(m);
   }).catch(() => {});
+}
+// ---- Proximity streaming for the Queens DCP chunks (PERF: startup + Manhattan use load
+// NONE of these — they stream in only as the camera approaches, and dispose when it
+// leaves, so resident geometry stays bounded regardless of how many neighborhoods exist.
+// Scales to the rest of the boroughs without regrowing the startup-memory peak). ----
+const DCP_MAT = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), 0);
+const DCP_CHUNKS = []; // {url, cx, cz, r, state:'idle'|'loading'|'loaded', mesh}
+function registerDcpChunk(url, cx, cz, r) { DCP_CHUNKS.push({ url, cx, cz, r, state: 'idle', mesh: null }); }
+let DCP_CAP = 16, DCP_LOAD = 7000, DCP_UNLOAD = 9000, _dcpTierSet = false;
+function streamDcpChunks() {
+  if (!_dcpTierSet) { // TIER is declared later in module scope — read it lazily at first run
+    DCP_CAP = TIER === 'low' ? 3 : TIER === 'medium' ? 6 : 16;
+    // high (desktop): wide radius so a borough stays whole when zoomed out (RAM is fine);
+    // startup is still protected — the hero view sits ~29 km from eastern Queens. mobile
+    // keeps a tight radius + hard cap so resident geometry can't blow the memory budget.
+    DCP_LOAD = TIER === 'low' ? 3200 : TIER === 'medium' ? 4800 : 13000;
+    DCP_UNLOAD = DCP_LOAD + 2500; _dcpTierSet = true;
+  }
+  const cx = camera.position.x, cz = camera.position.z;
+  const scored = DCP_CHUNKS.map(c => ({ c, d: Math.hypot(cx - c.cx, cz - c.cz) - c.r }));
+  scored.sort((a, b) => a.d - b.d);
+  const want = new Set();
+  for (const s of scored) { if (s.d < DCP_LOAD && want.size < DCP_CAP) want.add(s.c); }
+  for (const { c, d } of scored) {
+    if (want.has(c)) {
+      if (c.state === 'idle') {
+        c.state = 'loading';
+        fetch(c.url).then(r => r.json()).then(j => {
+          if (c.state !== 'loading') return;              // disposed while in flight
+          c.mesh = new THREE.Mesh(decodeBakedMesh(j), DCP_MAT);
+          c.mesh.matrixAutoUpdate = false; scene.add(c.mesh); c.state = 'loaded';
+        }).catch(() => { c.state = 'idle'; });
+      }
+    } else if (c.state === 'loaded' && d > DCP_UNLOAD) {
+      scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; c.state = 'idle';
+    } else if (c.state === 'loading' && d > DCP_UNLOAD) {
+      c.state = 'idle';                                   // cancel: drop the in-flight result on arrival
+    }
+  }
 }
 
 /* ============================================================
@@ -3234,26 +3277,27 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
   console.log('[street-truth]', ribKm.toFixed(0), 'km real streets,', realB, 'REAL borough footprints,', blkN, 'outer blocks,', blkB, 'filler buildings');
   // Queens real-massing chunks: DCP-baked meshes replace the suppressed box fabric
   // inside each QN_RING (exact-geoRaw placement, city window shader via aSeed/aKind).
-  loadBakedMesh('qn-lic.json', 0); // Long Island City / Hunters Point / Court Square (full-mesh ring)
-  // Tier-A chunks: hero buildings only; the low fabric stays real-footprint boxes
-  loadBakedMesh('qn-sunnyside.json', 0);  // Sunnyside (+Gardens) / Woodside / Blissville
-  loadBakedMesh('qn-ravenswood.json', 0); // Queensbridge / Ravenswood / Old Astoria / Silvercup
-  loadBakedMesh('qn-astoria.json', 0);    // Astoria / Ditmars / Steinway / ConEd waterfront
-  loadBakedMesh('qn-jacksonhts.json', 0); // Jackson Heights / East Elmhurst / North Corona
-  loadBakedMesh('qn-corona.json', 0);     // Corona / Corona Heights
-  loadBakedMesh('qn-elmhurst.json', 0);   // Elmhurst / Lefrak City
-  loadBakedMesh('qn-rikers.json', 0);     // Rikers Island complex
-  // Queens part 3: CD5 east + CD6 + CD7 (Glendale, Rego Park, Forest Hills, Flushing,
-  // College Point, Whitestone, Bayside) — off-plate real fabric (Tier-A mesh + Tier-B
-  // footprint extrusions + coast-clipped ground) east of the old borough plate edge.
-  loadBakedMesh('qn-ridgewood.json', 0);  // Ridgewood/Maspeth/Middle Village hero buildings
-  loadBakedMesh('qn-glendale.json', 0);   // Glendale (off-plate CD5 sliver)
-  loadBakedMesh('qn-regopark.json', 0);   // Rego Park
-  loadBakedMesh('qn-foresthills.json', 0);// Forest Hills / Forest Hills Gardens
-  loadBakedMesh('qn-flushing.json', 0);   // Downtown/East Flushing / Murray Hill / Queensboro Hill
-  loadBakedMesh('qn-collegept.json', 0);  // College Point / Malba
-  loadBakedMesh('qn-whitestone.json', 0); // Whitestone / Beechhurst / Clearview
-  loadBakedMesh('qn-bayside.json', 0);    // Auburndale / Bay Terrace / Waldheim edge
+  // Register the Queens DCP chunks for proximity streaming (nothing loads until the
+  // camera nears them — see streamDcpChunks). [url, centerX, centerZ, radius].
+  registerDcpChunk('qn-lic.json', 2548, 7232, 1108);        // Long Island City / Court Sq
+  registerDcpChunk('qn-sunnyside.json', 4544, 8400, 2019);  // Sunnyside / Woodside / Blissville
+  registerDcpChunk('qn-ravenswood.json', 2620, 8951, 1245); // Queensbridge / Ravenswood / Silvercup
+  registerDcpChunk('qn-astoria.json', 3773, 11555, 2607);   // Astoria / Ditmars / Steinway / ConEd
+  registerDcpChunk('qn-jacksonhts.json', 6669, 11138, 1537);// Jackson Heights / East Elmhurst
+  registerDcpChunk('qn-corona.json', 8148, 10968, 1186);    // Corona / Corona Heights
+  registerDcpChunk('qn-elmhurst.json', 7087, 9184, 1578);   // Elmhurst / Lefrak City
+  registerDcpChunk('qn-rikers.json', 4740, 14351, 928);     // Rikers Island
+  registerDcpChunk('qn-ridgewood.json', 7338, 8185, 497);   // Ridgewood/Maspeth/Middle Village
+  registerDcpChunk('qn-glendale.json', 8771, 6360, 1977);   // Glendale
+  registerDcpChunk('qn-regopark.json', 9181, 9444, 1184);   // Rego Park
+  registerDcpChunk('qn-foresthills.json', 10632, 9030, 1350);// Forest Hills / FH Gardens
+  registerDcpChunk('qn-flushing.json', 10170, 12906, 2016); // Flushing / Murray Hill / Q'boro Hill
+  registerDcpChunk('qn-collegept.json', 8460, 16065, 2318); // College Point / Malba
+  registerDcpChunk('qn-whitestone.json', 11307, 16530, 2911);// Whitestone / Beechhurst / Clearview
+  registerDcpChunk('qn-bayside.json', 11941, 13131, 992);   // Auburndale / Bay Terrace
+  window.__dcp = DCP_CHUNKS; // dev: streaming state
+  streamDcpChunks();                    // initial pass (loads only chunks near the start camera)
+  setInterval(streamDcpChunks, 700);    // stream as the camera moves
 }
 
 /* ============================================================
@@ -7928,7 +7972,7 @@ window.__birds = birds; // dev/testing hook
    icosahedron vertices = a truncated-icosahedron read).
    ============================================================ */
 const linknyc = (() => {
-  const R = 8, KFLOAT = 149.5, BALL_H = KFLOAT + 42; // kiosk floats 30% higher than the old marker height; ball rides just above the now-32 m kiosk
+  const R = 11.2, KFLOAT = 149.5, BALL_H = KFLOAT + 60; // ball rides ~2 m above the 44.8 m kiosk top (both sized up 40%)
   // --- soccer-pattern geometry: white sphere, black patches toward the 12 icosa vertices ---
   const geo = new THREE.IcosahedronGeometry(R, 2).toNonIndexed();
   const pos = geo.attributes.position;
@@ -8001,9 +8045,12 @@ const linknyc = (() => {
     ring.position.set(x, gy + 0.6, z);
     ring.visible = true;
     setFocus('LinkNYC kiosk (static city list)', name, { name }, () => [x, gy, z]);
-    focusui.enter(() => [x, gy + 26, z], '<b>⚽ LinkNYC kiosk</b><br>' + String(name).replace(/</g, '&lt;'));
+    const mid = gy + KFLOAT + 22; // vertical center of the floating kiosk (base gy+KFLOAT, ~45 m tall)
+    focusui.enter(() => [x, gy + BALL_H + R + 4, z], '<b>⚽ LinkNYC kiosk</b><br>' + String(name).replace(/</g, '&lt;')); // chip rides above the ball
+    // pull back far enough that the tall floating marker sits centered and CLEAR of
+    // the top nycsim banner (aim at the kiosk's own mid-height, not the ground)
     camTween = { p0: camera.position.clone(), t0: controls.target.clone(),
-      p1: new THREE.Vector3(x + 90, 200, z - 300), t1: new THREE.Vector3(x, 70, z), t: 0, dur: 1.6 }; // frame the floating kiosk stack + the ground ring
+      p1: new THREE.Vector3(x + 150, mid + 55, z - 430), t1: new THREE.Vector3(x, mid, z), t: 0, dur: 1.7 };
   }
   // ball picking: click (not drag) → nearest ball within 30 px (cams pattern —
   // the mirror shim already delivers camera-space coords, so plain NDC compares)
@@ -8029,13 +8076,13 @@ const linknyc = (() => {
     if (best >= 0) { e.stopImmediatePropagation(); focusKiosk(best); }
   }, true);
   // --- kiosk marker models: decimated bake of a REAL LinkNYC kiosk
-  //     (public/linkkiosk.json, 7.7k tris, cm units → ×0.105 = 32 m tall,
-  //     twice the ball's diameter). ONE InstancedMesh; the color
+  //     (public/linkkiosk.json, 7.7k tris, cm units → ×0.147 = 44.8 m tall).
+  //     ONE InstancedMesh; the color
   //     atlas carries the ad art + part swatches, the glow map keeps the ad
   //     screens and tablet lit at night. 200 kiosks × 7.7k tris would blow
   //     the tri budget, so the instances re-point at the nearest kiosks once
   //     a second — beyond ~2.6 km the soccer ball overhead stays the marker.
-  const KCAP = 16, KRANGE = 2600, KSCALE = 0.105; // 305 cm model -> 32 m tall (2x the ball's diameter)
+  const KCAP = 16, KRANGE = 2600, KSCALE = 0.147; // 305 cm model -> 44.8 m tall
   let kMesh = null;
   Promise.all([
     fetch('linkkiosk.json').then(r => r.json()),
@@ -9820,6 +9867,7 @@ function frame() {
   T += dt;
   cityUniforms.uTime.value = T;
   if (camTween) {
+    if (!camTween._hi) { camTween.p1.y *= 1.40; camTween._hi = true; } // swoop-ins end 40% higher
     camTween.t += dt / camTween.dur;
     const e = easeInOut(clamp(camTween.t, 0, 1));
     camera.position.lerpVectors(camTween.p0, camTween.p1, e);
