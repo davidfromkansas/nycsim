@@ -335,9 +335,10 @@
        flights and map layers, so the scene must stay visible above the chat.
        width:100vw + border-box: explicitly the full device width, no side gap */
     #agentPanel {
-      top:auto; left:0; right:auto; bottom:0; width:100vw; box-sizing:border-box; height:48vh;
-      border-left:none; border-top:1px solid rgba(140,190,255,.25);
-      border-radius:16px 16px 0 0;
+      top:0; left:0; right:auto; bottom:0; width:100vw; box-sizing:border-box;
+      height:100vh; height:100dvh; /* full screen; dvh accounts for the iOS address bar */
+      border:none; border-radius:0;
+      padding-top:calc(10px + env(safe-area-inset-top, 0px));
       padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
       will-change:transform; /* visualViewport keyboard lift animates this */
     }
