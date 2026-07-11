@@ -132,6 +132,7 @@ async function fetchDay(day, force) {
   if (dayCache[day] && !force) return dayCache[day];
   const r = await fetch('/api/agent-log?full=1&limit=1000&day=' + day + '&key=' + encodeURIComponent(KEY));
   if (r.status === 401) throw Object.assign(new Error('unauthorized'), { auth: true });
+  if (r.status === 429) throw Object.assign(new Error('Too many attempts — this connection is paused for an hour.'), { friendly: true });
   if (!r.ok) throw new Error('http ' + r.status);
   const j = await r.json();
   dayCache[day] = (j.turns || []).filter(t => t && t.t);
@@ -228,7 +229,7 @@ async function unlock(pw) {
     }, POLL_MS);
   } catch (e) {
     KEY = ''; sessionStorage.removeItem('convoKey');
-    bad.textContent = e.auth ? 'Wrong password.' : 'Could not reach the log API (' + e.message + ').';
+    bad.textContent = e.auth ? 'Wrong password.' : e.friendly ? e.message : 'Could not reach the log API (' + e.message + ').';
     gate.classList.remove('shake'); void gate.offsetWidth; gate.classList.add('shake');
   }
   goBtn.disabled = false;
