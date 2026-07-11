@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>City Concierge — conversations (live)</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --panel:#fff; --ink:#1a2230; --muted:#6b7688; --line:#e5e9f2;
+    --user:#2e6bc4; --userink:#fff; --ai:#eef1f7; --aiink:#1a2230;
+    --accent:#2e6bc4; --err:#c0362c; --errbg:#fdecea; --chip:#eaf0fb; --chipink:#2e6bc4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--bg);}
+  a{color:var(--accent)}
+  .app{display:flex;height:100vh;overflow:hidden}
+
+  /* password gate */
+  #gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center}
+  #gate form{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px 30px;width:320px;
+    box-shadow:0 10px 40px rgba(20,40,90,.12);text-align:center}
+  #gate h1{font-size:16px;margin:0 0 4px}
+  #gate p{color:var(--muted);font-size:12px;margin:0 0 16px}
+  #gate input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;outline:none;text-align:center}
+  #gate input:focus{border-color:var(--accent)}
+  #gate button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:10px;background:var(--accent);color:#fff;
+    font-size:14px;font-weight:600;cursor:pointer}
+  #gate button:disabled{opacity:.6;cursor:wait}
+  #gate .bad{color:var(--err);font-size:12px;min-height:16px;margin-top:8px}
+  #gate.shake form{animation:gshake .35s}
+  @keyframes gshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+  /* sidebar */
+  .side{width:340px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
+  .side h1{font-size:15px;margin:0;padding:14px 16px 4px;font-weight:700}
+  .side h1 .live{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.8px;color:#fff;
+    background:rgba(205,32,44,.92);border-radius:8px;padding:1px 7px;margin-left:7px;vertical-align:2px}
+  .side h1 .live i{display:inline-block;width:5px;height:5px;border-radius:50%;background:#fff;margin-right:4px;animation:blink 1.6s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  .side .sub{padding:0 16px 10px;color:var(--muted);font-size:12px}
+  .search{margin:0 12px 10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;width:calc(100% - 24px);outline:none}
+  .search:focus{border-color:var(--accent)}
+  .list{flex:1;overflow-y:auto;padding-bottom:20px}
+  .item{padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+  .item:hover{background:#f7f9fd}
+  .item.active{background:#eaf1fc;box-shadow:inset 3px 0 0 var(--accent)}
+  .item .top{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .item .prev{font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .n{color:var(--muted);font-size:11.5px}
+  .item .errdot{width:7px;height:7px;border-radius:50%;background:var(--err);display:inline-block;margin-left:4px;vertical-align:middle}
+  .mono{font-family:ui-monospace,Menlo,monospace}
+
+  /* thread */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .mhead{padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .mhead .who{font-weight:700}
+  .mhead .meta{color:var(--muted);font-size:12px}
+  .thread{flex:1;overflow-y:auto;padding:22px 20px 60px;background:var(--bg)}
+  .turn{max-width:760px;margin:0 auto 20px}
+  .row{display:flex;margin-bottom:6px}
+  .row.u{justify-content:flex-end}
+  .bub{padding:9px 13px;border-radius:16px;max-width:80%;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(20,40,90,.05)}
+  .u .bub{background:var(--user);color:var(--userink);border-bottom-right-radius:5px}
+  .a .bub{background:var(--ai);color:var(--aiink);border-bottom-left-radius:5px}
+  .a .bub.err{background:var(--errbg);color:var(--err);border:1px solid #f3c7c2}
+  .ctx{font-size:11px;color:var(--muted);text-align:right;margin:0 4px 4px}
+  .ctx::before{content:"📍 "}
+  .foot{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:5px 2px 0 2px;font-size:11px;color:var(--muted)}
+  .chip{background:var(--chip);color:var(--chipink);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+  .chip.cam{background:#eafaf0;color:#1a7d46}
+  .chip.lay{background:#fdf1e3;color:#b5731a}
+  .time{color:#9aa4b5;font-size:10.5px;margin:0 4px}
+  .u .time{text-align:right}
+  .empty{color:var(--muted);text-align:center;margin-top:120px}
+  @media(max-width:720px){
+    .app{flex-direction:column}
+    .side{width:100%;height:44vh;border-right:none;border-bottom:1px solid var(--line)}
+    .main{height:56vh}
+  }
+</style>
+</head>
+<body>
+<div id="gate">
+  <form id="gateForm">
+    <h1>City Concierge — conversations</h1>
+    <p>Enter the viewer password to continue.</p>
+    <input id="pw" type="password" placeholder="password" autofocus autocomplete="current-password">
+    <button id="go" type="submit">Unlock</button>
+    <div class="bad" id="bad"></div>
+  </form>
+</div>
+<div class="app">
+  <aside class="side">
+    <h1>City Concierge — conversations<span class="live"><i></i>LIVE</span></h1>
+    <div class="sub" id="stat">loading…</div>
+    <input class="search" id="q" placeholder="Search messages…">
+    <div class="list" id="list"></div>
+  </aside>
+  <main class="main">
+    <div class="mhead" id="mhead"><span class="who">Pick a conversation →</span></div>
+    <div class="thread" id="thread"><div class="empty">Select a conversation on the left to read it as the user saw it.</div></div>
+  </main>
+</div>
+<script>
+/* Live viewer over GET /api/agent-log (server-side key gate — the password IS the
+   AGENT_LOG_KEY, checked by the API on every request; nothing is trusted client-side).
+   Loads the last DAYS days, groups turns into conversations (same visitor, <30 min
+   gap), newest conversation first, and re-polls today every POLL_MS. */
+const DAYS = 7, POLL_MS = 30_000, GAP_MS = 30 * 60_000;
+const list = document.getElementById('list'), thread = document.getElementById('thread'),
+      mhead = document.getElementById('mhead'), stat = document.getElementById('stat');
+const gate = document.getElementById('gate'), gateForm = document.getElementById('gateForm'),
+      pwEl = document.getElementById('pw'), goBtn = document.getElementById('go'), bad = document.getElementById('bad');
+
+const esc = s => { // some log fields are structured (context/error objects) — coerce, never crash
+  if (s == null) return '';
+  if (typeof s === 'object') { try { s = JSON.stringify(s); } catch { s = String(s); } }
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+};
+const fmt = iso => { const d = new Date(iso); return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+const fmtT = iso => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+const dayStr = (offset) => { const d = new Date(Date.now() - offset * 86400_000); return d.toISOString().slice(0, 10); };
+
+let KEY = sessionStorage.getItem('convoKey') || '';
+let S = [];            // conversations, newest first: { v, key, turns:[...] }
+let activeKey = null;  // stable id (visitor + first-turn iso) so refresh keeps selection
+const dayCache = {};   // day → raw turns (past days are immutable; only today re-fetches)
+
+async function fetchDay(day, force) {
+  if (dayCache[day] && !force) return dayCache[day];
+  const r = await fetch('/api/agent-log?full=1&limit=1000&day=' + day + '&key=' + encodeURIComponent(KEY));
+  if (r.status === 401) throw Object.assign(new Error('unauthorized'), { auth: true });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  dayCache[day] = (j.turns || []).filter(t => t && t.t);
+  return dayCache[day];
+}
+
+function regroup() {
+  const rows = Object.values(dayCache).flat().slice().sort((a, b) => a.t.localeCompare(b.t));
+  const open = {}; // visitor → current conversation
+  const convos = [];
+  for (const r of rows) {
+    const turn = {
+      t: r.t, q: r.message || '', a: r.reply || '', ok: r.status === 'ok', err: r.error,
+      ctx: r.context, cam: !!(r.intents && r.intents.camera),
+      layers: ((r.intents && r.intents.layers) || []).map(l => l.title).filter(Boolean),
+      tools: (r.tools || []).map(x => x.name), lat: r.latency_ms
+    };
+    const cur = open[r.visitor];
+    if (cur && new Date(r.t) - new Date(cur.turns[cur.turns.length - 1].t) < GAP_MS) cur.turns.push(turn);
+    else { const c = { v: r.visitor || '?', key: (r.visitor || '?') + '|' + r.t, turns: [turn] }; open[r.visitor] = c; convos.push(c); }
+  }
+  // most recent activity first
+  convos.sort((a, b) => b.turns[b.turns.length - 1].t.localeCompare(a.turns[a.turns.length - 1].t));
+  S = convos;
+}
+
+function renderStat() {
+  const totalTurns = S.reduce((n, s) => n + s.turns.length, 0);
+  const visitors = new Set(S.map(s => s.v)).size;
+  stat.textContent = `${S.length} conversations · ${visitors} visitors · ${totalTurns} messages · last ${DAYS} days · updated ${new Date().toLocaleTimeString()}`;
+}
+
+function renderList(filter) {
+  filter = (filter || '').toLowerCase();
+  list.innerHTML = '';
+  S.forEach((s) => {
+    if (filter && !s.turns.some(t => (t.q + ' ' + t.a).toLowerCase().includes(filter))) return;
+    const errs = s.turns.filter(t => !t.ok).length;
+    const last = s.turns[s.turns.length - 1];
+    const el = document.createElement('div');
+    el.className = 'item' + (s.key === activeKey ? ' active' : '');
+    el.innerHTML = `<div class="top"><span>${esc(fmt(last.t))} · <span class="mono">${esc(s.v.slice(0, 6))}</span></span>`
+      + `<span class="n">${s.turns.length} msg${errs ? '<span class="errdot" title="had an error"></span>' : ''}</span></div>`
+      + `<div class="prev">${esc(s.turns[0].q || '(no text)')}</div>`;
+    el.onclick = () => { activeKey = s.key; renderList(document.getElementById('q').value); renderThread(s); };
+    list.appendChild(el);
+  });
+  if (!list.children.length) list.innerHTML = '<div class="empty" style="margin-top:40px">No matches.</div>';
+}
+
+function renderThread(s) {
+  const errs = s.turns.filter(t => !t.ok).length;
+  mhead.innerHTML = `<span class="who">Visitor ${esc(s.v.slice(0, 8))}</span>`
+    + `<span class="meta">${esc(fmt(s.turns[0].t))} · ${s.turns.length} messages${errs ? ` · <span style="color:var(--err)">${errs} error${errs > 1 ? 's' : ''}</span>` : ''}</span>`;
+  thread.innerHTML = s.turns.map(t => {
+    const tools = [];
+    if (t.cam) tools.push('<span class="chip cam">🎥 flew camera</span>');
+    (t.layers || []).forEach(l => tools.push(`<span class="chip lay">▨ ${esc(l)}</span>`));
+    (t.tools || []).filter(x => x !== 'set_camera' && x !== 'show_layer').forEach(x => tools.push(`<span class="chip">${esc(x)}</span>`));
+    if (t.lat) tools.push(`<span>${(t.lat / 1000).toFixed(1)}s</span>`);
+    const ai = t.ok
+      ? `<div class="bub">${esc(t.a) || '<i>(empty reply)</i>'}</div>`
+      : `<div class="bub err">⚠ ${esc(t.err || 'service error')} — the user saw a failure here</div>`;
+    return `<div class="turn">`
+      + (t.ctx ? `<div class="ctx">${esc(t.ctx)}</div>` : '')
+      + `<div class="row u"><div><div class="bub">${esc(t.q)}</div><div class="time">${esc(fmtT(t.t))}</div></div></div>`
+      + `<div class="row a"><div>${ai}<div class="foot">${tools.join(' ')}</div></div></div>`
+      + `</div>`;
+  }).join('');
+  thread.scrollTop = 0;
+}
+
+function rerender() {
+  regroup(); renderStat(); renderList(document.getElementById('q').value);
+  if (activeKey) { const s = S.find(x => x.key === activeKey); if (s) renderThread(s); }
+}
+
+async function loadAll() {
+  const days = Array.from({ length: DAYS }, (_, i) => dayStr(i));
+  await Promise.all(days.map(d => fetchDay(d, d === days[0]).catch(e => { if (e.auth) throw e; })));
+  rerender();
+}
+
+async function unlock(pw) {
+  goBtn.disabled = true; bad.textContent = '';
+  KEY = pw;
+  try {
+    await fetchDay(dayStr(0), true);       // auth check + first load in one request
+    sessionStorage.setItem('convoKey', KEY);
+    gate.style.display = 'none';
+    await loadAll();
+    setInterval(() => { // live: re-poll today (and pick up midnight rollover) — quiet on failure
+      fetchDay(dayStr(0), true).then(rerender).catch(() => {});
+    }, POLL_MS);
+  } catch (e) {
+    KEY = ''; sessionStorage.removeItem('convoKey');
+    bad.textContent = e.auth ? 'Wrong password.' : 'Could not reach the log API (' + e.message + ').';
+    gate.classList.remove('shake'); void gate.offsetWidth; gate.classList.add('shake');
+  }
+  goBtn.disabled = false;
+}
+
+gateForm.addEventListener('submit', (e) => { e.preventDefault(); if (pwEl.value) unlock(pwEl.value); });
+document.getElementById('q').addEventListener('input', e => renderList(e.target.value));
+if (KEY) unlock(KEY); // returning session: auto-unlock
+</script>
+</body>
+</html>
