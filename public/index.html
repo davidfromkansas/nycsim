@@ -7716,7 +7716,7 @@ window.__birds = birds; // dev/testing hook
    set costs one draw call and zero per-frame CPU.
    ============================================================ */
 const linknyc = (() => {
-  const R = 9, BALL_Y = LAND_Y + 48;                 // radius + float height: a clear floating marker above the street
+  const R = 16, BALL_Y = LAND_Y + 115;               // big ball floating high in the sky, like the subway beacons
   // --- soccer-pattern geometry: white sphere, black patches toward the 12 icosa vertices ---
   const geo = new THREE.IcosahedronGeometry(R, 2).toNonIndexed();
   const pos = geo.attributes.position;
