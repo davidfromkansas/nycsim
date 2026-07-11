@@ -9527,6 +9527,15 @@ function frame() {
     let spdS = 0, spdN = 0; for (const L of rtraffic.links) if (L.speed != null) { spdS += L.speed; spdN++; }
     put('vSpeed', Math.round(spdS / spdN) + ' mph', spdN > 0);
     put('vBirds', '≈' + fmt(BIRDS.aloft) + ' birds', BIRDS.aloft > 0);
+    positionCredit();
+  }
+  // keep the credit badge hugging the bottom of City Vitals on desktop — the panel's
+  // height changes as conditional rows (avg speed, birds aloft) appear/disappear, so a
+  // fixed CSS top would get covered. Mobile keeps its CSS top-right position.
+  const credit = document.getElementById('credit');
+  function positionCredit() {
+    if (matchMedia('(max-width: 700px)').matches) { credit.style.top = ''; return; }
+    credit.style.top = Math.round(el.getBoundingClientRect().bottom + 10) + 'px';
   }
   updateVitals();
   setInterval(updateVitals, 2000);
