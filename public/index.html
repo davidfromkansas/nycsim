@@ -1282,6 +1282,13 @@ function inQnEast(x, z) {
   const bit = gx * QN_EAST.h + gz;
   return (QN_EAST.bytes[bit >> 3] & (128 >> (bit & 7))) !== 0;
 }
+// Airport grounds (LGA, JFK): the whole field is runways/aprons (19e) + real DCP
+// terminals — never procedural boxes. These rects sit clear of the surrounding
+// residential (East Elmhurst is south of z≈12250; JFK is ringed by water/marsh).
+function inAirport(x, z) {
+  return (x > 4850 && x < 6600 && z > 12250 && z < 14450) ||   // LaGuardia
+         (x > 14800 && x < 20400 && z > 1900 && z < 6300);      // JFK
+}
 // Queens DCP claims: one circle per baked Tier-A building — the box fabric inside a
 // circle is replaced by real massing from the qn-*.json chunks. 60 m cell hash.
 const QN_CLAIM_HASH = new Map();
@@ -3204,6 +3211,7 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
     if (inQnDcp(x, z)) continue;                           // Queens DCP chunks render real massing (qn-*.json)
     if (inQnClaim(x, z)) continue;                         // box replaced by a baked Tier-A building
     if (inQnEast(x, z)) continue;                          // eastern Queens: baked chunk fabric replaces boxes
+    if (inAirport(x, z)) continue;                         // airport grounds: DCP terminals + runways, no boxes
     if (!landB(x, z)) continue;
     if (!onPlate(x, z) && !islets.some(([P]) => polyContains(P, x, z))) continue; // iron rule 2: painted plate or islet under every box
     const [h0, h1, gl, palN] = recipeB(x, z);
@@ -3226,6 +3234,7 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
     if (inQnDcp(o.cx, o.cz)) continue;                    // Queens DCP chunks own their fabric
     if (inQnClaim(o.cx, o.cz)) continue;                  // block face replaced by baked Tier-A massing
     if (inQnEast(o.cx, o.cz)) continue;                   // eastern Queens: baked chunk fabric
+    if (inAirport(o.cx, o.cz)) continue;                  // airport grounds
     if (!landB(o.cx, o.cz)) continue;
     if (blk.a < 1500 || o.w < 24 || o.l < 24) continue;   // traffic islands
     const rec = recipeB(o.cx, o.cz);
