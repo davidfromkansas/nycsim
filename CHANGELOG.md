@@ -6,6 +6,29 @@ the rules on adding entries.
 
 ---
 
+## 🏙️ Manhattan: instant procedural base, real detail on approach (progressive LOD)
+
+**Shipped:** July 12, 2026
+
+**TL;DR:** Manhattan now shows its full procedural city *instantly* (no streaming wait, no
+flat holes), and the real DCP building massing fades in over it as you get close.
+
+**What you'll see:** the whole island is always populated from the first frame — the
+original procedural buildings are the base everywhere. As you approach a neighborhood its
+real DCP massing streams in and seamlessly replaces the procedural there (no doubled or
+flickering buildings). Especially on phones, there's no "sparse until it loads" moment.
+
+**How it works:** the procedural base is built across all of Manhattan again (the bespoke
+landmarks and FiDi stay carved out via `inPad`/`inFidi`). Each streamed Manhattan chunk
+(`mn-*`/`ues-*`) carries a `proc` flag: it only ever loads at full detail (never as box-LOD),
+and when it lands, its world-space bounding box is pushed into a shared `CITY_MASK` uniform.
+The city shader (`patchCityMaterial`, `maskOn` variant) discards procedural fragments inside
+any loaded chunk's rect, so the real mesh shows through with no overlap. Gated by a separate
+program key, so every other material (boroughs, DCP, LOD) compiles unchanged. Boroughs still
+use the box-LOD blanket for now; Manhattan-style progressive detail can extend to them next.
+
+---
+
 ## 🌊 Manhattan waterfront on land · 📱 fuller city on phones
 
 **Shipped:** July 12, 2026

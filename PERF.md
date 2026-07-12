@@ -350,3 +350,15 @@ move when visited).
 - No `.github/workflows` (iron rule 7). No changes to calibration/land predicates.
 - CHANGELOG: these are internal perf changes — no entries (per the changelog rule),
   except if A's auto-tier is deemed user-visible enough to note later.
+
+**I — Manhattan progressive detail (procedural base + DCP-on-approach, 2026-07-12).** Option A:
+instead of the mobile LOD-blanket for Manhattan, the procedural base is built across all of
+Manhattan again (bespoke landmarks/FiDi carved via inPad/inFidi), and each streamed Manhattan
+chunk (mn-*/ues-*/roosevelt, flagged `proc`) loads only at FULL detail (never box-LOD). On load
+its world-space AABB goes into a shared `CITY_MASK` uniform; the city shader's `maskOn` variant
+discards procedural fragments inside any loaded chunk rect, so the real mesh shows through with
+no doubling. Gated by a separate program-cache key, so borough/DCP/LOD materials compile
+byte-identically (contained blast radius — verified). Desktop: clean build, fps 120, no doubles,
+whole island instantly full. Mobile startup memory (rebuilding the full Manhattan procedural)
+is back to the pre-DCP level that C2b fixed, so it *should* fit — pending on-device confirmation.
+Boroughs stay on the box-LOD blanket (workstream H) for now.

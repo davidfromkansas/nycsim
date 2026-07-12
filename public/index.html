@@ -581,8 +581,8 @@
   }
   body.gba #ui .grp { flex-direction:row; gap:5px; }
   body.gba #presets button { width:40px; height:40px; font-size:19px; border-radius:12px; }
-  body.gba #ticker { bottom:calc(var(--sh) + 2px); }        /* tickers drop to the freed screen-bottom */
-  body.gba #thoughtTicker { bottom:calc(var(--sh) + 36px); }
+  body.gba #ticker { display:none !important; }                     /* phones: drop the news ticker */
+  body.gba #thoughtTicker { bottom:calc(var(--sh) + 2px); }         /* keep only the resident-thought ticker, in the news ticker's old spot */
   body.gba #agentFab { bottom:var(--sh); right:0; width:76px; } /* flush with the console top edge + right viewport edge, over the tickers */
   body.gba #hud { transform:scale(.58); transform-origin:top left; max-width:calc((100vw - 16px) / 0.58); } /* compact top panel, kept within the screen (no right-edge cutoff) */
   body.gba #wxAlerts { display:none !important; } /* drop the weather-alert card on phones */
@@ -638,25 +638,24 @@
       <circle class="db" data-act="ru" cx="60" cy="94" r="17"><title>tilt down (street level)</title></circle>
       <circle class="db" data-act="rr" cx="94" cy="60" r="17"><title>rotate left</title></circle>
       <circle class="db" data-act="rl" cx="26" cy="60" r="17"><title>rotate right</title></circle>
-      <!-- one clean arrow — a gentle curved tail into a straight-pointing head — rotated
-           per circle so all four match, stay centered, and point squarely: rl→right,
-           rr→left, ro→up, ru→down -->
+      <!-- half-arc "rotate" arrow (a semicircle tail into a cardinal head) — clearly a
+           TURN, not a move; rotated per circle so it points up/right/down/left -->
       <g class="ic" stroke-linejoin="round">
-        <g transform="translate(94 60) rotate(180)">
-          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
-          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        <g transform="translate(60 26)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="2.8" stroke-linecap="round" d="M5.6 4.6 A7 7 0 1 1 -2.2 -6.6"/>
+          <path fill="#eaf0ff" stroke="none" d="M-2.2 -9.8 L-6 -4 L1.6 -4 Z"/>
         </g>
-        <g transform="translate(26 60)">
-          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
-          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        <g transform="translate(94 60) rotate(270)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="2.8" stroke-linecap="round" d="M5.6 4.6 A7 7 0 1 1 -2.2 -6.6"/>
+          <path fill="#eaf0ff" stroke="none" d="M-2.2 -9.8 L-6 -4 L1.6 -4 Z"/>
         </g>
-        <g transform="translate(60 26) rotate(-90)">
-          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
-          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        <g transform="translate(60 94) rotate(180)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="2.8" stroke-linecap="round" d="M5.6 4.6 A7 7 0 1 1 -2.2 -6.6"/>
+          <path fill="#eaf0ff" stroke="none" d="M-2.2 -9.8 L-6 -4 L1.6 -4 Z"/>
         </g>
-        <g transform="translate(60 94) rotate(90)">
-          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
-          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        <g transform="translate(26 60) rotate(90)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="2.8" stroke-linecap="round" d="M5.6 4.6 A7 7 0 1 1 -2.2 -6.6"/>
+          <path fill="#eaf0ff" stroke="none" d="M-2.2 -9.8 L-6 -4 L1.6 -4 Z"/>
         </g>
       </g>
     </svg>
@@ -1342,7 +1341,7 @@ const DCP_MAT = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: 
 // only, so a far LOD tile matches the base lighting without per-facade window detail.
 const DCP_MAT_LOD = patchClouds(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), true);
 const DCP_CHUNKS = []; // {url, cx, cz, r, state, mesh, detail:'full'|'lod'}
-function registerDcpChunk(url, cx, cz, r) { DCP_CHUNKS.push({ url, cx, cz, r, state: 'idle', mesh: null }); }
+function registerDcpChunk(url, cx, cz, r) { DCP_CHUNKS.push({ url, cx, cz, r, state: 'idle', mesh: null, proc: /^(mn-|ues-|roosevelt)/.test(url) }); }
 // Off-main-thread chunk decode (perf #2): a small worker pool fetches the .bin, dequantises
 // positions + computes normals, and transfers the raw arrays back — the main thread only wraps
 // them in a geometry. No JSON.parse of megabytes and no dequant loop on the main thread → the
@@ -1365,6 +1364,7 @@ function dcpWorker() {
       g.setIndex(new THREE.BufferAttribute(d.idx, 1));
       c.mesh = new THREE.Mesh(g, c.loadingDetail === 'lod' ? DCP_MAT_LOD : DCP_MAT);
       c.detail = c.loadingDetail;
+      if (c.proc) { g.computeBoundingBox(); const bb = g.boundingBox; c.aabb = [bb.min.x, bb.min.z, bb.max.x, bb.max.z]; }
       c.mesh.matrixAutoUpdate = false; scene.add(c.mesh); c.state = 'loaded';
     };
     DCP_WORKERS.push(w);
@@ -1399,7 +1399,7 @@ function streamDcpChunks() {
     const { c, d } = scored[r];
     let det = null;
     if (r < DCP_CAP && d < DCP_LOAD) det = 'full';
-    else if (r < DCP_CAP + DCP_KEEP + DCP_LOD_CAP && d < DCP_LOD_RADIUS) det = 'lod';
+    else if (!c.proc && r < DCP_CAP + DCP_KEEP + DCP_LOD_CAP && d < DCP_LOD_RADIUS) det = 'lod';
     // hysteresis: keep a currently-FULL chunk full through the KEEP band so it doesn't flip to LOD on tiny moves
     if (det === 'lod' && r < DCP_CAP + DCP_KEEP && c.detail === 'full' && c.state === 'loaded') det = 'full';
     desired.set(c, det);
@@ -1416,6 +1416,15 @@ function streamDcpChunks() {
       c.state = 'loading'; loadDcpChunk(c, det);
     }
   }
+  // Procedural clip-mask: hide the Manhattan procedural base under each loaded Manhattan chunk so the
+  // real mesh shows through (no doubling). Rebuilt each tick from the loaded proc chunks.
+  let _mn = 0;
+  for (const c of DCP_CHUNKS) {
+    if (c.proc && c.state === 'loaded' && c.aabb && _mn < MN_MASK_N) {
+      CITY_MASK.uRects.value[_mn].set(c.aabb[0], c.aabb[1], c.aabb[2], c.aabb[3]); _mn++;
+    }
+  }
+  CITY_MASK.uCount.value = _mn;
 }
 
 /* ============================================================
@@ -1853,9 +1862,11 @@ function generateCity() {
   for (let i = 0; i < BLDG.n; i++) {
     const x = BLDG.x[i], z = BLDG.z[i];
     if (!onLand(x, z)) continue;
-    if (inFidi(x, z)) continue; // FiDi core renders real DCP massing (fidi.json) instead
-    if (inMN08(x, z)) continue; // Upper East Side + Roosevelt Island render real DCP massing
-    if (inManhattanDCP(x, z)) continue; // rest of Manhattan renders real DCP massing (mn-*.json)
+    if (inFidi(x, z)) continue; // FiDi core renders real DCP massing (fidi.json, always resident)
+    if (inPad(x, z)) continue;  // clear bespoke landmark footprints (ESB, Chrysler...) so they don't double
+    // The rest of Manhattan now builds the PROCEDURAL base everywhere; streamed DCP chunks (mn-*/ues-*)
+    // mask it out under themselves as they load (CITY_MASK), so far Manhattan is instantly full and
+    // upgrades to real massing as you approach.
     const R = rng(iHash(BLDG.bin[i] | 0, 3));
     makeBuilding(x, z, BLDG.w[i], BLDG.d[i], BLDG.r[i] / 1000, recipeAt(x, z), R,
       { h: Math.max(4, BLDG.h[i]), real: true });
@@ -2003,8 +2014,10 @@ const SHADER_NOISE = `
   float vnoise(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f);
     return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+1.),f.x), f.y); }`;
 
-function patchCityMaterial(mat, tier) {
-  mat.customProgramCacheKey = () => 'city' + tier;
+const MN_MASK_N = 24; // world clip rects (loaded Manhattan DCP chunks) that hide the procedural base beneath them
+const CITY_MASK = { uRects: { value: Array.from({ length: MN_MASK_N }, () => new THREE.Vector4()) }, uCount: { value: 0 } };
+function patchCityMaterial(mat, tier, maskOn) {
+  mat.customProgramCacheKey = () => 'city' + tier + (maskOn ? 'm' : '');
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, cityUniforms);
     sh.vertexShader = sh.vertexShader
@@ -2078,6 +2091,15 @@ function patchCityMaterial(mat, tier) {
         emisW += uSunColor * gl2 * (step(0.80, fract(wr * 29.7)) * inWin) * (2.2 + glassy * 2.2) * uGlint;
         outgoingLight += emisW;
         #include <opaque_fragment>`);
+    if (maskOn) { // procedural base: discard fragments under a loaded DCP chunk so the real mesh shows through
+      sh.uniforms.uMaskRects = CITY_MASK.uRects; sh.uniforms.uMaskCount = CITY_MASK.uCount;
+      sh.fragmentShader = sh.fragmentShader
+        .replace('varying float vSeed; varying float vKind;', `varying float vSeed; varying float vKind;
+        uniform vec4 uMaskRects[${MN_MASK_N}]; uniform int uMaskCount;`)
+        .replace('float dcam = distance(vW, cameraPosition);', `float dcam = distance(vW, cameraPosition);
+        for (int _mi = 0; _mi < ${MN_MASK_N}; _mi++) { if (_mi >= uMaskCount) break; vec4 _r = uMaskRects[_mi];
+          if (vW.x >= _r.x && vW.x <= _r.z && vW.z >= _r.y && vW.z <= _r.w) discard; }`);
+    }
   };
   return mat;
 }
@@ -2865,7 +2887,7 @@ function emitBuilding(S, b) {
     let s = sinks.get(key); if (!s) { s = Sink(); sinks.set(key, s); }
     emitBuilding(s, b);
   }
-  const farMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 2);
+  const farMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 2, true);
   for (const s of sinks.values()) {
     const m = new THREE.Mesh(sinkToGeometry(s), farMat);
     m.matrixAutoUpdate = false; m.receiveShadow = false;
@@ -2898,7 +2920,7 @@ const midMeshes = [];
   }
   const counts = new Array(STACKS.length).fill(0);
   for (const b of B) counts[b.a]++;
-  const midMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 1);
+  const midMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 1, true);
   const meshes = [], idx = new Array(STACKS.length).fill(0);
   for (let a = 0; a < STACKS.length; a++) {
     const g = archGeo[a].clone();
@@ -2938,7 +2960,7 @@ const midMeshes = [];
     const g = geo.clone();
     g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(new Float32Array(count || 1), 1));
     g.setAttribute('aKind', new THREE.InstancedBufferAttribute(new Float32Array(count || 1).fill(-1), 1));
-    const im = new THREE.InstancedMesh(g, patchCityMaterial(new THREE.MeshLambertMaterial(), 1), count || 1);
+    const im = new THREE.InstancedMesh(g, patchCityMaterial(new THREE.MeshLambertMaterial(), 1, true), count || 1);
     im.frustumCulled = false;
     let i = 0;
     for (const b of B) {
@@ -4705,7 +4727,7 @@ const airlife = (() => {
 const cells = (() => {
   const built = new Map();
   let queue = [];
-  const cellStaticMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 3);
+  const cellStaticMat = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true }), 3, true);
   // fire-escape lattice texture (procedural)
   const fc = document.createElement('canvas'); fc.width = 64; fc.height = 64;
   {
@@ -4723,7 +4745,7 @@ const cells = (() => {
   fireTex.wrapS = fireTex.wrapT = THREE.RepeatWrapping;
   const fireMat = patchCityMaterial(new THREE.MeshLambertMaterial({
     color: 0x20201f, alphaMap: fireTex, alphaTest: 0.4, side: THREE.DoubleSide
-  }), 3);
+  }), 3, true);
   const pedGeo = new THREE.BoxGeometry(0.5, 1.75, 0.5); pedGeo.translate(0, 0.87, 0);
   pedGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(new Float32Array(96), 1));
   pedGeo.setAttribute('aKind', new THREE.InstancedBufferAttribute(new Float32Array(96).fill(-1), 1));
