@@ -49,7 +49,7 @@
     border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:5px 12px;
     text-shadow:0 1px 3px rgba(0,0,0,.6);
   }
-  body.flying #flyhint { display:block; }
+  body.flying #flyhint { display:none; } /* control hint removed on mobile + desktop */
   #joy {
     position:fixed; left:50%; bottom:96px; transform:translateX(-50%); z-index:30;
     width:116px; height:116px; border-radius:50%; display:none; touch-action:none;
@@ -505,10 +505,10 @@
     display:block; position:fixed; left:0; right:0; bottom:0; height:var(--sh);
     z-index:20; user-select:none; -webkit-user-select:none; touch-action:none;
     padding-bottom:env(safe-area-inset-bottom, 0px);
-    background:
-      radial-gradient(130% 100% at 50% -25%, rgba(255,255,255,.16), transparent 62%),
-      linear-gradient(180deg, #6b73c2 0%, #565ea8 44%, #464d92 100%);
-    border-top:2px solid rgba(18,22,54,.6);
+    background: /* Knicks blue */
+      radial-gradient(130% 100% at 50% -25%, rgba(255,255,255,.18), transparent 62%),
+      linear-gradient(180deg, #2f70c4 0%, #1f5db2 46%, #164d96 100%);
+    border-top:2px solid rgba(10,30,66,.6);
     box-shadow: inset 0 2px 0 rgba(255,255,255,.20), inset 0 -12px 26px rgba(18,22,58,.4);
   }
   body.gba #gba::before { /* screen bezel lip — a recessed shadow at the canvas seam */
@@ -516,75 +516,77 @@
     background:linear-gradient(180deg, rgba(6,8,22,0), rgba(6,8,22,.6));
   }
   #gbaBrand { display:none; }
-  body.gba #gbaBrand { /* NYC-SIMULATOR logo printed atop the console face */
-    display:block; position:absolute; top:5px; left:50%; transform:translateX(-50%);
-    width:min(48%, 200px); height:auto; opacity:.97; pointer-events:none;
+  body.gba #gbaBrand { /* NYC-SIMULATOR logo printed along the BOTTOM of the console face */
+    display:block; position:absolute; bottom:calc(7px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%);
+    width:min(46%, 190px); height:auto; opacity:.97; pointer-events:none;
     filter:drop-shadow(0 1px 2px rgba(10,14,40,.55));
   }
-  /* D-pad — a 3×3 grid: 4 directional keys form the cross, center hub fills the joint */
+  /* D-pad (left) — a 3×3 grid; the 4 directional keys form the cross and each is its
+     own press-and-hold button. Movement is horizontal-plane only (§26e). */
   #gbaDpad { display:none; }
   body.gba #gbaDpad {
-    display:grid; position:absolute; left:6%; top:calc(50% + 6px); transform:translateY(-42%);
-    width:126px; height:126px; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
+    display:grid; position:absolute; left:7%; top:50%; transform:translateY(-50%);
+    width:122px; height:122px; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
     filter:drop-shadow(0 3px 5px rgba(10,12,35,.5));
   }
   body.gba .dp {
     -webkit-appearance:none; appearance:none; border:none; margin:0; padding:0; cursor:pointer;
-    position:relative; background:linear-gradient(180deg,#3b4055,#22273a);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+    position:relative; background:linear-gradient(180deg,#f28a3e,#dd6e1e); touch-action:none; /* Knicks orange */
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
   }
   body.gba .dp.up    { grid-area:1/2/2/3; border-radius:9px 9px 0 0; }
   body.gba .dp.left  { grid-area:2/1/3/2; border-radius:9px 0 0 9px; }
   body.gba .dp.right { grid-area:2/3/3/4; border-radius:0 9px 9px 0; }
   body.gba .dp.down  { grid-area:3/2/4/3; border-radius:0 0 9px 9px; }
-  body.gba .dp-hub   { grid-area:2/2/3/3; background:#2c3145; box-shadow:inset 0 0 6px rgba(0,0,0,.5); }
+  body.gba .dp-hub   { grid-area:2/2/3/3; background:#c4661d; box-shadow:inset 0 0 6px rgba(90,40,0,.5); pointer-events:none; }
   body.gba .dp::after { /* direction triangle */
-    content:''; position:absolute; left:50%; top:50%; width:0; height:0; opacity:.72;
+    content:''; position:absolute; left:50%; top:50%; width:0; height:0; opacity:.72; pointer-events:none;
   }
-  body.gba .dp.up::after    { transform:translate(-50%,-70%); border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:8px solid #cfd4ee; }
-  body.gba .dp.down::after  { transform:translate(-50%,-30%); border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #cfd4ee; }
-  body.gba .dp.left::after  { transform:translate(-70%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-right:8px solid #cfd4ee; }
-  body.gba .dp.right::after { transform:translate(-30%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:8px solid #cfd4ee; }
-  body.gba .dp.pressed { background:linear-gradient(180deg,#8f97ff,#5a63c8); }
-  body.gba .dp, body.gba .dp-hub { pointer-events:none; } /* the whole pad is one touch zone (§26e), keys are visual */
-  /* A / B — round buttons, offset diagonally like the hardware (A up-right, B down-left) */
-  #gbaAB { display:none; }
-  body.gba #gbaAB { display:block; position:absolute; right:7%; top:calc(50% + 4px); transform:translateY(-48%); width:132px; height:112px; }
-  body.gba .gbtn {
-    position:absolute; width:54px; height:54px; border-radius:50%; cursor:pointer; border:none;
-    color:rgba(255,255,255,.94); font:800 15px/54px system-ui,sans-serif; text-align:center;
-    background:radial-gradient(circle at 38% 30%, #bb4c74, #7f2449 68%, #611936);
-    box-shadow:0 3px 5px rgba(10,12,35,.5), inset 0 1px 0 rgba(255,255,255,.32), inset 0 -3px 6px rgba(0,0,0,.35);
+  body.gba .dp.up::after    { transform:translate(-50%,-70%); border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:8px solid #fff; }
+  body.gba .dp.down::after  { transform:translate(-50%,-30%); border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #fff; }
+  body.gba .dp.left::after  { transform:translate(-70%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-right:8px solid #fff; }
+  body.gba .dp.right::after { transform:translate(-30%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:8px solid #fff; }
+  body.gba .dp.pressed { background:linear-gradient(180deg,#ffc078,#f2913f); }
+  /* Rotation dial (right) — same functions as the desktop #rotDial (yaw L/R, pitch
+     over/under, center +/− elevation) but restyled in the D-pad's charcoal GBA
+     material so both pads read as one console (§26e). */
+  #gbaRot { display:none; }
+  body.gba #gbaRot {
+    display:block; position:absolute; right:7%; top:50%; transform:translateY(-50%);
+    width:120px; height:120px; touch-action:none; filter:drop-shadow(0 3px 5px rgba(10,12,35,.5));
   }
-  body.gba .gbtn.a { right:0; top:6px; }
-  body.gba .gbtn.b { left:0; bottom:6px; }
-  body.gba .gbtn.pressed { transform:translateY(1px); filter:brightness(1.22); }
-  /* Start / Select — the classic angled pills, centered along the bottom */
+  body.gba #gbaRot svg { display:block; width:100%; height:100%; }
+  body.gba #gbaRot .db { fill:url(#gbaKeyG); stroke:#151a28; stroke-width:1.4; cursor:pointer; } /* charcoal keys, like the D-pad */
+  body.gba #gbaRot .db.pressed, body.gba #gbaRot .db:active { fill:url(#gbaKeyP); }              /* pressed = indigo, like .dp.pressed */
+  body.gba #gbaRot .ic { pointer-events:none; }
+  /* Start / Select pills — repurposed as the +/− vertical-elevation buttons (§26e) */
   #gbaSS { display:none; }
-  body.gba #gbaSS { display:flex; position:absolute; left:50%; bottom:calc(8px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); gap:20px; }
+  body.gba #gbaSS { display:flex; position:absolute; left:50%; top:70%; transform:translate(-50%,-50%); gap:8px; } /* in the gap between the pads — clears the up/down keys and the logo */
   body.gba .ssb {
-    -webkit-appearance:none; appearance:none; cursor:pointer; border:none; transform:rotate(-18deg);
-    font:700 9px/1 system-ui,sans-serif; letter-spacing:.6px; color:rgba(255,255,255,.72);
-    background:linear-gradient(180deg,#3a3f52,#282d40); padding:6px 15px; border-radius:11px;
-    box-shadow:0 2px 3px rgba(10,12,35,.5), inset 0 1px 0 rgba(255,255,255,.12);
+    -webkit-appearance:none; appearance:none; cursor:pointer; border:none; touch-action:none;
+    width:28px; height:23px; border-radius:11px;
+    font:800 16px/1 system-ui,sans-serif; color:#fff; text-align:center;
+    background:linear-gradient(180deg,#f28a3e,#dd6e1e); /* Knicks orange */
+    box-shadow:0 2px 3px rgba(10,12,35,.5), inset 0 1px 0 rgba(255,255,255,.22);
   }
-  body.gba .ssb.pressed { filter:brightness(1.35); }
+  body.gba .ssb.pressed { background:linear-gradient(180deg,#ffc078,#f2913f); color:#fff; }
   body.gba #joy { display:none !important; } /* the D-pad replaces the floating joystick */
   body.gba #hint { display:none; } /* desktop drag/scroll instructions have no place here */
   /* ---- overlays repositioned to live INSIDE the screen (top 2/3) ---- */
-  body.gba #ui { /* entity ride-alongs → horizontal item bar on the screen's bottom edge */
-    left:0; right:0; bottom:var(--sh); transform:none; max-width:none; z-index:21;
+  body.gba #ui { /* entity ride-alongs → shortcut row across the TOP of the console */
+    left:0; right:0; top:calc(var(--rh) + 6px); bottom:auto; transform:none; max-width:none; z-index:21;
     flex-direction:row; justify-content:center; gap:5px;
-    background:none; border:none; padding:5px 6px; backdrop-filter:none; -webkit-backdrop-filter:none;
+    background:none; border:none; padding:0 6px; backdrop-filter:none; -webkit-backdrop-filter:none;
   }
   body.gba #ui .grp { flex-direction:row; gap:5px; }
   body.gba #presets button { width:40px; height:40px; font-size:19px; border-radius:12px; }
-  body.gba #ticker { bottom:calc(var(--sh) + 50px); }
-  body.gba #thoughtTicker { bottom:calc(var(--sh) + 82px); }
-  body.gba #agentFab { bottom:calc(var(--sh) + 98px); right:6px; width:76px; }
+  body.gba #ticker { bottom:calc(var(--sh) + 2px); }        /* tickers drop to the freed screen-bottom */
+  body.gba #thoughtTicker { bottom:calc(var(--sh) + 36px); }
+  body.gba #agentFab { bottom:var(--sh); right:0; width:76px; } /* flush with the console top edge + right viewport edge, over the tickers */
+  body.gba #hud { transform:scale(.58); transform-origin:top left; max-width:calc((100vw - 16px) / 0.58); } /* compact top panel, kept within the screen (no right-edge cutoff) */
+  body.gba #wxAlerts { display:none !important; } /* drop the weather-alert card on phones */
   body.gba #camview { top:calc(var(--rh) / 2); } /* center the cam card on the screen, not the viewport */
   body.gba #personaCard { bottom:calc(var(--sh) + 10px); } /* dock the resident card just above the shell */
-  body.gba.gbamute #ticker, body.gba.gbamute #thoughtTicker { display:none !important; } /* Select toggles the tickers */
 </style>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -614,20 +616,53 @@
 <!-- §26e GBA mobile shell — portrait-phone console face (inert + hidden unless body.gba) -->
 <div id="gba" aria-hidden="true">
   <img id="gbaBrand" src="nycsim-logo.png" alt="NYC Simulator">
-  <div id="gbaDpad">
-    <button class="dp up"    data-dir="u" aria-label="fly forward"></button>
-    <button class="dp left"  data-dir="l" aria-label="fly left"></button>
+  <div id="gbaDpad"><!-- movement: horizontal-plane walk (§26e) -->
+    <button class="dp up"    data-dir="u" aria-label="move forward"></button>
+    <button class="dp left"  data-dir="l" aria-label="move left"></button>
     <span   class="dp-hub"></span>
-    <button class="dp right" data-dir="r" aria-label="fly right"></button>
-    <button class="dp down"  data-dir="d" aria-label="fly back"></button>
+    <button class="dp right" data-dir="r" aria-label="move right"></button>
+    <button class="dp down"  data-dir="d" aria-label="move back"></button>
   </div>
-  <div id="gbaAB">
-    <button class="gbtn b" data-btn="b" aria-label="B — back out">B</button>
-    <button class="gbtn a" data-btn="a" aria-label="A — City Concierge">A</button>
+  <div id="gbaRot"><!-- rotation: 4 CIRCLE buttons (yaw L/R, tilt over/under) — §26e -->
+    <svg viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="gbaKeyG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f28a3e"/><stop offset="1" stop-color="#dd6e1e"/>
+        </linearGradient>
+        <linearGradient id="gbaKeyP" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffc078"/><stop offset="1" stop-color="#f2913f"/>
+        </linearGradient>
+      </defs>
+      <circle class="db" data-act="ro" cx="60" cy="26" r="17"><title>tilt up (bird's-eye)</title></circle>
+      <circle class="db" data-act="ru" cx="60" cy="94" r="17"><title>tilt down (street level)</title></circle>
+      <circle class="db" data-act="rl" cx="94" cy="60" r="17"><title>rotate right</title></circle>
+      <circle class="db" data-act="rr" cx="26" cy="60" r="17"><title>rotate left</title></circle>
+      <!-- one clean arrow — a gentle curved tail into a straight-pointing head — rotated
+           per circle so all four match, stay centered, and point squarely: rl→right,
+           rr→left, ro→up, ru→down -->
+      <g class="ic" stroke-linejoin="round">
+        <g transform="translate(94 60)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
+          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        </g>
+        <g transform="translate(26 60) rotate(180)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
+          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        </g>
+        <g transform="translate(60 26) rotate(-90)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
+          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        </g>
+        <g transform="translate(60 94) rotate(90)">
+          <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
+          <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
+        </g>
+      </g>
+    </svg>
   </div>
-  <div id="gbaSS">
-    <button class="ssb" data-btn="select" aria-label="Select — toggle tickers">SELECT</button>
-    <button class="ssb" data-btn="start" aria-label="Start — auto-tour">START</button>
+  <div id="gbaSS"><!-- elevation +/− as the classic angled Start/Select pills — §26e -->
+    <button class="ssb" data-act="ed" aria-label="descend">–</button>
+    <button class="ssb" data-act="eu" aria-label="ascend">+</button>
   </div>
 </div>
 <div id="camview"><div class="ring"><img alt="live traffic camera"><div class="live"><i></i>LIVE</div><button class="x" title="close">✕</button></div><div class="name"></div></div>
@@ -1851,7 +1886,8 @@ const TIER = (() => {
 // right, and --sh (shell height in px) is published for the CSS shell/overlay layout
 // so CSS and canvas agree exactly regardless of vh/dvh quirks.
 const GBA_MQ = matchMedia('(max-width: 700px) and (orientation: portrait)');
-const gbaActive = () => GBA_MQ.matches && matchMedia('(pointer: coarse)').matches;
+const GBA_FORCE = /\bgba\b/.test(location.search + location.hash); // preview override: ?gba / #gba forces the shell without a touch pointer
+const gbaActive = () => GBA_MQ.matches && (GBA_FORCE || matchMedia('(pointer: coarse)').matches);
 let RENDER_H = innerHeight;
 function syncRenderH() {
   const gba = document.body.classList.contains('gba');
@@ -2479,10 +2515,22 @@ function flatLand(loop, y, mat) { // ShapeGeometry rotated into XZ
   m.matrixAutoUpdate = false;
   return m;
 }
+// Widened bulkhead (shore): the island plate + seawall follow max(coastAt, real building edge),
+// clamped to ≤70 m, so near-shore waterfront blocks sit on land instead of the water plane.
+// coastAt itself is left frozen (calibration). Long piers (Hudson River Park / Seaport) are left
+// to the water — decking them read as spikes. Edge derived from the baked chunks by mn_shore.py.
+const MN_SHORE_EDGE = [[400,4,343],[550,-250.4,391.8],[700,-380.5,434],[850,-433,490.2],[1000,-471.5,553.5],[1150,-509.5,626.9],[1300,-551.2,783],[1450,-599.9,809],[1600,-646,822.4],[1750,-690.1,871.2],[1900,-708.2,999.8],[2050,-708.2,1154.6],[2200,-592.6,1391.5],[2350,-592.6,1629.4],[2500,-635.5,1814.8],[2650,-677.8,1946.4],[2800,-720,2086],[2950,-769.6,2129.5],[3100,-822,2129.5],[3250,-876,2115],[3400,-933.5,2099],[3550,-987.1,2078.8],[3700,-1039.2,2051.2],[3850,-1098,2021.6],[4000,-1155,1980],[4150,-1286.1,1948.1],[4300,-1299.1,1909.5],[4450,-1316,1867.9],[4600,-1316,1824],[4750,-1360.6,1769.5],[4900,-1406.5,1673],[5050,-1459.2,1465.2],[5200,-1606,1348],[5350,-1658.5,1323],[5500,-1690,1308.5],[5650,-1720,1241.2],[5800,-1737.5,1180.5],[5950,-1737.5,1134],[6100,-1737.5,1088],[6250,-1735,1062.4],[6400,-1735,1062.4],[6550,-1735,1072.2],[6700,-1734.2,1080.5],[6850,-1733,1082.9],[7000,-1689.5,1091],[7150,-1656,1103.2],[7300,-1656,1117.2],[7450,-1656,1132.9],[7600,-1708,1145],[7750,-1718.2,1170.1],[7900,-1718.2,1186.8],[8050,-1718.2,1194.1],[8200,-1720,1212.5],[8350,-1724.2,1237.6],[8500,-1729,1266],[8650,-1729,1292.1],[8800,-1708.9,1306],[8950,-1708.9,1318.2],[9100,-1726.5,1330.5],[9250,-1735.9,1344],[9400,-1740,1353],[9550,-1742.4,1357.9],[9700,-1744.5,1370],[9850,-1747.1,1387.8],[10000,-1749,1415],[10150,-1751.9,1435.9],[10300,-1752.8,1444.9],[10450,-1753.6,1444.9],[10600,-1756.5,1408],[10750,-1757.4,1277],[10900,-1758,1141.5],[11050,-1759.1,1063.8],[11200,-1761,1063.8],[11350,-1762.9,1112],[11500,-1765.8,1157.8],[11650,-1767.6,1173.8],[11800,-1769.5,1173.8],[11950,-1770.8,1159],[12100,-1770.8,1159],[12250,-1765.4,1174.5],[12400,-1755,1226],[12550,-1742.8,1360.6],[12700,-1733.8,1390.1],[12850,-1727.5,1390.1],[13000,-1721.5,1383],[13150,-1711.8,1340.8],[13300,-1704.2,1286],[13450,-1693.6,1269.9],[13600,-1670,1091],[13750,-1640,920.6],[13900,-1614,694.8],[14050,-1580.2,556.6],[14200,-1580.2,497],[14350,-1650.5,457.1],[14500,-1650.5,424],[14650,-1621.9,392],[14800,-1584,359],[14950,-1450.8,325.4],[15100,-1378.5,275.5],[15250,-1346.5,227.1],[15400,-1321.5,174],[15550,-1298.9,120.8],[15700,-1279.5,70.5],[15850,-1279.5,9.8],[16000,-1285,-56],[16150,-1289.8,-114.2],[16300,-1289.8,-158.8],[16450,-1284.5,-188],[16600,-1274,-188],[16750,-1274,-178.8],[16900,-1289.8,-166.5],[17050,-1367.8,-155.1],[17200,-1416,-143],[17350,-1482,-138],[17500,-1482,-137.1],[17650,-1404.5,-128.2],[17800,-1329,-128.2],[17950,-1314,-130.8],[18100,-1314,-134.8],[18250,-1327.4,-140.4],[18400,-1328,-146],[18550,-1329.8,-151.8],[18700,-1331.6,-154.8],[18850,-1339.5,-158.9],[19000,-1362,-190.5],[19150,-1379.9,-219.6],[19300,-1404.8,-219.6],[19450,-1427.8,-215],[19600,-1462,-215],[19750,-1543.1,-215],[19900,-1603.5,-215.8],[20050,-1646.2,-213.5],[20200,-1673,-216.9],[20350,-1692.8,-228.9],[20500,-1707.5,-247.8],[20650,-1707.5,-271.4],[20800,-1677,-316],[20950,-1397.9,-391.9]];
+function mnShore(z) {
+  const a = MN_SHORE_EDGE, z0 = a[0][0], st = 150;
+  if (z <= z0) return { w: a[0][1], e: a[0][2] };
+  const k = Math.min(a.length - 2, Math.max(0, Math.floor((z - z0) / st)));
+  const t = Math.max(0, Math.min(1, (z - a[k][0]) / st));
+  return { w: a[k][1] + (a[k + 1][1] - a[k][1]) * t, e: a[k][2] + (a[k + 1][2] - a[k][2]) * t };
+}
 // island loop
 const islandLoop = [];
-for (let z = Z_TIP_S + 10; z <= Z_TIP_N - 10; z += 70) islandLoop.push([coastAt(z).w, z]);
-for (let z = Z_TIP_N - 10; z >= Z_TIP_S + 10; z -= 70) islandLoop.push([coastAt(z).e, z]);
+for (let z = Z_TIP_S + 10; z <= Z_TIP_N - 10; z += 70) islandLoop.push([mnShore(z).w, z]);
+for (let z = Z_TIP_N - 10; z >= Z_TIP_S + 10; z -= 70) islandLoop.push([mnShore(z).e, z]);
 const landMat = patchClouds(new THREE.MeshLambertMaterial({
   map: gTex, emissiveMap: eTex, emissive: new THREE.Color(0xffb069), emissiveIntensity: 0,
   polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 // beat the water plane at range (same tier as the borough plates)
@@ -5444,65 +5492,88 @@ applyQuality(TIER); // auto-selected device tier (PERF.md A); hash q= still over
    The CSS + markup (search "§26e") turn portrait phones into a Game Boy
    Advance: canvas in the top 2/3 (RENDER_H), console shell in the bottom
    1/3. Here we (1) toggle body.gba as the phone rotates across the
-   breakpoint, and (2) wire the shell controls. Wiring always attaches
-   (testable on desktop by adding body.gba); the elements are hidden off
-   gba. The D-pad writes the SAME fly.st.joy state the joystick does — the
-   mirror-correct movement math stays in §26c, unforked.
+   breakpoint, and (2) wire the console controls: a D-pad (left) for
+   horizontal-plane movement and a rotation dial (right, cloned from the
+   desktop #rotDial) for yaw/pitch + elevation. Both drive the §26c fly
+   camera so drag-to-look on the screen keeps working. Wiring always
+   attaches (testable on desktop by adding body.gba); elements hide off gba.
    ============================================================ */
 {
   // ---- mode gating: rotate/resize across the breakpoint flips the class + re-frames ----
+  const GBA_HINT = 'D-pad moves · dial rotates & lifts · drag to look';
   function applyGbaMode() {
-    document.body.classList.toggle('gba', gbaActive());
+    const on = gbaActive();
+    document.body.classList.toggle('gba', on);
+    if (on) { const fh = document.getElementById('flyhint'); if (fh) fh.textContent = GBA_HINT; }
     resizeRenderer(); // recompute RENDER_H + --sh, resize the canvas to match
   }
   GBA_MQ.addEventListener('change', applyGbaMode);
+  if (document.body.classList.contains('gba')) { // set at load too (the early gate already added the class)
+    const fh = document.getElementById('flyhint'); if (fh) fh.textContent = GBA_HINT;
+  }
 
-  // ---- D-pad: one touch zone (keys are visual), computes an 8-way vector like the
-  //      joystick and writes fly.st.joy directly (same sign convention as §26c) ----
-  const dpad = document.getElementById('gbaDpad');
-  const dpK = { u: dpad.querySelector('.up'), d: dpad.querySelector('.down'), l: dpad.querySelector('.left'), r: dpad.querySelector('.right') };
-  let dpId = null;
-  function dpTrack(e) {
-    const r = dpad.getBoundingClientRect();
-    let dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
-    let dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
-    const m = Math.hypot(dx, dy);
-    if (m < 0.3) { dx = dy = 0; }             // center dead zone (the hub)
-    else if (m > 1) { dx /= m; dy /= m; }     // clamp to the unit circle
-    fly.st.joy.x = dx; fly.st.joy.y = dy;     // f -= joy.y, r += joy.x (mirror handled in §26c)
-    dpK.u.classList.toggle('pressed', dy < -0.35);
-    dpK.d.classList.toggle('pressed', dy > 0.35);
-    dpK.l.classList.toggle('pressed', dx < -0.35);
-    dpK.r.classList.toggle('pressed', dx > 0.35);
+  // ---- the two console pads drive the SAME fly camera as drag-to-look (§26c), so
+  //      the D-pad and rotation dial coexist with dragging the screen. Movement and
+  //      elevation nudge camera.position directly; rotation nudges fly's yaw/pitch,
+  //      which fly.tick turns into the camera orientation each frame. While a control
+  //      is held, fly's joystick/keys stay at zero so its own velocity is ~0 and never
+  //      fights these direct moves. ----
+  const _gv = new THREE.Vector3();
+  const acts = new Set();               // held control tokens (mf/mb/ml/mr + ro/ru/rl/rr/eu/ed)
+  const ROT_RATE = 0.9, PITCH_MAX = 1.5; // rad/s for turns/tilt; matches §26c's clamp
+  let gRaf = 0, gLast = 0;
+  function moveStep(dt) {
+    // horizontal-plane walk: forward = the look direction flattened to the ground
+    camera.getWorldDirection(_gv);
+    let fx = _gv.x, fz = _gv.z;
+    const hn = Math.hypot(fx, fz);
+    if (hn < 1e-3) { fx = -Math.sin(fly.st.yaw); fz = -Math.cos(fly.st.yaw); } // looking near-vertical
+    else { fx /= hn; fz /= hn; }
+    let dx = 0, dz = 0;
+    if (acts.has('mf')) { dx += fx; dz += fz; }
+    if (acts.has('mb')) { dx -= fx; dz -= fz; }
+    if (acts.has('mr')) { dx += fz; dz -= fx; }   // strafe right (mirror-correct, per §26c pl/pr)
+    if (acts.has('ml')) { dx -= fz; dz += fx; }
+    if (dx || dz) {
+      const n = Math.hypot(dx, dz) || 1, spd = clamp(camera.position.y * 1.4, 60, 4000) * dt;
+      camera.position.x += dx / n * spd; camera.position.z += dz / n * spd;
+    }
   }
-  function dpEnd() { fly.st.joy.x = fly.st.joy.y = 0; for (const k in dpK) dpK[k].classList.remove('pressed'); }
-  dpad.addEventListener('pointerdown', (e) => { dpId = e.pointerId; try { dpad.setPointerCapture(dpId); } catch { } navigator.vibrate?.(8); dpTrack(e); e.preventDefault(); });
-  dpad.addEventListener('pointermove', (e) => { if (e.pointerId === dpId) dpTrack(e); });
-  for (const t of ['pointerup', 'pointercancel']) dpad.addEventListener(t, (e) => { if (e.pointerId === dpId) { dpId = null; dpEnd(); } });
+  function rotStep(dt) {
+    const st = fly.st, a = ROT_RATE * dt;
+    if (acts.has('rl')) st.yaw -= a;              // right arc → view turns right (mirrored display)
+    if (acts.has('rr')) st.yaw += a;              // left arc  → view turns left
+    if (acts.has('ro')) st.pitch = clamp(st.pitch + a, -PITCH_MAX, PITCH_MAX); // top ↑ button → look up
+    if (acts.has('ru')) st.pitch = clamp(st.pitch - a, -PITCH_MAX, PITCH_MAX); // bottom ↓ button → look down
+    const ev = Math.max(camera.position.y * ROT_RATE, 25) * dt;
+    if (acts.has('eu')) camera.position.y = clamp(camera.position.y + ev, 6, 26000); // + → rise
+    if (acts.has('ed')) camera.position.y = clamp(camera.position.y - ev, 6, 26000); // − → descend
+  }
+  function gLoop(T) {
+    if (!acts.size) { gRaf = 0; return; }
+    const dt = Math.min((T - gLast) / 1000, 0.05); gLast = T;
+    camTween = null;                    // any pad press takes the camera (cancel preset flights)
+    if (!fly.st.on) fly.enter(false);   // ensure the fly integrator applies our yaw/pitch
+    moveStep(dt); rotStep(dt);
+    gRaf = requestAnimationFrame(gLoop);
+  }
+  function gStart(act) {
+    acts.add(act); autoPan.stop();
+    if (!gRaf) { gLast = performance.now(); gRaf = requestAnimationFrame(gLoop); }
+  }
+  function bindHold(el, act) {
+    const down = (e) => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch { } el.classList.add('pressed'); navigator.vibrate?.(6); gStart(act); };
+    const up = () => { el.classList.remove('pressed'); acts.delete(act); };
+    el.addEventListener('pointerdown', down);
+    for (const t of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(t, up);
+  }
+  // D-pad keys → horizontal movement; rotation dial reuses the desktop data-act codes
+  const DIR2MOVE = { u: 'mf', d: 'mb', l: 'ml', r: 'mr' };
+  for (const b of document.querySelectorAll('#gbaDpad .dp')) bindHold(b, DIR2MOVE[b.dataset.dir]);
+  for (const b of document.querySelectorAll('#gbaRot .db')) bindHold(b, b.dataset.act);
+  for (const b of document.querySelectorAll('#gbaSS .ssb')) bindHold(b, b.dataset.act); // +/− elevation pills
 
-  // ---- A / B / Start / Select: discrete actions, all delegating to existing handlers ----
-  function backOut() { // B: close whatever is open, most-modal first; else snap to now
-    const cam = document.getElementById('camview');
-    if (cam && getComputedStyle(cam).display !== 'none') { cam.querySelector('.x').click(); return; }
-    const card = document.getElementById('personaCard');
-    if (card && getComputedStyle(card).display !== 'none') { card.querySelector('.x').click(); return; }
-    if (document.body.classList.contains('agent')) { document.body.classList.remove('agent'); return; }
-    if (document.body.classList.contains('focusmode')) { dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return; }
-    document.getElementById('timeReset').click(); // nothing open → back to LIVE
-  }
-  const BTN = {
-    a: () => { if (!document.body.classList.contains('agent')) document.getElementById('agentFab').click(); }, // open concierge
-    b: backOut,
-    start: () => document.getElementById('photo').click(),          // restart the Manhattan auto-tour
-    select: () => document.body.classList.toggle('gbamute')          // hide/show the ticker strips
-  };
-  for (const btn of document.querySelectorAll('#gbaAB .gbtn, #gbaSS .ssb')) {
-    const act = BTN[btn.dataset.btn];
-    btn.addEventListener('pointerdown', () => { btn.classList.add('pressed'); navigator.vibrate?.(8); });
-    for (const t of ['pointerup', 'pointercancel', 'pointerleave']) btn.addEventListener(t, () => btn.classList.remove('pressed'));
-    btn.addEventListener('click', (e) => { e.preventDefault(); act && act(); });
-  }
-  window.__gba = { applyGbaMode, backOut, active: gbaActive }; // dev/testing hook
+  window.__gba = { applyGbaMode, active: gbaActive, acts }; // dev/testing hook
 }
 
 /* ============================================================
@@ -8895,7 +8966,8 @@ window.__personas = personas; // dev/testing hook
    Phase 2 will mix in public/thoughts.json (baked sheet).
    ============================================================ */
 const thoughts = (() => {
-  const MAXB = 8, CYCLE_MS = 6000, SEP = 140;       // bubble count / rotation / min screen spread
+  const MOBILE_TB = matchMedia('(max-width: 700px)').matches;
+  const MAXB = MOBILE_TB ? 12 : 8, CYCLE_MS = 6000, SEP = MOBILE_TB ? 80 : 140; // count / rotation / min screen spread (phones: more bubbles, tighter — they're unobtrusive)
   const ZOOM_Y = 1500, NEAR_Y = 240;                // camY gates: show bubbles / auto-show text
   const RANGE = 3400, FADE0 = 2800, FADE1 = 3400;   // world-distance prefilter + opacity fade band
   const mul32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -9064,7 +9136,7 @@ window.__thoughts = thoughts; // dev/testing hook
    25v. CHIP LIMITER — phones only. The scene's floating transit/
    incident dialogues (.fybl: subway, bus, ferry, 311, closures,
    bikes, flocks) pile up fast on a small screen. Each frame, keep
-   only the 5 nearest screen-center visible and hide the rest via
+   only the 2 nearest screen-center visible and hide the rest via
    `visibility` — an overlay that never touches each module's own
    `display` logic, so nothing fights and it self-corrects as the
    camera moves. Air-traffic labels (.flbl) and persona bubbles
@@ -9073,7 +9145,7 @@ window.__thoughts = thoughts; // dev/testing hook
    ============================================================ */
 const chipLimiter = (() => {
   const MOBILE = matchMedia('(max-width: 700px)').matches;
-  const MAX = 5;
+  const MAX = 2; // phones: only the 2 nearest transit/incident dialogues — the rest crowd the small screen
   const re = /translate\(\s*([-\d.]+)px,\s*([-\d.]+)px/;
   function tick() {
     if (!MOBILE) return;
@@ -10315,7 +10387,7 @@ function frame() {
   linknyc.tick();    // kiosk focus ring follows focusmode's lifetime
   thoughts.tick();   // §25t Sims-style thought bubbles over residents
   personas.followTick(); // §25h follow-cam rides along with the clicked resident
-  chipLimiter.tick(); // phones: cap on-screen transit/incident dialogues at 5
+  chipLimiter.tick(); // phones: cap on-screen transit/incident dialogues at 2
   renderer.render(scene, camera);
   precipOverlay.render(); // screen-space rain/snow veil, drawn on top
   fpsN++; fpsT += dt;
