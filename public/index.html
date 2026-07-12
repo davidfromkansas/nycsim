@@ -635,17 +635,17 @@
       </defs>
       <circle class="db" data-act="ro" cx="60" cy="26" r="17"><title>tilt up (bird's-eye)</title></circle>
       <circle class="db" data-act="ru" cx="60" cy="94" r="17"><title>tilt down (street level)</title></circle>
-      <circle class="db" data-act="rl" cx="94" cy="60" r="17"><title>rotate right</title></circle>
-      <circle class="db" data-act="rr" cx="26" cy="60" r="17"><title>rotate left</title></circle>
+      <circle class="db" data-act="rr" cx="94" cy="60" r="17"><title>rotate left</title></circle>
+      <circle class="db" data-act="rl" cx="26" cy="60" r="17"><title>rotate right</title></circle>
       <!-- one clean arrow — a gentle curved tail into a straight-pointing head — rotated
            per circle so all four match, stay centered, and point squarely: rl→right,
            rr→left, ro→up, ru→down -->
       <g class="ic" stroke-linejoin="round">
-        <g transform="translate(94 60)">
+        <g transform="translate(94 60) rotate(180)">
           <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
           <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
         </g>
-        <g transform="translate(26 60) rotate(180)">
+        <g transform="translate(26 60)">
           <path fill="none" stroke="#eaf0ff" stroke-width="3" stroke-linecap="round" d="M-6 2.6 A8 8 0 0 1 -0.3 0"/>
           <path fill="#eaf0ff" stroke="none" d="M5.6 0 L-0.3 -4.6 L-0.3 4.6 Z"/>
         </g>
@@ -1382,12 +1382,12 @@ function streamDcpChunks() {
     // how many neighborhoods exist (perf #1): the nearest DCP_CAP render FULL detail; the next
     // DCP_LOD_CAP within DCP_LOD_RADIUS render as cheap LOD boxes (~⅓ the tris, perf #3) so the
     // whole city still shows when zoomed out; anything past that is freed. The DCP_KEEP band is
-    // hysteresis so a chunk at the full/LOD boundary doesn't swap-thrash. Mobile: near FULL only,
-    // no LOD ring (tight radius already bounds it; LOD boxes look bad up close).
+    // hysteresis so a chunk at the full/LOD boundary doesn't swap-thrash. Mobile keeps a small LOD
+    // ring (12 within 8 km) so the city still fills in around the 3 full-detail neighbourhoods.
     DCP_CAP = TIER === 'low' ? 3 : TIER === 'medium' ? 6 : 16;
-    DCP_LOD_CAP = TIER === 'low' ? 0 : TIER === 'medium' ? 20 : 60;
+    DCP_LOD_CAP = TIER === 'low' ? 8 : TIER === 'medium' ? 20 : 60;
     DCP_LOAD = TIER === 'low' ? 3200 : TIER === 'medium' ? 4800 : 13000;
-    DCP_LOD_RADIUS = TIER === 'low' ? 0 : 60000;
+    DCP_LOD_RADIUS = TIER === 'low' ? 8000 : 60000;
     _dcpTierSet = true;
   }
   const cx = camera.position.x, cz = camera.position.z;
@@ -5561,8 +5561,9 @@ applyQuality(TIER); // auto-selected device tier (PERF.md A); hash q= still over
     acts.add(act); autoPan.stop();
     if (!gRaf) { gLast = performance.now(); gRaf = requestAnimationFrame(gLoop); }
   }
+  const buzz = () => navigator.vibrate?.(15); // one short haptic tap per press (Android; iOS Safari has no Vibration API)
   function bindHold(el, act) {
-    const down = (e) => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch { } el.classList.add('pressed'); navigator.vibrate?.(6); gStart(act); };
+    const down = (e) => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch { } el.classList.add('pressed'); buzz(); gStart(act); };
     const up = () => { el.classList.remove('pressed'); acts.delete(act); };
     el.addEventListener('pointerdown', down);
     for (const t of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(t, up);
@@ -5572,6 +5573,7 @@ applyQuality(TIER); // auto-selected device tier (PERF.md A); hash q= still over
   for (const b of document.querySelectorAll('#gbaDpad .dp')) bindHold(b, DIR2MOVE[b.dataset.dir]);
   for (const b of document.querySelectorAll('#gbaRot .db')) bindHold(b, b.dataset.act);
   for (const b of document.querySelectorAll('#gbaSS .ssb')) bindHold(b, b.dataset.act); // +/− elevation pills
+  for (const b of document.querySelectorAll('#presets button')) b.addEventListener('pointerdown', buzz); // shortcut icons buzz too
 
   window.__gba = { applyGbaMode, active: gbaActive, acts }; // dev/testing hook
 }

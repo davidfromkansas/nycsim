@@ -51,9 +51,11 @@ the full mesh, `lod_bin.py`, **~31% of the tris**, ~15 MB total, plain material 
 anything past that is freed. A chunk upgrades LOD→full on approach and downgrades on retreat, with the
 `DCP_KEEP` band as hysteresis. Measured (desktop `high`): all **50 chunks visible** (19 full + 31 LOD)
 with the whole city populated and **no gaps**; East NY went LOD→full when approached; heap **340 MB**
-(only +12 MB vs the 328 MB near-only state — LOD boxes are ~0.5 MB each). Mobile (`LOD_CAP=0`) keeps
-near-FULL only (LOD boxes look bad up close; its tight radius already bounds it). Bounded at ≈`CAP +
-KEEP + LOD_CAP` (~64) chunks regardless of how many neighborhoods are added.
+(only +12 MB vs the 328 MB near-only state — LOD boxes are ~0.5 MB each). Bounded at ≈`CAP + KEEP +
+LOD_CAP` chunks regardless of how many neighborhoods are added. **Update 2026-07-12:** once all of
+Manhattan landed (~70 chunks), the mobile LOD ring was turned on (`LOD_CAP` 0→8 for `low`) — a phone
+now loads 3 full + ~12 box-LOD (~15 chunks, ~6 MB extra) so the city fills in around you instead of
+showing only the 3 nearest neighborhoods. Still hard-capped; mobile memory budget unchanged.
 
 ## Baseline (measured 2026-07-07, commit `7d434d4`, desktop Chrome via preview, local server)
 

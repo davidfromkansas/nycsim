@@ -6,6 +6,29 @@ the rules on adding entries.
 
 ---
 
+## 🌊 Manhattan waterfront on land · 📱 fuller city on phones
+
+**Shipped:** July 12, 2026
+
+**TL;DR:** The Manhattan waterfront blocks now sit on land instead of edging into the
+water, and phones now fill the city in around you instead of showing only the 3 nearest
+neighborhoods.
+
+**What you'll see:** along the Hudson and East River, the real waterfront blocks now have
+ground under them (no more buildings at the waterline). On a phone, the skyline fills out —
+you get the 3 nearest neighborhoods in full detail plus ~12 more as lightweight block
+massing, so the city reads as populated rather than sparse.
+
+**How it works:** the island land-plate (and its seawall) now trace `max(coastAt, real
+building edge)`, clamped to ≤70 m, so near-shore blocks are covered — while `coastAt`
+itself stays frozen (it's the shared calibration everything else is pinned to). The edge is
+derived from the baked chunks by `scripts/mn_shore.py`. (Long piers like Hudson River Park
+are left to the water — decking them read as spikes.) On mobile, the streaming LOD ring is
+now on (`DCP_LOD_CAP` 0→8 for the `low` tier): ~12 extra neighborhoods stream as cheap box
+LOD (~6 MB / ~300k tris) — still hard-capped, so the mobile memory budget is unchanged.
+
+---
+
 ## 🗽 All of Manhattan: real building massing, Battery Park City → Inwood
 
 **Shipped:** July 12, 2026
