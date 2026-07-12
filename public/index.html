@@ -125,6 +125,7 @@
     font:12px/1.2 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
     color:#1d4f9c; user-select:none; transition:opacity .4s; white-space:nowrap;
     background:linear-gradient(180deg,#fff 0%,#f3f8fe 45%,#e2edfb 100%);
+    background-color:#f3f8fe; /* solid fallback — iOS sheds gradient layers under memory pressure */
     border:2px solid #fff; border-radius:18px; padding:6px 8px;
     box-shadow:0 5px 16px rgba(8,20,50,.4), inset 0 1px 0 #fff, inset 0 -3px 8px rgba(130,160,210,.28);
   }
@@ -265,6 +266,7 @@
     display:flex; gap:8px; align-items:center;
     font:10px 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif; color:#5f81b6;
     background:linear-gradient(180deg,#fff 0%,#f3f8fe 45%,#e2edfb 100%);
+    background-color:#f3f8fe; /* solid fallback — iOS sheds gradient layers under memory pressure */
     border:2px solid #fff; border-radius:14px; padding:5px 10px;
     box-shadow:0 5px 16px rgba(8,20,50,.35), inset 0 1px 0 #fff, inset 0 -3px 8px rgba(130,160,210,.28);
     user-select:none; transition:opacity .4s;
@@ -508,6 +510,7 @@
     background: /* Knicks blue */
       radial-gradient(130% 100% at 50% -25%, rgba(255,255,255,.18), transparent 62%),
       linear-gradient(180deg, #2f70c4 0%, #1f5db2 46%, #164d96 100%);
+    background-color:#1f5db2; /* solid fallback (iOS memory pressure) */
     border-top:2px solid rgba(10,30,66,.6);
     box-shadow: inset 0 2px 0 rgba(255,255,255,.20), inset 0 -12px 26px rgba(18,22,58,.4);
   }
@@ -529,6 +532,7 @@
   body.gba .dp {
     -webkit-appearance:none; appearance:none; border:none; margin:0; padding:0; cursor:pointer;
     position:relative; background:linear-gradient(180deg,#f28a3e,#dd6e1e); touch-action:none; /* Knicks orange */
+    background-color:#e87f30; /* solid fallback — iOS sheds gradient layers under memory pressure */
     box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
   }
   body.gba .dp.up    { grid-area:1/2/2/3; border-radius:9px 9px 0 0; }
@@ -543,7 +547,7 @@
   body.gba .dp.down::after  { transform:translate(-50%,-30%); border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #fff; }
   body.gba .dp.left::after  { transform:translate(-70%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-right:8px solid #fff; }
   body.gba .dp.right::after { transform:translate(-30%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:8px solid #fff; }
-  body.gba .dp.pressed { background:linear-gradient(180deg,#ffc078,#f2913f); }
+  body.gba .dp.pressed { background:linear-gradient(180deg,#ffc078,#f2913f); background-color:#f9a85c; }
   /* Look joystick (right) — analog replacement for the four rotation buttons: push to
      rotate the view (x = yaw, y = pitch), same fly.st math via §26e's rotStep. Knurled
      Knicks-orange knob in a recessed well so it reads as a tactile thumbstick. */
@@ -552,6 +556,7 @@
     display:block; position:absolute; right:4%; top:50%; transform:translateY(-50%); /* 7% inset shifted 3% outward */
     width:112px; height:112px; border-radius:50%; touch-action:none; cursor:pointer;
     background:radial-gradient(circle at 50% 42%, #16418a, #0e2f66 72%); /* recessed well */
+    background-color:#113779; /* solid fallback (iOS memory pressure) */
     box-shadow:inset 0 3px 8px rgba(6,16,42,.75), inset 0 -1px 0 rgba(255,255,255,.14), 0 2px 4px rgba(10,12,35,.4);
   }
   #gbaStickK { /* the knob: concentric knurl rings + a top highlight + grip dimples */
@@ -561,6 +566,7 @@
       radial-gradient(circle at 35% 28%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
       radial-gradient(circle at 50% 50%, rgba(120,45,0,.5) 0 4px, transparent 5px),
       repeating-radial-gradient(circle at 50% 50%, #ee833a 0 3px, #d96a1a 3px 6px);
+    background-color:#e87f30; /* solid fallback (iOS memory pressure) */
     border:1.5px solid #b95f18;
     box-shadow:0 4px 7px rgba(10,12,35,.55), inset 0 2px 3px rgba(255,255,255,.3), inset 0 -4px 7px rgba(120,45,0,.45);
   }
@@ -572,6 +578,7 @@
     -webkit-appearance:none; appearance:none; cursor:pointer; border:none; touch-action:none;
     position:relative; width:30px; height:30px; border-radius:50%;
     background:radial-gradient(circle at 38% 30%, #ffb26e, #f28a3e 52%, #d0661a 100%); /* Knicks-orange dome */
+    background-color:#f28a3e; /* solid fallback (iOS memory pressure) */
     box-shadow:
       0 0 0 5px #0d2b5e,                       /* recessed navy well */
       0 0 0 6px rgba(255,255,255,.16),         /* well rim catchlight */
@@ -1582,34 +1589,37 @@ const F_WTOWER = 1, F_HVAC = 2, F_CORNICE = 4, F_FIRESC = 8, F_TALL = 16;
    ALL generation below builds on real geometry. These indexes are
    also the future agent-query substrate (edge/node/block ids).
    ============================================================ */
-// §26e boot bar: stream the three big city files so the bar tracks REAL download bytes
-// (0.15→0.45 of the bar). Deployed responses are gzipped (Content-Length = compressed,
-// the reader yields decompressed bytes) so the fraction is clamped — worst case the
-// download segment just fills early. bootStep() then yields a macrotask at generation
-// milestones so the frozen-main-thread build phase still repaints the bar between
-// sections. Both are no-ops when the boot screen isn't up (desktop / after load).
-const _dl = { got: 0, total: 0 };
+// §26e boot bar: stream ONE big city file (buildings.json — the largest) so the bar
+// tracks real download bytes (0.15→0.45; the three files download in parallel, so one
+// file's bytes are an honest pacing proxy). Streets/blocks keep the native r.json()
+// path — manually buffering all three at once (chunks + assembled bytes + decoded
+// string, ×3 in parallel) was exactly the kind of startup heap spike PERF.md C2b
+// fought, and iOS Safari sheds GL contexts/backing stores under that pressure.
+// Deployed responses are gzipped (Content-Length = compressed, the reader yields
+// decompressed bytes) so the fraction is clamped — worst case the segment fills early.
+// bootStep() yields a macrotask at generation milestones so the frozen-main-thread
+// build phase still repaints the bar. Both no-op without the boot screen (desktop).
 async function fetchJP(url) {
   const r = await fetch(url);
   if (!window.__gbaBoot || !r.body) return r.json();
-  _dl.total += (+r.headers.get('Content-Length')) || 9e6; // header missing → rough slice so the bar still moves
+  const total = (+r.headers.get('Content-Length')) || 11e6; // header missing → rough size so the bar still moves
   const rd = r.body.getReader(), chunks = [];
+  let got = 0;
   for (;;) {
     const { done, value } = await rd.read();
     if (done) break;
-    chunks.push(value); _dl.got += value.length;
-    window.__gbaBoot?.p(0.15 + 0.3 * Math.min(_dl.got / _dl.total, 1));
+    chunks.push(value); got += value.length;
+    window.__gbaBoot?.p(0.15 + 0.3 * Math.min(got / total, 1));
   }
-  let n = 0; for (const c of chunks) n += c.length;
-  const buf = new Uint8Array(n); let o = 0;
-  for (const c of chunks) { buf.set(c, o); o += c.length; }
+  const buf = new Uint8Array(got); let o = 0;
+  while (chunks.length) { const c = chunks.shift(); buf.set(c, o); o += c.length; } // drain as we copy — no double-resident chunks
   return JSON.parse(new TextDecoder().decode(buf));
 }
 const bootStep = (v, txt) => { if (!window.__gbaBoot) return; window.__gbaBoot.p(v, txt); return new Promise(r => setTimeout(r, 0)); };
 window.__gbaBoot?.p(0.15, 'downloading the real city…');
 let [SG_DATA, BLK_DATA, BLDG, QN_CLAIMS, QN_EAST_RAW] = await Promise.all([ // let: build-time data, released after generation (PERF.md C1)
-  fetchJP('streets.json'),
-  fetchJP('blocks.json'),
+  fetch('streets.json').then(r => r.json()),
+  fetch('blocks.json').then(r => r.json()),
   fetchJP('buildings.json'), // 305k REAL buildings as oriented boxes (one-time local bake)
   fetch('qn-claims.json').then(r => r.ok ? r.json() : []).catch(() => []), // Queens Tier-A claim circles (suppress replaced boxes; missing file = no claims)
   fetch('qn-east-land.json').then(r => r.ok ? r.json() : null).catch(() => null) // eastern Queens land bitmask (CD6/CD7 + Glendale: off-plate real fabric)
@@ -2021,6 +2031,15 @@ renderer.toneMappingExposure = 1.12;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 document.body.appendChild(renderer.domElement);
+// iOS Safari sheds the WebGL context under memory pressure: the scene goes black while
+// the DOM keeps painting (PERF.md assumed the browser reloads on loss — it doesn't
+// always). three's loop no-ops on a lost context, so recover the only way mobile
+// allows: one automatic reload, guarded so two quick losses can't loop forever.
+renderer.domElement.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  if (sessionStorage.getItem('glLost') !== '1') { sessionStorage.setItem('glLost', '1'); location.reload(); }
+}, false);
+setTimeout(() => sessionStorage.removeItem('glLost'), 30000); // a session that survives 30 s re-arms recovery
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0xe3c096, 4.0e-5);
