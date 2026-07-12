@@ -1296,6 +1296,37 @@ function loadBakedMesh(url, tier) {
 const DCP_MAT = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), 0);
 const DCP_CHUNKS = []; // {url, cx, cz, r, state:'idle'|'loading'|'loaded', mesh}
 function registerDcpChunk(url, cx, cz, r) { DCP_CHUNKS.push({ url, cx, cz, r, state: 'idle', mesh: null }); }
+// Off-main-thread chunk decode (perf #2): a small worker pool fetches the .bin, dequantises
+// positions + computes normals, and transfers the raw arrays back — the main thread only wraps
+// them in a geometry. No JSON.parse of megabytes and no dequant loop on the main thread → the
+// per-chunk pan hitch is gone. (The 3 resident landmarks keep JSON + decodeBakedMesh; they load
+// once at startup.)
+const DCP_WORKERS = [], DCP_PEND = new Map(); let _dcpWi = 0, _dcpId = 1;
+function dcpWorker() {
+  if (DCP_WORKERS.length < 2) {
+    const w = new Worker('dcp-worker.js');
+    w.onmessage = (e) => {
+      const d = e.data, c = DCP_PEND.get(d.id); DCP_PEND.delete(d.id);
+      if (!c || c.state !== 'loading') return;          // disposed/cancelled while decoding
+      if (!d.ok) { c.state = 'idle'; return; }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(d.pos, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(d.nor, 3));
+      g.setAttribute('color', new THREE.BufferAttribute(d.col, 3, true));
+      if (d.seed) g.setAttribute('aSeed', new THREE.BufferAttribute(d.seed, 1));
+      if (d.kind) g.setAttribute('aKind', new THREE.BufferAttribute(d.kind, 1));
+      g.setIndex(new THREE.BufferAttribute(d.idx, 1));
+      c.mesh = new THREE.Mesh(g, DCP_MAT);
+      c.mesh.matrixAutoUpdate = false; scene.add(c.mesh); c.state = 'loaded';
+    };
+    DCP_WORKERS.push(w);
+  }
+  return DCP_WORKERS[(_dcpWi++) % DCP_WORKERS.length];
+}
+function loadDcpChunk(c) {
+  const id = _dcpId++; DCP_PEND.set(id, c);
+  dcpWorker().postMessage({ id, url: c.url.replace(/\.json$/, '.bin') });
+}
 let DCP_CAP = 16, DCP_KEEP = 4, DCP_LOAD = 7000, DCP_UNLOAD = 9000, _dcpTierSet = false;
 function streamDcpChunks() {
   if (!_dcpTierSet) { // TIER is declared later in module scope — read it lazily at first run
@@ -1320,14 +1351,7 @@ function streamDcpChunks() {
   }
   for (const { c } of scored) {
     if (want.has(c)) {
-      if (c.state === 'idle') {
-        c.state = 'loading';
-        fetch(c.url).then(r => r.json()).then(j => {
-          if (c.state !== 'loading') return;              // disposed while in flight
-          c.mesh = new THREE.Mesh(decodeBakedMesh(j), DCP_MAT);
-          c.mesh.matrixAutoUpdate = false; scene.add(c.mesh); c.state = 'loaded';
-        }).catch(() => { c.state = 'idle'; });
-      }
+      if (c.state === 'idle') { c.state = 'loading'; loadDcpChunk(c); }   // decode off-thread (perf #2)
     } else if (!keep.has(c)) {                            // fell outside the retain band (by rank or distance)
       if (c.state === 'loaded') { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; c.state = 'idle'; }
       else if (c.state === 'loading') c.state = 'idle';   // cancel: drop the in-flight result on arrival
