@@ -1117,7 +1117,12 @@ const BK_RINGS = [
   [2350, 3800, 4950, 6750], [2500, 4350, 3750, 4950], [2350, 4350, 2500, 3750], [4350, 5700, 3150, 5250], // greenpoint, wburg-n, wburg-s, e-wburg
   [1500, 3300, 550, 2350], [1250, 2950, -500, 900], [1150, 2450, -1150, 50], [2950, 4050, 900, 2550],      // downtown/dumbo, heights/cobble, carroll/columbia, fortgreene/navy
   [3300, 4600, 600, 1950], [4600, 6750, 650, 2750],                                                        // clinton hill, bed-stuy
-  [2300, 3300, -2150, -500], [3300, 4550, -2550, -250], [800, 2300, -2750, -850], [2300, 4450, -5500, -2500] // gowanus, park slope, red hook, sunset park
+  [2300, 3300, -2150, -500], [3300, 4550, -2550, -250], [800, 2300, -2750, -850], [2300, 4450, -5500, -2500], // gowanus, park slope, red hook, sunset park
+  // central + east Brooklyn (BK04/05/08/09)
+  [3550, 5200, -500, 950], [5000, 6950, -400, 1450], [6300, 7650, -850, 350], [5050, 6750, -1800, -450],   // prospect hts, crown hts+weeksville, crown hts s+wingate, prospect-lefferts
+  [5600, 7950, 2850, 5150],                                                                                 // bushwick
+  [7650, 9100, 1950, 3550], [8750, 10550, 3450, 5250], [8650, 10750, 1350, 3450],                           // broadway jct, cypress hills+highland pk, east new york
+  [9750, 11550, 3050, 4750], [9450, 11250, 850, 2250], [9850, 12450, 50, 1750]                              // city line, new lots, starrett city+spring creek
 ];
 function inBK(x, z) {
   for (let k = 0; k < BK_RINGS.length; k++) {
@@ -2349,6 +2354,14 @@ const boroughGndMat = patchClouds(new THREE.MeshLambertMaterial({ vertexColors: 
   polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }), true);
 function hudsonW(z) { return z < 8000 ? 1250 : z < 15000 ? 1150 : 1000; }
 function eastW(z) { return z < 2400 ? 820 : z < 5200 ? 620 : z < 8000 ? 700 : 980; }
+// East Brooklyn / Jamaica Bay frontier: the real building edge (BK05) past the main
+// plate's 8800 east edge, +45 m margin. Drives the extra ground plate + the water border
+// for Cypress Hills / East NY / New Lots / Starrett City / Spring Creek.
+const BK_EAST_EDGE = [[300,11487],[450,11494],[600,11494],[750,11441],[900,11384],[1050,11384],[1200,11622],[1350,11670],[1500,11713],[1650,11713],[1800,11693],[1950,11300],[2100,11297],[2250,11224],[2400,10808],[2550,10807],[2700,10799],[2850,10799],[3000,11591],[3150,11616],[3300,11616],[3450,11601],[3600,11601],[3750,11599],[3900,11599],[4050,11278],[4200,11193],[4350,11111],[4500,11008],[4650,10818],[4800,10526],[4950,10435],[5100,10321],[5250,10208]];
+function bkEastEdge(z) { const a = BK_EAST_EDGE;
+  if (z < a[0][0] || z > a[a.length - 1][0]) return null;
+  const k = Math.min(a.length - 2, Math.max(0, Math.floor((z - a[0][0]) / 150)));
+  const t = Math.max(0, Math.min(1, (z - a[k][0]) / 150)); return a[k][1] + (a[k + 1][1] - a[k][1]) * t; }
 { // borough ground plates as robust quad strips (no earcut)
   const S = Sink();
   const gc = [0.44, 0.38, 0.31];
@@ -2369,6 +2382,15 @@ function eastW(z) { return z < 2400 ? 820 : z < 5200 ? 620 : z < 8000 ? 700 : 98
   // Bronx (wraps around the island's north tip) — west edge = real Harlem River bank
   // where baked (clamped east of the stylized Manhattan coast to keep the channel open)
   strip(15400, 24200, 300, plateEdgeBX, 8600); // extends over the REAL East Bronx (real buildings/streets fill it; LI Sound past 8600)
+  // East Brooklyn — the geo-first build (Cypress Hills → East NY → New Lots → Starrett City)
+  // reaches PAST the main plate's 8800 edge; extend land east to the Jamaica Bay shore
+  // (bkEastEdge = real building frontier). West edge abuts the main plate at 8800; water beyond.
+  const marshC = [0.29, 0.35, 0.25]; // Spring Creek / Gateway wetlands read as marsh, not pavement
+  for (let z = BK_EAST_EDGE[0][0]; z < BK_EAST_EDGE[BK_EAST_EDGE.length - 1][0]; z += 150) {
+    const e0 = bkEastEdge(z), e1 = bkEastEdge(z + 150); if (e0 === null || e1 === null) continue;
+    const col = z < 1850 ? marshC : gc; // south of New Lots the frontier is Jamaica Bay marshland
+    sinkQuad(S, 8800, 1.1, z + 150, e1, 1.1, z + 150, e0, 1.1, z, 8800, 1.1, z, 0, 1, 0, col, 0, -1);
+  }
   const m = new THREE.Mesh(sinkToGeometry(S), boroughGndMat);
   m.matrixAutoUpdate = false;
   scene.add(m);
@@ -3379,6 +3401,19 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
   registerDcpChunk('bk-redhook.json', 1565, -1966, 1150);         // Red Hook
   registerDcpChunk('bk-sunsetpark.json', 3356, -4002, 1872);      // Sunset Park / Windsor Terrace
   registerDcpChunk('bk-parks.json', 4813, -1441, 1348);           // Prospect Park + Green-Wood structures
+
+  // central + east Brooklyn (BK04/05/08/09) — inland + the Jamaica Bay frontier
+  registerDcpChunk('bk-prospect-heights.json', 4394, 221, 1008);      // Prospect Heights
+  registerDcpChunk('bk-crown-heights.json', 6072, 673, 1189);         // Crown Heights / Weeksville
+  registerDcpChunk('bk-crownheights-s.json', 6872, -248, 850);        // Crown Heights South / Wingate
+  registerDcpChunk('bk-prospect-lefferts.json', 5893, -1117, 1107);   // Prospect Lefferts Gardens
+  registerDcpChunk('bk-bushwick.json', 6779, 3920, 1579);             // Bushwick
+  registerDcpChunk('bk-broadway-junction.json', 8533, 2746, 1003);    // Broadway Junction
+  registerDcpChunk('bk-cypress-hills.json', 9656, 4345, 1289);        // Cypress Hills / Highland Park
+  registerDcpChunk('bk-east-newyork.json', 9791, 2405, 1460);         // East New York
+  registerDcpChunk('bk-city-line.json', 11075, 3858, 1003);           // City Line
+  registerDcpChunk('bk-new-lots.json', 10346, 1543, 1168);            // New Lots
+  registerDcpChunk('bk-starrett-springcreek.json', 10761, 1011, 1195);// Starrett City / Spring Creek (Jamaica Bay)
   window.__dcp = DCP_CHUNKS; // dev: streaming state
   streamDcpChunks();                    // initial pass (loads only chunks near the start camera)
   setInterval(streamDcpChunks, 700);    // stream as the camera moves

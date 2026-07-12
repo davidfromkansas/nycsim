@@ -6,6 +6,32 @@ the rules on adding entries.
 
 ---
 
+## 🏙️ Central & East Brooklyn: Crown Heights → Bushwick → East New York, with the Jamaica Bay shore
+
+**Shipped:** July 12, 2026
+
+**TL;DR:** Central and eastern Brooklyn now render real DCP massing — Crown Heights
+(+ Weeksville), Prospect Heights, Crown Heights South, Prospect Lefferts Gardens,
+Wingate, Bushwick, and the far east (Broadway Junction, Cypress Hills / Highland Park,
+East New York, City Line, New Lots, Starrett City / Spring Creek) — and the land now
+extends out to the real **Jamaica Bay shoreline** where it had simply stopped before.
+
+**What you'll see:** the dense brownstone/rowhouse grid from Prospect Heights across
+Crown Heights and Bushwick, then East New York and Cypress Hills, out to Starrett City's
+towers on the water; and along the southeast the Jamaica Bay frontier — the developed
+edge meets the bay, with the Spring Creek / Gateway wetlands reading as green marsh
+(including the Fresh Creek inlet notch) rather than a hard line.
+
+**How it works:** geometry from DCP tiles **BK04/05/08/09**
+([NYC 3D model](https://www.nyc.gov/site/planning/data-maps/open-data/dwn-nyc-3d-model-download.page))
+baked to 11 proximity-streamed chunks (~1.0M tris, ~43 MB). The eastern neighborhoods sit
+*past* the old ground plate's hard 8800 east edge, so a new East-Brooklyn plate extends the
+land out to a shoreline derived from the real building frontier (`bkEastEdge`), with Jamaica
+Bay beyond it and the marsh corner tinted as wetland. An `inBK` ring suppresses the
+procedural box fabric wherever a chunk owns the blocks.
+
+---
+
 ## ⛵ Brooklyn Bridge Park piers + DUMBO / Navy Yard waterfront
 
 **Shipped:** July 12, 2026
