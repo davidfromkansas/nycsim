@@ -9956,6 +9956,12 @@ function frame() {
     const e = easeInOut(clamp(camTween.t, 0, 1));
     camera.position.lerpVectors(camTween.p0, camTween.p1, e);
     controls.target.lerpVectors(camTween.t0, camTween.t1, e);
+    // fly mode skips controls.update() below, so nothing else orients the camera
+    // during a tween — without this, touch/WASD flights arrive at the destination
+    // still facing the OLD heading and the flown-to subject lands off-screen.
+    // fly.tick's syncFromCamera() absorbs the new yaw/pitch each frame, so free-fly
+    // resumes aimed at the subject with no snap. Desktop (fly off) is untouched.
+    if (fly.st.on) camera.lookAt(controls.target);
     if (camTween.t >= 1) camTween = null;
   }
   fly.tick(dt);
