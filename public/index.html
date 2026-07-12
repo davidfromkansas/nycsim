@@ -1294,7 +1294,10 @@ function loadBakedMesh(url, tier) {
 // leaves, so resident geometry stays bounded regardless of how many neighborhoods exist.
 // Scales to the rest of the boroughs without regrowing the startup-memory peak). ----
 const DCP_MAT = patchCityMaterial(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), 0);
-const DCP_CHUNKS = []; // {url, cx, cz, r, state:'idle'|'loading'|'loaded', mesh}
+// LOD material (perf #3): plain lit boxes (no window shader) for distant chunks — cloud shadows
+// only, so a far LOD tile matches the base lighting without per-facade window detail.
+const DCP_MAT_LOD = patchClouds(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), true);
+const DCP_CHUNKS = []; // {url, cx, cz, r, state, mesh, detail:'full'|'lod'}
 function registerDcpChunk(url, cx, cz, r) { DCP_CHUNKS.push({ url, cx, cz, r, state: 'idle', mesh: null }); }
 // Off-main-thread chunk decode (perf #2): a small worker pool fetches the .bin, dequantises
 // positions + computes normals, and transfers the raw arrays back — the main thread only wraps
@@ -1316,45 +1319,57 @@ function dcpWorker() {
       if (d.seed) g.setAttribute('aSeed', new THREE.BufferAttribute(d.seed, 1));
       if (d.kind) g.setAttribute('aKind', new THREE.BufferAttribute(d.kind, 1));
       g.setIndex(new THREE.BufferAttribute(d.idx, 1));
-      c.mesh = new THREE.Mesh(g, DCP_MAT);
+      c.mesh = new THREE.Mesh(g, c.loadingDetail === 'lod' ? DCP_MAT_LOD : DCP_MAT);
+      c.detail = c.loadingDetail;
       c.mesh.matrixAutoUpdate = false; scene.add(c.mesh); c.state = 'loaded';
     };
     DCP_WORKERS.push(w);
   }
   return DCP_WORKERS[(_dcpWi++) % DCP_WORKERS.length];
 }
-function loadDcpChunk(c) {
-  const id = _dcpId++; DCP_PEND.set(id, c);
-  dcpWorker().postMessage({ id, url: c.url.replace(/\.json$/, '.bin') });
+function loadDcpChunk(c, detail) {
+  const id = _dcpId++; DCP_PEND.set(id, c); c.loadingDetail = detail;
+  const base = c.url.replace(/\.json$/, '');
+  dcpWorker().postMessage({ id, url: detail === 'lod' ? base + '.lod.bin' : base + '.bin' });
 }
-let DCP_CAP = 16, DCP_KEEP = 4, DCP_LOAD = 7000, DCP_UNLOAD = 9000, _dcpTierSet = false;
+let DCP_CAP = 16, DCP_KEEP = 4, DCP_LOD_CAP = 44, DCP_LOAD = 7000, DCP_LOD_RADIUS = 60000, _dcpTierSet = false;
 function streamDcpChunks() {
   if (!_dcpTierSet) { // TIER is declared later in module scope — read it lazily at first run
+    // Detail is assigned by RANK (nearest first), which keeps resident geometry bounded no matter
+    // how many neighborhoods exist (perf #1): the nearest DCP_CAP render FULL detail; the next
+    // DCP_LOD_CAP within DCP_LOD_RADIUS render as cheap LOD boxes (~⅓ the tris, perf #3) so the
+    // whole city still shows when zoomed out; anything past that is freed. The DCP_KEEP band is
+    // hysteresis so a chunk at the full/LOD boundary doesn't swap-thrash. Mobile: near FULL only,
+    // no LOD ring (tight radius already bounds it; LOD boxes look bad up close).
     DCP_CAP = TIER === 'low' ? 3 : TIER === 'medium' ? 6 : 16;
-    // Resident chunks are bounded by RANK, not just distance: the nearest DCP_CAP load, and
-    // anything past the nearest (DCP_CAP + DCP_KEEP) is freed. Without this the old
-    // distance-only rule let loaded chunks pile up (all of NYC sits inside DCP_UNLOAD), so
-    // heap grew unbounded as more neighborhoods were added. The +DCP_KEEP band is hysteresis
-    // so a chunk hovering at the cap boundary doesn't load/dispose-thrash. Mobile also keeps a
-    // tight radius so decode spikes stay small.
+    DCP_LOD_CAP = TIER === 'low' ? 0 : TIER === 'medium' ? 20 : 44;
     DCP_LOAD = TIER === 'low' ? 3200 : TIER === 'medium' ? 4800 : 13000;
-    DCP_UNLOAD = DCP_LOAD + 2500; _dcpTierSet = true;
+    DCP_LOD_RADIUS = TIER === 'low' ? 0 : 60000;
+    _dcpTierSet = true;
   }
   const cx = camera.position.x, cz = camera.position.z;
   const scored = DCP_CHUNKS.map(c => ({ c, d: Math.hypot(cx - c.cx, cz - c.cz) - c.r }));
   scored.sort((a, b) => a.d - b.d);
-  const want = new Set();   // nearest CAP within load radius → these load
-  const keep = new Set();   // nearest CAP+KEEP within unload radius → a loaded chunk outside this is freed
-  for (const s of scored) {
-    if (s.d < DCP_LOAD && want.size < DCP_CAP) want.add(s.c);
-    if (s.d < DCP_UNLOAD && keep.size < DCP_CAP + DCP_KEEP) keep.add(s.c);
+  const desired = new Map();   // chunk → 'full' | 'lod' | null(evict), by rank
+  for (let r = 0; r < scored.length; r++) {
+    const { c, d } = scored[r];
+    let det = null;
+    if (r < DCP_CAP && d < DCP_LOAD) det = 'full';
+    else if (r < DCP_CAP + DCP_KEEP + DCP_LOD_CAP && d < DCP_LOD_RADIUS) det = 'lod';
+    // hysteresis: keep a currently-FULL chunk full through the KEEP band so it doesn't flip to LOD on tiny moves
+    if (det === 'lod' && r < DCP_CAP + DCP_KEEP && c.detail === 'full' && c.state === 'loaded') det = 'full';
+    desired.set(c, det);
   }
   for (const { c } of scored) {
-    if (want.has(c)) {
-      if (c.state === 'idle') { c.state = 'loading'; loadDcpChunk(c); }   // decode off-thread (perf #2)
-    } else if (!keep.has(c)) {                            // fell outside the retain band (by rank or distance)
-      if (c.state === 'loaded') { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; c.state = 'idle'; }
-      else if (c.state === 'loading') c.state = 'idle';   // cancel: drop the in-flight result on arrival
+    const det = desired.get(c);
+    if (det === null) {                                   // outside the retain band → free (rank or distance)
+      if (c.state === 'loaded') { scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null; c.state = 'idle'; c.detail = null; }
+      else if (c.state === 'loading') c.state = 'idle';
+    } else if (c.state === 'idle') {
+      c.state = 'loading'; loadDcpChunk(c, det);          // decode off-thread (perf #2)
+    } else if (c.state === 'loaded' && c.detail !== det) {// upgrade LOD→full on approach / downgrade on retreat
+      scene.remove(c.mesh); c.mesh.geometry.dispose(); c.mesh = null;
+      c.state = 'loading'; loadDcpChunk(c, det);
     }
   }
 }

@@ -19,6 +19,8 @@ every push (every push deploys prod).
 | D | Consolidated `/api/live` snapshot ✅ + Web Worker bridge ✅ (9 pollers → 1 off-thread; `#nolive` kill switch) | high | ✅ done (payload trims optional) |
 | E | Distance-tiered simulation updates (traffic: −38% CPU at street level, ÷2 cap aloft) | medium | ✅ done (traffic; boats/riders not worth it — ~5% of the cost) |
 | F | DCP chunk streaming: rank-bounded eviction (loaded ≤ `CAP + KEEP`, not distance-only) | medium | ✅ done (2026-07-12; keeps resident geometry FLAT as neighborhoods are added) |
+| G | DCP chunk assets: binary `.bin` + off-main-thread Web Worker decode | medium | ✅ done (2026-07-12; no pan hitch; 152→114 MB, −25%) |
+| H | DCP chunk LOD: distance-tiered full vs box LOD (whole city visible when zoomed out) | medium | ✅ done (2026-07-12; ~⅓-tri LOD boxes for the far ring) |
 
 **F — DCP chunk eviction (2026-07-12).** As more baked-neighborhood chunks were registered (now
 50: 26 BK + 20 QN + 3 UES + resident), desktop resident geometry grew unbounded: the streamer only
@@ -30,7 +32,28 @@ across the city): loaded settled at **18–20** (was 27+ and climbing); moving M
 **freed the far Manhattan chunks** (ues 3→0) while the near ones loaded; heap 350→328 MB, DCP geometry
 4.41M→3.06M verts, fps 120, no visible gaps at navigation zoom. Mobile (`CAP=3`) was already bounded by
 its tight radius; unchanged. Tradeoff: a very wide aerial now shows the nearest ~20 neighborhoods rather
-than all of them — the fix for that is per-chunk distance LOD (a separate, larger workstream).
+than all of them — fixed by **H** below.
+
+**G — binary chunk format + worker decode (2026-07-12).** Each streamed chunk was a multi-MB JSON
+string with base64 buffers, `JSON.parse`d + `atob`'d + dequantised on the main thread per load → a
+frame hitch on every chunk (worse as dense boroughs fill in). New `public/*.bin` (40-byte header +
+raw u16 pos + u8 color/seed/kind + index; `transcode_bin.py`) is fetched + dequantised + normal-computed
+in `public/dcp-worker.js` (pool of 2) and the raw typed arrays are **transferred** back; the main thread
+only wraps them in a geometry. No base64 (−33%) and no JSON envelope: **152.6 → 114.4 MB (−25%)** across
+50 chunks; the per-chunk main-thread hitch is gone. Resident landmarks (fidi/govisland/liberty) keep
+JSON (one-shot at startup). Verified: chunks stream with correct worker-computed normals, no console
+errors, shading identical.
+
+**H — distance LOD (2026-07-12).** #F bounded resident chunks to ~20, which meant a wide aerial no
+longer showed the whole city. Fix: assign detail by **rank** — nearest `DCP_CAP` render FULL, the next
+`DCP_LOD_CAP` (44 on desktop) within `DCP_LOD_RADIUS` render a cheap box LOD (height-map downsample of
+the full mesh, `lod_bin.py`, **~31% of the tris**, ~15 MB total, plain material = no window shader),
+anything past that is freed. A chunk upgrades LOD→full on approach and downgrades on retreat, with the
+`DCP_KEEP` band as hysteresis. Measured (desktop `high`): all **50 chunks visible** (19 full + 31 LOD)
+with the whole city populated and **no gaps**; East NY went LOD→full when approached; heap **340 MB**
+(only +12 MB vs the 328 MB near-only state — LOD boxes are ~0.5 MB each). Mobile (`LOD_CAP=0`) keeps
+near-FULL only (LOD boxes look bad up close; its tight radius already bounds it). Bounded at ≈`CAP +
+KEEP + LOD_CAP` (~64) chunks regardless of how many neighborhoods are added.
 
 ## Baseline (measured 2026-07-07, commit `7d434d4`, desktop Chrome via preview, local server)
 
