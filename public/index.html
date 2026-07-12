@@ -8129,10 +8129,10 @@ const linknyc = (() => {
     ring.position.set(x, gy + 0.6, z);
     ring.visible = true;
     setFocus('LinkNYC kiosk (static city list)', name, { name }, () => [x, gy, z]);
-    const mid = gy + KFLOAT + 22; // vertical center of the floating kiosk (base gy+KFLOAT, ~45 m tall)
+    const mid = gy + BALL_H; // aim at the BALL (the thing clicked): kiosk-mid aim read
+    // as "too high" — ball + chip floated above center. Ball centered puts the whole
+    // assembly at center-and-slightly-below, clear of the top nycsim banner.
     focusui.enter(() => [x, gy + BALL_H + R + 4, z], '<b>⚽ LinkNYC kiosk</b><br>' + String(name).replace(/</g, '&lt;')); // chip rides above the ball
-    // pull back far enough that the tall floating marker sits centered and CLEAR of
-    // the top nycsim banner (aim at the kiosk's own mid-height, not the ground)
     camTween = { p0: camera.position.clone(), t0: controls.target.clone(),
       p1: new THREE.Vector3(x + 150, mid + 55, z - 430), t1: new THREE.Vector3(x, mid, z), t: 0, dur: 1.7 };
   }
