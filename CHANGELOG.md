@@ -108,9 +108,10 @@ where you're looking. Push the joystick to turn the view (left/right) and tilt i
 toward the skyline, down for a bird's-eye), speed scaling with how far you push; the
 `+` / `−` pills raise and lower your altitude. You can still drag anywhere on the screen
 to look around while steering. Controls give a small haptic tap where the phone supports
-it. To keep the small screen readable, only the **two nearest** transit/incident labels
-show at once (the rest stay as unlabeled dots until you get close), while the unobtrusive
-**citizen thought bubbles are dialed up** so the crowd still feels alive. Rotate to
+it. To keep the small screen readable, only the **two nearest** dialogue labels of any
+kind — subway, bus, ferry, flight, bike, incident — show at once (the rest stay as
+unlabeled dots until you get close), while the unobtrusive **citizen thought bubbles are
+dialed up** so the crowd still feels alive. Rotate to
 landscape, or open it on a desktop or tablet, and the normal full-screen layout returns
 unchanged.
 

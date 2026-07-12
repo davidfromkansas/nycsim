@@ -511,10 +511,7 @@
     border-top:2px solid rgba(10,30,66,.6);
     box-shadow: inset 0 2px 0 rgba(255,255,255,.20), inset 0 -12px 26px rgba(18,22,58,.4);
   }
-  body.gba #gba::before { /* screen bezel lip — a recessed shadow at the canvas seam */
-    content:''; position:absolute; left:0; right:0; top:-9px; height:9px; pointer-events:none;
-    background:linear-gradient(180deg, rgba(6,8,22,0), rgba(6,8,22,.6));
-  }
+  /* (screen bezel lip removed — it read as a shadow under the thought ticker) */
   #gbaBrand { display:none; }
   body.gba #gbaBrand { /* NYC-SIMULATOR logo printed along the BOTTOM of the console face */
     display:block; position:absolute; bottom:calc(7px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%);
@@ -525,7 +522,7 @@
      own press-and-hold button. Movement is horizontal-plane only (§26e). */
   #gbaDpad { display:none; }
   body.gba #gbaDpad {
-    display:grid; position:absolute; left:7%; top:50%; transform:translateY(-50%);
+    display:grid; position:absolute; left:4%; top:50%; transform:translateY(-50%); /* 7% inset shifted 3% outward */
     width:122px; height:122px; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
     filter:drop-shadow(0 3px 5px rgba(10,12,35,.5));
   }
@@ -552,7 +549,7 @@
      Knicks-orange knob in a recessed well so it reads as a tactile thumbstick. */
   #gbaStick { display:none; }
   body.gba #gbaStick {
-    display:block; position:absolute; right:7%; top:50%; transform:translateY(-50%);
+    display:block; position:absolute; right:4%; top:50%; transform:translateY(-50%); /* 7% inset shifted 3% outward */
     width:112px; height:112px; border-radius:50%; touch-action:none; cursor:pointer;
     background:radial-gradient(circle at 50% 42%, #16418a, #0e2f66 72%); /* recessed well */
     box-shadow:inset 0 3px 8px rgba(6,16,42,.75), inset 0 -1px 0 rgba(255,255,255,.14), 0 2px 4px rgba(10,12,35,.4);
@@ -570,16 +567,27 @@
   body.gba #gbaStick.pressed #gbaStickK { filter:brightness(1.15); }
   /* Start / Select pills — repurposed as the +/− vertical-elevation buttons (§26e) */
   #gbaSS { display:none; }
-  body.gba #gbaSS { display:flex; position:absolute; left:50%; top:70%; transform:translate(-50%,-50%); gap:8px; } /* in the gap between the pads — clears the up/down keys and the logo */
-  body.gba .ssb {
+  body.gba #gbaSS { display:flex; position:absolute; left:50%; top:71%; transform:translate(-50%,-50%); gap:24px; } /* in the gap between the pads — clears the up/down keys and the logo; gap clears the button wells */
+  body.gba .ssb { /* hardware-style Select/Start: silver dome recessed in a dark well */
     -webkit-appearance:none; appearance:none; cursor:pointer; border:none; touch-action:none;
-    display:flex; align-items:center; justify-content:center; line-height:0; /* dead-center the glyph */
-    width:28px; height:23px; border-radius:11px;
-    font:800 18px system-ui,sans-serif; color:#fff;
-    background:linear-gradient(180deg,#f28a3e,#dd6e1e); /* Knicks orange */
-    box-shadow:0 2px 3px rgba(10,12,35,.5), inset 0 1px 0 rgba(255,255,255,.22);
+    position:relative; width:30px; height:30px; border-radius:50%;
+    background:radial-gradient(circle at 38% 30%, #ffb26e, #f28a3e 52%, #d0661a 100%); /* Knicks-orange dome */
+    box-shadow:
+      0 0 0 5px #0d2b5e,                       /* recessed navy well */
+      0 0 0 6px rgba(255,255,255,.16),         /* well rim catchlight */
+      inset 0 2px 3px rgba(255,255,255,.85), inset 0 -3px 5px rgba(60,70,90,.5),
+      0 3px 5px rgba(10,12,35,.5);
   }
-  body.gba .ssb.pressed { background:linear-gradient(180deg,#ffc078,#f2913f); color:#fff; }
+  body.gba .ssb::after { /* label printed on the shell, centered above its button */
+    content:attr(data-l); position:absolute; left:50%; top:-17px; white-space:nowrap;
+    transform:translateX(-50%); pointer-events:none;
+    font:800 9px/1 system-ui,sans-serif; letter-spacing:.8px; color:#e8eeff; opacity:.9;
+    text-shadow:0 1px 1px rgba(8,20,50,.65);
+  }
+  body.gba .ssb.pressed { filter:brightness(1.1); box-shadow:
+    0 0 0 5px #0d2b5e, 0 0 0 6px rgba(255,255,255,.16),
+    inset 0 2px 3px rgba(255,255,255,.7), inset 0 -2px 4px rgba(60,70,90,.55),
+    0 1px 2px rgba(10,12,35,.5); }
   body.gba #joy { display:none !important; } /* the D-pad replaces the floating joystick */
   body.gba #hint { display:none; } /* desktop drag/scroll instructions have no place here */
   /* ---- overlays repositioned to live INSIDE the screen (top 2/3) ---- */
@@ -593,10 +601,22 @@
   body.gba #ticker { display:none !important; }                     /* phones: drop the news ticker */
   body.gba #thoughtTicker { bottom:calc(var(--sh) + 2px); }         /* keep only the resident-thought ticker, in the news ticker's old spot */
   body.gba #agentFab { bottom:var(--sh); right:0; width:76px; } /* flush with the console top edge + right viewport edge, over the tickers */
-  body.gba #hud { transform:scale(.58); transform-origin:top left; max-width:calc((100vw - 16px) / 0.58); } /* compact top panel, kept within the screen (no right-edge cutoff) */
+  /* compact top panel: dense chip innards + a higher scale — same readable text in a
+     much smaller box (one tight row instead of two airy ones), kept within the screen */
+  body.gba #hud { transform:scale(.75); transform-origin:top left; max-width:calc((100vw - 16px) / 0.75); }
+  body.gba #chip { padding:2px 4px; border-radius:12px; }
+  body.gba #chip .seg { padding:1px 5px; gap:4px; }
+  body.gba #chip .seg svg { width:17px; height:17px; }
+  body.gba #chip .wxi { font-size:14px; }
+  body.gba #chip .v b { font-size:12px; }
+  body.gba #chip .v b small { font-size:8px; }
+  body.gba #chip .v span { font-size:7.5px; }
+  body.gba #chip .sep { margin:1px 0; }
+  body.gba #chSnd { width:22px; height:22px; margin-left:2px; padding:3px; }
+  body.gba #credit { top:calc(64px + env(safe-area-inset-top, 0px)); } /* below the single-row chip + timeline, not over them */
   body.gba #wxAlerts { display:none !important; } /* drop the weather-alert card on phones */
   body.gba #camview { top:calc(var(--rh) / 2); } /* center the cam card on the screen, not the viewport */
-  body.gba #personaCard { bottom:calc(var(--sh) + 10px); } /* dock the resident card just above the shell */
+  body.gba #personaCard { bottom:calc(var(--sh) + 10px); z-index:32; } /* dock the resident card just above the shell, IN FRONT of the concierge fab (z31) */
   /* §26e boot screen — fills the GBA "screen" instantly while the module loads:
      pixel-arcade type, a spinning Sims plumbob, and a chunky segmented progress bar.
      Painted by the inline script right after the console markup; removed on first frame. */
@@ -670,9 +690,10 @@
   <div id="gbaStick" aria-label="look joystick — push to rotate the view"><!-- §26e analog look control -->
     <div id="gbaStickK"></div>
   </div>
-  <div id="gbaSS"><!-- elevation +/− as the classic angled Start/Select pills — §26e -->
-    <button class="ssb" data-act="ed" aria-label="descend">−</button>
-    <button class="ssb" data-act="eu" aria-label="ascend">+</button>
+  <div id="gbaSS"><!-- elevation +/− styled like the hardware Select/Start: silver dome in a
+       recessed well, label printed on the shell above at the classic angle — §26e -->
+    <button class="ssb" data-act="ed" data-l="DOWN" aria-label="descend"></button>
+    <button class="ssb" data-act="eu" data-l="UP" aria-label="ascend"></button>
   </div>
 </div>
 <div id="gbaBoot"><!-- §26e boot screen (phones): shown by the inline script below, removed on first frame -->
@@ -693,7 +714,7 @@
   const force = /\bgba\b/.test(location.search + location.hash);
   if (!(portrait && (force || matchMedia('(pointer: coarse)').matches))) return;
   document.body.classList.add('gba');
-  const rh = Math.round(innerHeight * 2 / 3);
+  const rh = innerHeight - Math.max(Math.round(innerHeight / 3), 265); // console min-height 265px (keep in sync with GBA_MIN_SH in the module)
   document.body.style.setProperty('--rh', rh + 'px');
   document.body.style.setProperty('--sh', (innerHeight - rh) + 'px');
   const boot = document.getElementById('gbaBoot');
@@ -1982,9 +2003,10 @@ const GBA_MQ = matchMedia('(max-width: 700px) and (orientation: portrait)');
 const GBA_FORCE = /\bgba\b/.test(location.search + location.hash); // preview override: ?gba / #gba forces the shell without a touch pointer
 const gbaActive = () => GBA_MQ.matches && (GBA_FORCE || matchMedia('(pointer: coarse)').matches);
 let RENDER_H = innerHeight;
+const GBA_MIN_SH = 265; // px — the console never squishes below this; short screens give up game-screen height instead (keep in sync with the §26e inline boot script)
 function syncRenderH() {
   const gba = document.body.classList.contains('gba');
-  RENDER_H = gba ? Math.round(innerHeight * 2 / 3) : innerHeight;
+  RENDER_H = gba ? innerHeight - Math.max(Math.round(innerHeight / 3), GBA_MIN_SH) : innerHeight;
   document.body.style.setProperty('--rh', RENDER_H + 'px');
   document.body.style.setProperty('--sh', (innerHeight - RENDER_H) + 'px'); // shell height
 }
@@ -6200,8 +6222,8 @@ const live = (() => {
     chTp.textContent = f + '°F';
     chWx.textContent = condIcon(W.code, hh >= 20 || hh < 6);
     chC.textContent = condText(W.code);
-    chW.textContent = COMPASS[Math.round(W.windDir / 45) % 8];
-    chWL.textContent = 'Wind · ' + mph + ' mph';
+    chW.innerHTML = COMPASS[Math.round(W.windDir / 45) % 8] + ' <small>' + mph + ' mph</small>'; // value line, like the time seg
+    chWL.textContent = 'Wind';
     const x = [];
     // bird counts dropped from the chip — City Vitals already reports birds aloft
     if (HIST.active) x.push('replaying ' + HIST.day);
@@ -9107,7 +9129,7 @@ window.__personas = personas; // dev/testing hook
    ============================================================ */
 const thoughts = (() => {
   const MOBILE_TB = matchMedia('(max-width: 700px)').matches;
-  const MAXB = MOBILE_TB ? 12 : 8, CYCLE_MS = 6000, SEP = MOBILE_TB ? 80 : 140; // count / rotation / min screen spread (phones: more bubbles, tighter — they're unobtrusive)
+  const MAXB = MOBILE_TB ? 18 : 8, CYCLE_MS = 6000, SEP = MOBILE_TB ? 56 : 140; // count / rotation / min screen spread (phones: lots of bubbles, tight — their minimal design carries it)
   const ZOOM_Y = 1500, NEAR_Y = 240;                // camY gates: show bubbles / auto-show text
   const RANGE = 3400, FADE0 = 2800, FADE1 = 3400;   // world-distance prefilter + opacity fade band
   const mul32 = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -9273,32 +9295,34 @@ const thoughts = (() => {
 window.__thoughts = thoughts; // dev/testing hook
 
 /* ============================================================
-   25v. CHIP LIMITER — phones only. The scene's floating transit/
-   incident dialogues (.fybl: subway, bus, ferry, 311, closures,
-   bikes, flocks) pile up fast on a small screen. Each frame, keep
-   only the 2 nearest screen-center visible and hide the rest via
-   `visibility` — an overlay that never touches each module's own
-   `display` logic, so nothing fights and it self-corrects as the
-   camera moves. Air-traffic labels (.flbl) and persona bubbles
-   (.thoughtB) are different classes, so they're never capped.
-   Positions are read from the inline transform (no forced layout).
+   25v. CHIP LIMITER — phones only. EVERY floating dialogue class
+   (.fybl ferry/bus/bike/flock/311/traffic, .swlbl subway, .flbl
+   flights) shares ONE budget: each frame keep only the 2 nearest
+   screen-center visible and hide the rest via `visibility` — an
+   overlay that never touches each module's own `display` logic,
+   so nothing fights and it self-corrects as the camera moves.
+   Persona thought bubbles (.thoughtB) are deliberately exempt
+   (they're the unobtrusive life of the scene). Positions are read
+   from the inline transform (no forced layout).
    ============================================================ */
 const chipLimiter = (() => {
   const MOBILE = matchMedia('(max-width: 700px)').matches;
-  const MAX = 2; // phones: only the 2 nearest transit/incident dialogues — the rest crowd the small screen
+  const MAX = 2; // phones: only the 2 nearest dialogues of ANY kind — the rest crowd the small screen
   const re = /translate\(\s*([-\d.]+)px,\s*([-\d.]+)px/;
+  const pools = ['fybl', 'swlbl', 'flbl'].map((k) => document.getElementsByClassName(k)); // live collections
   function tick() {
     if (!MOBILE) return;
-    const all = document.getElementsByClassName('fybl');
     const cx = innerWidth / 2, cy = RENDER_H / 2;
     const shown = [];
-    for (let i = 0; i < all.length; i++) {
-      const c = all[i];
-      if (c.id === 'focusChip' || c.style.display !== 'block') continue; // module hid it, or it's the pinned focus
-      const m = re.exec(c.style.transform);
-      const x = m ? +m[1] : cx, y = m ? +m[2] : cy;
-      const dx = x - cx, dy = y - cy;
-      shown.push({ c, d: dx * dx + dy * dy });
+    for (const all of pools) {
+      for (let i = 0; i < all.length; i++) {
+        const c = all[i];
+        if (c.id === 'focusChip' || c.style.display !== 'block') continue; // module hid it, or it's the pinned focus
+        const m = re.exec(c.style.transform);
+        const x = m ? +m[1] : cx, y = m ? +m[2] : cy;
+        const dx = x - cx, dy = y - cy;
+        shown.push({ c, d: dx * dx + dy * dy });
+      }
     }
     if (shown.length <= MAX) { for (const s of shown) s.c.style.visibility = ''; return; }
     shown.sort((a, b) => a.d - b.d);
