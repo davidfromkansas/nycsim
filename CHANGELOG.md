@@ -6,6 +6,71 @@ the rules on adding entries.
 
 ---
 
+## 🗽 All of Manhattan: real building massing, Battery Park City → Inwood
+
+**Shipped:** July 12, 2026
+
+**TL;DR:** The whole island now renders the city's real DCP building massing instead of
+procedural boxes — Battery Park City, Tribeca, Civic Center, South Street Seaport, SoHo,
+NoHo, Little Italy, the Villages, Chinatown, Lower East Side, Two Bridges, Chelsea, Hudson
+Yards, Flatiron, Gramercy, Herald Square, Midtown, Times Square, Murray Hill, Sutton Place,
+Turtle Bay, Stuyvesant Town, the Upper West Side, Morningside/Hamilton Heights, all of
+Harlem, Washington Heights and Inwood — plus Central Park's real greensward and Randalls/
+Wards Islands. The iconic skyline is untouched.
+
+**What you'll see:** the real fabric of every Manhattan neighborhood — true footprints and
+heights, block by block — with the hand-built landmarks (Empire State, Chrysler, One
+Vanderbilt, 432 Park, the pencil towers, Hudson Yards, One WTC, etc.) still standing above
+it; Central Park with its reservoir and ponds where it belongs; and the Hudson/East River
+shoreline meeting the waterfront blocks.
+
+**How it works:** geometry from the DCP tiles **MN01–07, 09–12 and Central Park**
+([NYC 3D model](https://www.nyc.gov/site/planning/data-maps/open-data/dwn-nyc-3d-model-download.page))
+baked to **20 proximity-streamed chunks** (~1.8M tris) via the exact-geoRaw transform. FiDi
+(`fidi.json`) and the Upper East Side / Roosevelt Island (already done) are carved out, as
+are the bespoke landmarks' clearance pads, so the DCP fabric fills everything around the
+hand-built skyline without doubling it. An `inManhattanDCP` ring suppresses the procedural
+footprints. Three of the tiles turned out to be authored in millimeters (÷304.8) rather than
+feet — the bake now auto-detects units per tile. Chunks ship as binary `.bin` + box `.lod.bin`
+(perf #2/#3) so the ~70-chunk city stays smooth and memory-bounded.
+
+---
+
+## 🎮 Game Boy Advance mode on phones
+
+**Shipped:** July 12, 2026
+
+**TL;DR:** Open the city on a phone held upright and the whole site becomes a Game Boy
+Advance: the live NYC simulation fills the top two-thirds as the "screen," and the
+bottom third is a console with a working D-pad, A/B, and Start/Select.
+
+**What you'll see:** on a portrait phone, the 3D city renders in the top 2/3 with the
+seven ride-along icons (✈️ 🚇 ⛴️ 🚌 🚲 📷 🐦) lined up horizontally along the bottom
+edge of the screen like a game's item bar, and the time/weather chip, 7-day timeline,
+news + resident-thought tickers, and the concierge all overlaid on the screen as an
+in-game HUD. Below the screen is an indigo console face with the **NYC-SIMULATOR logo**
+printed at the top, a **D-pad** on the left, **A/B** buttons on the right, and angled
+**Start/Select** pills. Drive with the D-pad (drag anywhere on the screen to look
+around at the same time). **A** opens the City Concierge, **B** backs out of whatever's
+open (a traffic-cam feed, a resident card, the chat, or a pinned entity) and otherwise
+snaps the timeline back to LIVE, **Start** restarts the Manhattan auto-tour, and
+**Select** hides/shows the ticker strips. Buttons give a small haptic tap where the
+phone supports it. Rotate to landscape, or open it on a desktop or tablet, and the
+normal full-screen layout returns unchanged.
+
+**How it works:** the layout activates only for coarse-pointer devices at
+`max-width:700px` in portrait, toggled live as the phone rotates. The WebGL canvas is
+resized to exactly the top 2/3 of the viewport (a real rendering saving on phones), and
+a single render-height value flows through the camera aspect and every entity
+label/pick projection so chips stay glued to their entities and taps still select the
+right thing on the shorter canvas — the console's height is published to CSS so the
+shell and canvas always meet exactly. The D-pad feeds the same fly-camera controls the
+old floating joystick used, so movement (and the map's left-right mirror) behaves
+identically; the buttons are thin wrappers over existing actions. No new data, no
+server changes — purely how the existing city is framed and driven on a phone.
+
+---
+
 ## 🏙️ Central & East Brooklyn: Crown Heights → Bushwick → East New York, with the Jamaica Bay shore
 
 **Shipped:** July 12, 2026

@@ -1207,6 +1207,14 @@ function inMN08(x, z) {
   }
   return false;
 }
+// The rest of Manhattan (Battery Park City → Inwood, + Randalls/Wards) renders real DCP massing
+// from the mn-*.json chunks; suppress the procedural footprint fabric there. FiDi (inFidi) and the
+// UES/Roosevelt Island (inMN08) are carved OUT of the mn bake and keep their own chunks + bespoke
+// landmarks (ESB, Chrysler, etc. — carved from the bake by their clearance pads).
+function inManhattanDCP(x, z) {
+  if (x > 1500 && x < 2500 && z > 12300 && z < 13600) return true;   // Randalls / Wards Islands
+  return z > 1150 && z < 20900 && x > -1850 && x < 1700;             // Manhattan mainland
+}
 const FIDI_RING = [[-89, 100], [-150, 734], [-173, 1025], [-235, 1329], [-129, 1481], [105, 1700], [595, 1810], [603, 959], [343, 247]];
 function inFidi(x, z) {
   if (x < -560 || x > 610 || z < 90 || z > 1820) return false;
@@ -1342,7 +1350,7 @@ function streamDcpChunks() {
     // hysteresis so a chunk at the full/LOD boundary doesn't swap-thrash. Mobile: near FULL only,
     // no LOD ring (tight radius already bounds it; LOD boxes look bad up close).
     DCP_CAP = TIER === 'low' ? 3 : TIER === 'medium' ? 6 : 16;
-    DCP_LOD_CAP = TIER === 'low' ? 0 : TIER === 'medium' ? 20 : 44;
+    DCP_LOD_CAP = TIER === 'low' ? 0 : TIER === 'medium' ? 20 : 60;
     DCP_LOAD = TIER === 'low' ? 3200 : TIER === 'medium' ? 4800 : 13000;
     DCP_LOD_RADIUS = TIER === 'low' ? 0 : 60000;
     _dcpTierSet = true;
@@ -1811,6 +1819,7 @@ function generateCity() {
     if (!onLand(x, z)) continue;
     if (inFidi(x, z)) continue; // FiDi core renders real DCP massing (fidi.json) instead
     if (inMN08(x, z)) continue; // Upper East Side + Roosevelt Island render real DCP massing
+    if (inManhattanDCP(x, z)) continue; // rest of Manhattan renders real DCP massing (mn-*.json)
     const R = rng(iHash(BLDG.bin[i] | 0, 3));
     makeBuilding(x, z, BLDG.w[i], BLDG.d[i], BLDG.r[i] / 1000, recipeAt(x, z), R,
       { h: Math.max(4, BLDG.h[i]), real: true });
@@ -3590,6 +3599,28 @@ const NECKLACE = []; // bridge/arch light positions (consumed by section 21's em
   registerDcpChunk('bk-city-line.json', 11075, 3858, 1003);           // City Line
   registerDcpChunk('bk-new-lots.json', 10346, 1543, 1168);            // New Lots
   registerDcpChunk('bk-starrett-springcreek.json', 10761, 1011, 1195);// Starrett City / Spring Creek (Jamaica Bay)
+
+  // Manhattan — real DCP massing, Battery Park City → Inwood + Randalls/Wards + Central Park
+  registerDcpChunk('mn-battery-bpc.json', 86, 1502, 809);            // Battery Park City / South St Seaport
+  registerDcpChunk('mn-tribeca-seaport.json', 524, 2240, 1283);      // Tribeca / Civic Center / Two Bridges
+  registerDcpChunk('mn-soho-chinatown.json', 293, 3056, 1495);       // SoHo / Little Italy / Chinatown / Hudson Sq
+  registerDcpChunk('mn-village.json', 164, 3859, 1625);              // Greenwich / West / East Village / NoHo
+  registerDcpChunk('mn-union-stuytown.json', 35, 4728, 1774);        // Union Sq / Gramercy / Stuy Town / LES
+  registerDcpChunk('mn-chelsea-flatiron.json', -203, 5591, 1602);    // Chelsea / Flatiron / Hudson Yards
+  registerDcpChunk('mn-herald-murray.json', -441, 6332, 1535);       // Herald Sq / Murray Hill
+  registerDcpChunk('mn-midtown-times.json', -410, 7058, 1574);       // Times Square / Midtown / Tudor City
+  registerDcpChunk('mn-clinton-sutton.json', -365, 8061, 1649);      // Clinton / Sutton Place / Turtle Bay
+  registerDcpChunk('mn-lincoln-sq.json', -1232, 9062, 714);          // Lincoln Square
+  registerDcpChunk('mn-uws.json', -1234, 10080, 748);                // Upper West Side
+  registerDcpChunk('mn-manhattan-valley.json', -303, 11158, 1549);   // Manhattan Valley
+  registerDcpChunk('mn-morningside-eastharlem.json', 54, 12176, 1746);// Morningside Heights / East Harlem
+  registerDcpChunk('mn-harlem.json', 54, 13155, 1751);               // Central Harlem
+  registerDcpChunk('mn-manhattanville.json', -409, 14129, 1385);     // Manhattanville / West Harlem
+  registerDcpChunk('mn-hamilton-heights.json', -667, 15284, 1296);   // Hamilton Heights
+  registerDcpChunk('mn-washington-heights.json', -701, 17350, 1386); // Washington Heights
+  registerDcpChunk('mn-inwood.json', -860, 19778, 1373);             // Inwood
+  registerDcpChunk('mn-randalls-wards.json', 2058, 12903, 730);      // Randalls / Wards Islands
+  registerDcpChunk('mn-central-park.json', -317, 10369, 1493);       // Central Park structures
   window.__dcp = DCP_CHUNKS; // dev: streaming state
   streamDcpChunks();                    // initial pass (loads only chunks near the start camera)
   setInterval(streamDcpChunks, 700);    // stream as the camera moves
