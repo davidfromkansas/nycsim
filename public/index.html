@@ -628,8 +628,9 @@
   #gbaReset { display:none; }
   body.gba #gbaReset {
     display:block; position:absolute; left:50%; top:74px; transform:translateX(-50%);
-    width:68px; height:26px; border-radius:9px;
+    width:48px; height:18px; border-radius:7px;
   }
+  body.gba #gbaReset::after { top:-15px; font-size:8px; } /* label tracks the smaller button */
   body.gba #wxAlerts { display:none !important; } /* drop the weather-alert card on phones */
   body.gba #camview { top:calc(var(--rh) / 2); } /* center the cam card on the screen, not the viewport */
   body.gba #personaCard { bottom:calc(var(--sh) + 10px); z-index:32; } /* dock the resident card just above the shell, IN FRONT of the concierge fab (z31) */
@@ -660,7 +661,10 @@
     height:100%; width:0%; background:#41c536; border-radius:2px;
     /* chunky pixel segments: dark notches every 10px */
     background-image:repeating-linear-gradient(90deg, transparent 0 8px, rgba(8,29,64,.85) 8px 10px);
-    transition:width .25s steps(4);
+    /* no width transition: it animates on the main thread, which is BLOCKED during the
+       build phases — the bar froze at the transition's start value while the % text
+       (no transition) updated, so they visibly disagreed. Width now applies instantly
+       at each repaint; the segment notches keep the retro chunkiness. */
   }
   #gbaBoot .pct, #gbaBoot .lbl {
     font:700 12px ui-monospace, Menlo, monospace; color:#cfe3ff; letter-spacing:2px;
@@ -742,7 +746,7 @@
   let li = 0;
   const lt = setInterval(() => { lbl.textContent = LINES[++li % LINES.length]; }, 1800);
   let p = 0.04, cap = 0.15; // creep toward the current milestone cap so the bar always moves
-  const draw = () => { const s = Math.min(p, 0.99); fill.style.width = (Math.floor(s * 20) * 5) + '%'; pct.textContent = Math.floor(s * 100) + '%'; };
+  const draw = () => { const s = Math.min(p, 0.99), n = Math.floor(s * 100); fill.style.width = n + '%'; pct.textContent = n + '%'; }; // bar and text share ONE number — they can never disagree
   const ct = setInterval(() => { p = Math.min(p + (cap - p) * 0.08 + 0.001, cap); draw(); }, 120);
   window.__gbaBoot = {
     p(v, txt) { cap = Math.max(cap, v); p = Math.max(p, Math.min(v, 0.99)); if (txt) lbl.textContent = txt; draw(); },
