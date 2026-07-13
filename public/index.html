@@ -644,9 +644,9 @@
   /* §26e boot screen — fills the GBA "screen" instantly while the module loads:
      pixel-arcade type, a spinning Sims plumbob, and a chunky segmented progress bar.
      Painted by the inline script right after the console markup; removed on first frame. */
-  #gbaBoot { display:none; }
-  body.gba #gbaBoot {
-    display:flex; position:fixed; left:0; top:0; right:0; height:var(--rh); z-index:60;
+  #gbaBoot { /* all platforms: on phones it fills the GBA "screen" (--rh); on desktop
+       --rh isn't set yet at parse time, so the 100% fallback covers the viewport */
+    display:flex; position:fixed; left:0; top:0; right:0; height:var(--rh, 100%); z-index:60;
     flex-direction:column; align-items:center; justify-content:center; gap:18px;
     background:
       repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 2px, transparent 2px 4px), /* scanlines */
@@ -733,19 +733,21 @@
   <div class="lbl">reticulating splines…</div>
 </div>
 <script>
-/* §26e INSTANT CONSOLE — plain script, runs at parse time, long before the ES module
-   (which waits on the three.js CDN + a ~40 MB city download). Paints body.gba so the
-   CSS-only console + boot screen show immediately on phones. The module's own gate
-   recomputes the same state later (harmless overwrite); its milestones drive the bar
-   via window.__gbaBoot, and frame() calls done() once the scene actually renders. */
+/* §26e INSTANT CONSOLE + BOOT SCREEN — plain script, runs at parse time, long before
+   the ES module (which waits on the three.js CDN + a ~40 MB city download). The boot
+   screen shows on EVERY platform (full viewport on desktop, the GBA "screen" on
+   phones); the console class/vars are phone-only. The module's own gate recomputes the
+   gba state later (harmless overwrite); its milestones drive the bar via
+   window.__gbaBoot, and frame() calls done() once the scene actually renders. */
 (() => {
   const portrait = matchMedia('(max-width: 700px) and (orientation: portrait)').matches;
   const force = /\bgba\b/.test(location.search + location.hash);
-  if (!(portrait && (force || matchMedia('(pointer: coarse)').matches))) return;
-  document.body.classList.add('gba');
-  const rh = innerHeight - Math.max(Math.round(innerHeight / 3), 265); // console min-height 265px (keep in sync with GBA_MIN_SH in the module)
-  document.body.style.setProperty('--rh', rh + 'px');
-  document.body.style.setProperty('--sh', (innerHeight - rh) + 'px');
+  if (portrait && (force || matchMedia('(pointer: coarse)').matches)) { // phone console
+    document.body.classList.add('gba');
+    const rh = innerHeight - Math.max(Math.round(innerHeight / 3), 265); // console min-height 265px (keep in sync with GBA_MIN_SH in the module)
+    document.body.style.setProperty('--rh', rh + 'px');
+    document.body.style.setProperty('--sh', (innerHeight - rh) + 'px');
+  }
   const boot = document.getElementById('gbaBoot');
   const fill = boot.querySelector('.fill'), pct = boot.querySelector('.pct'), lbl = boot.querySelector('.lbl');
   const LINES = ['reticulating splines…', 'waking 12,703 New Yorkers…', 'untangling subway lines…',
