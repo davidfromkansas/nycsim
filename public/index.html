@@ -10662,7 +10662,7 @@ const concierge = (() => {
   const panel = document.getElementById('agentPanel');
   { // starter-prompt chips: tap to ask without typing; hidden after the first send
     const chips = document.getElementById('agentChips');
-    for (const c of ['Find nearest LinkNYC Kiosk in Soho', 'Take me to the Metropolitan Museum of Art', 'how are the trains right now?', 'fly me along the Hudson']) {
+    for (const c of ['Find nearest LinkNYC Kiosk in Soho', 'Take me to the Metropolitan Museum of Art', "Nearest citibike station to Veniero's Bakery", 'Show me the nearest dashcam to Astor Place']) {
       const b = document.createElement('button');
       b.type = 'button'; b.textContent = c;
       b.addEventListener('click', () => { chips.style.display = 'none'; send(c); });
