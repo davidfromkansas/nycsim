@@ -10,13 +10,20 @@ import rhino3dm, struct, json, base64, time, gc
 import numpy as np
 from georaw import sp_to_scene, geoRaw_ll
 CELL=40.0
-X0,X1,Z0,Z1=1200,22600,-11900,19500
+X0,X1,Z0,Z1=1200,22600,-11900,27200
 W=int((X1-X0)//CELL); H=int((Z1-Z0)//CELL)
 mask=np.zeros((W,H),bool)
 t0=time.time()
-for T in ['BK10','BK11','BK12','BK13','BK14','BK15','BK16','BK17','BK18','QN08','QN09','QN10','QN11','QN12','QN13','QN14']:
+for T in ['BK10','BK11','BK12','BK13','BK14','BK15','BK16','BK17','BK18','QN08','QN09','QN10','QN11','QN12','QN13','QN14','BX01','BX03','BX04','BX05','BX06','BX07','BX08','BX09','BX10','BX11','BX12']:
     m=rhino3dm.File3dm.Read(f'/Users/david_lietjauw/Downloads/NYC_3DModel_{T}.3dm')
     layers={i:l.FullPath for i,l in enumerate(m.Layers)}
+    U=1.0
+    for o in m.Objects:
+        lp=layers[o.Attributes.LayerIndex]
+        if 'acade' in lp:
+            try: c=(o.Geometry.GetBoundingBox().Min.X+o.Geometry.GetBoundingBox().Max.X)/2
+            except: continue
+            if c>1e5: U=304.8 if c>5e6 else 1.0; break
     n=0
     for o in m.Objects:
         lp=layers[o.Attributes.LayerIndex]
@@ -24,7 +31,7 @@ for T in ['BK10','BK11','BK12','BK13','BK14','BK15','BK16','BK17','BK18','QN08',
         g=o.Geometry
         try: bb=g.GetBoundingBox()
         except: continue
-        cx=(bb.Min.X+bb.Max.X)/2; cy=(bb.Min.Y+bb.Max.Y)/2
+        cx=(bb.Min.X+bb.Max.X)/2/U; cy=(bb.Min.Y+bb.Max.Y)/2/U
         if cx<10 or cx>1e7: continue
         sx,sz=sp_to_scene(cx,cy)
         gx=int((sx-X0)//CELL); gz=int((sz-Z0)//CELL)
@@ -44,6 +51,11 @@ WATER=[  # (lat0,lon0, lat1,lon1, width_m)
  (40.6035,-73.8980, 40.6160,-73.9075, 420),   # Mill Basin (main body)
  (40.6160,-73.9075, 40.6205,-73.9215, 260),   # Mill Basin (west arm)
  (40.5795,-74.0015, 40.5862,-73.9835, 150),   # Coney Island Creek
+ (40.8060,-73.8420, 40.8410,-73.8460, 170),   # Westchester Creek
+ (40.8060,-73.8560, 40.8210,-73.8510, 120),   # Pugsley Creek
+ (40.7975,-73.8775, 40.8230,-73.8750, 170),   # Bronx River (lower, east-mask side)
+ (40.8250,-73.8110, 40.8720,-73.8260, 220),   # Eastchester Bay / Hutchinson mouth
+ (40.8720,-73.8260, 40.8870,-73.8180, 150),   # Hutchinson River (upper)
 ]
 def carve(land):
     for la0,lo0,la1,lo1,wd in WATER:
@@ -59,7 +71,7 @@ def carve(land):
     return land
 # manual park patches (no buildings but land): Marine Park grass + Floyd Bennett Field
 park=np.zeros((W,H),bool)
-for (la,lo,rx,rz) in [(40.6015,-73.9155,600,850),(40.5885,-73.8925,750,950)]:  # Marine Park (E of Gerritsen Ck), Floyd Bennett Field
+for (la,lo,rx,rz) in [(40.6015,-73.9155,600,850),(40.5885,-73.8925,750,950),(40.8680,-73.8090,1050,1450),(40.8740,-73.8290,700,950),(40.8950,-73.8670,550,650)]:  # + Pelham Bay Pk, Co-op City, Woodlawn  # Marine Park (E of Gerritsen Ck), Floyd Bennett Field
     px,pz=geoRaw_ll(la,lo)
     g0=int((px-rx-X0)//CELL); g1=int((px+rx-X0)//CELL); h0=int((pz-rz-Z0)//CELL); h1=int((pz+rz-Z0)//CELL)
     land[max(0,g0):min(W,g1), max(0,h0):min(H,h1)]=True
@@ -85,7 +97,7 @@ for gx in range(W):
     x=X0+gx*CELL
     for gz in range(H):
         z=Z0+gz*CELL
-        if not (z< -8480 or x>8780): offp[gx,gz]=False; continue
+        if not (z< -8480 or x>8780 or (z>15400 and x>4900)): offp[gx,gz]=False; continue
         if JFK[0]<x<JFK[1] and JFK[2]<z<JFK[3]: offp[gx,gz]=False; continue
         for cx0,cz0,rr in OLDPLATES:
             if (x-cx0)**2+(z-cz0)**2 < rr*rr: offp[gx,gz]=False; break

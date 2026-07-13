@@ -6,6 +6,43 @@ the rules on adding entries.
 
 ---
 
+## 🌉 The Bronx complete: real massing borough-wide, a real Bronx River, and a real east coast
+
+**Shipped:** July 13, 2026
+
+**TL;DR:** The whole Bronx now renders real DCP building massing — Mott Haven, Port
+Morris, Melrose, Hunts Point, Longwood, Morrisania, Claremont, Crotona Park East, the
+Concourses, Highbridge, Mount Eden, Morris Heights, University Heights, Mount Hope,
+Fordham, Belmont, Bathgate, East Tremont, West Farms, Bedford Park, Kingsbridge
+Heights, Norwood, Kingsbridge, Marble Hill, Riverdale, Fieldston, Spuyten Duyvil,
+North Riverdale, Soundview, Clason Point, Harding Park, Castle Hill, Unionport,
+Parkchester, Westchester Square, Schuylerville, Throgs Neck, Country Club, Edgewater
+Park, Pelham Bay, City Island, Co-op City, Allerton, Bronxdale, Morris Park, Pelham
+Gardens, Pelham Parkway, Van Nest, Olinville, Williamsbridge, Baychester, Edenwald,
+Eastchester, Wakefield, Woodlawn — plus Van Cortlandt Park, Bronx Park and Pelham Bay
+Park. And two big lore fixes: the **Bronx River** now cuts through the borough as real
+water along its true course, and the **east coast is real** — Eastchester Bay,
+Westchester and Pugsley Creeks, the Hutchinson River and **City Island** replace what
+used to be a solid land slab.
+
+**What you'll see:** the river winding from Soundview up through the Bronx Zoo to the
+Westchester line; the East Bronx coastline with its bays, creeks and peninsulas; City
+Island offshore; Co-op City's towers on their green superblock; the parks as green
+open space; and dense real fabric everywhere from the Harlem River to the Sound.
+
+**How it works:** DCP tiles **BX01, BX03–BX12 + BX_Parks** (all millimeter-authored —
+auto-detected) baked to 14 streamed chunks (~2.5M tris). The Bronx ground plate's east
+edge was cut back from x8600 to x4900 and the **building-coverage land mask** extended
+north to own the coast, so the bays and City Island emerge from real footprints. The
+Bronx River is a dual fix: a water-carve in `landOK` (personas/streets respect it) plus
+a dark ribbon overlay along the real course. Park greens for Van Cortlandt / Bronx
+Park / Woodlawn, mask patches for Pelham Bay Park and Co-op City. Verified with a
+22-point land/water audit — river, bays, creeks, island and every neighborhood read
+correctly. LOD caps raised so the now-109-chunk city still fills in whole when zoomed
+out.
+
+---
+
 ## 💬 Tap-to-expand dialogues — headlines first, detail on demand
 
 **Shipped:** July 13, 2026

@@ -1374,9 +1374,9 @@ function inManhattanDCP(x, z) {
 }
 // Bronx River — real course (mouth at Soundview → Westchester line), [x, z, halfWidth*2].
 // Cuts WATER through the solid Bronx plate: landOK carve (inBxRiver) + a dark ribbon overlay.
-const BX_RIVER = [[5409, 15554.7, 170], [4697.6, 16430.5, 120], [4308.5, 17671.9, 90], [3533.8, 18812.3, 70],
-  [3325.2, 19350.4, 60], [2747.5, 20169.4, 55], [2384.1, 21109.6, 55], [2321.5, 22442.9, 55],
-  [2033.7, 23383.2, 55], [1491.9, 24161.7, 55], [984.9, 25212.2, 55]];
+const BX_RIVER = [[4938, 15176.3, 200], [4773.6, 16028.4, 150], [4442.5, 16847.4, 110], [4376.5, 17712.3, 95],
+  [4055.2, 18768.3, 80], [3685.7, 19465, 70], [3061.3, 19983.9, 60], [2448.7, 20762.5, 55],
+  [2361.5, 21844.2, 55], [2033.7, 23383.2, 55], [1491.9, 24161.7, 55], [984.9, 25212.2, 55]];
 function inBxRiver(x, z) {
   if (x < 700 || x > 5600 || z < 15300 || z > 25400) return false;
   for (let i = 0; i < BX_RIVER.length - 1; i++) {
@@ -1563,7 +1563,7 @@ function streamDcpChunks() {
     // hysteresis so a chunk at the full/LOD boundary doesn't swap-thrash. Mobile blankets the city
     // with box-LOD (nearest ~40) so there are no flat holes; the 3 nearest upgrade to full detail.
     DCP_CAP = TIER === 'low' ? 3 : TIER === 'medium' ? 6 : 16;
-    DCP_LOD_CAP = TIER === 'low' ? 80 : TIER === 'medium' ? 60 : 80;
+    DCP_LOD_CAP = TIER === 'low' ? 96 : TIER === 'medium' ? 72 : 96;
     DCP_LOAD = TIER === 'low' ? 3200 : TIER === 'medium' ? 4800 : 13000;
     DCP_LOD_RADIUS = TIER === 'low' ? 60000 : 60000;
     _dcpTierSet = true;
@@ -2616,12 +2616,12 @@ function qwShoreX(z) {
 const riIslContains = makeContains(QB.ISL.ri);
 // is this point on borough land the scene actually has? (shared by fills, ribbons, traffic)
 function landOK(x, z) {
+  if (inBxRiver(x, z)) return false;                                  // Bronx River: lore-accurate water cut through the plate (before ANY land test)
   if (bayContains(x, z)) return false;
   { const qw = qwShoreX(z); if (qw !== null && x < qw && !riIslContains(x, z)) return false; } // East Channel is water (real DCP bank)
   if (typeof inQnEast === 'function' && inQnEast(x, z)) return true;   // eastern Queens real-fabric land (CD6/CD7 + Glendale)
-  if (typeof inBkSouth === 'function' && BK_SOUTH && (z < -8480 || x > 8780 || (z > 15400 && x > 4900)) && x > 1200 && z < 27200 && z > -11900 && x < 22600)
-    return inBkSouth(x, z);                                           // south BK + SE Queens + Rockaways + east Bronx: building-coverage mask is authoritative (bays/creeks = water)
-  if (inBxRiver(x, z)) return false;                                  // Bronx River (lore-accurate water cut through the plate)
+  if (typeof inBkSouth === 'function' && BK_SOUTH && (z < -8480 || x > 8780 || (z > 15400 && x > 4900) || z > 24200) && x > 1200 && z < 27200 && z > -11900 && x < 22600)
+    return inBkSouth(x, z);                                           // south BK + SE Queens + Rockaways + east/north Bronx: building-coverage mask is authoritative (bays/creeks = water)
   if (z > 12800 && z < 21500) { // Harlem corridor: keep east of the visual channel
     const ee = Math.max(bxShoreX(z) ?? -1e9, coastAt(Math.min(z, 21000)).e + 40) + 12;
     if (x < ee) return false;
@@ -3958,6 +3958,22 @@ await bootStep(0.7, 'paving the boroughs…'); // §26e boot bar (yield → repa
   registerDcpChunk('qn-rockaway-w.json', 14905, -6588, 4989);     // Breezy Point / Roxbury / Neponsit / Belle Harbor / Rockaway Park
   registerDcpChunk('qn-rockaway-e.json', 19982, -258, 3626);      // Hammels / Arverne / Edgemere / Far Rockaway / Bayswater
   registerDcpChunk('qn-broadchannel.json', 17079, -1296, 1500);   // Broad Channel (island in Jamaica Bay)
+
+  // the Bronx (BX01-12 + parks) — full borough, real Eastchester Bay / creeks / Bronx River
+  registerDcpChunk('bx-motthaven.json', 1733, 14577, 1440);       // Mott Haven / Port Morris
+  registerDcpChunk('bx-melrose.json', 1439, 16898, 2215);         // Melrose / Concourse / Highbridge / Morrisania / Claremont
+  registerDcpChunk('bx-huntspoint.json', 3899, 17858, 1221);      // Hunts Point / Longwood / Crotona Park E
+  registerDcpChunk('bx-fordham.json', 1218, 19892, 2212);         // Fordham / Morris Hts / University Hts / Mount Hope / Belmont
+  registerDcpChunk('bx-tremont.json', 3905, 19909, 1750);         // East Tremont / West Farms / Van Nest / Bronxdale
+  registerDcpChunk('bx-soundview.json', 5809, 17909, 1492);       // Soundview / Clason Point / Harding Park / Castle Hill
+  registerDcpChunk('bx-throggsneck.json', 8037, 19458, 2026);     // Throgs Neck / Edgewater Park / Country Club
+  registerDcpChunk('bx-parkchester.json', 5895, 20148, 1578);     // Parkchester / Unionport / Westchester Sq / Schuylerville
+  registerDcpChunk('bx-pelhampkwy.json', 4114, 22218, 1548);      // Pelham Pkwy / Allerton / Morris Park / Pelham Gardens
+  registerDcpChunk('bx-pelhambay.json', 7356, 23939, 3515);       // Pelham Bay / Co-op City / City Island
+  registerDcpChunk('bx-norwood.json', 1352, 22439, 1950);         // Norwood / Bedford Park / Kingsbridge Hts / Olinville
+  registerDcpChunk('bx-wakefield.json', 3049, 25272, 2843);       // Wakefield / Williamsbridge / Edenwald / Eastchester / Baychester
+  registerDcpChunk('bx-riverdale.json', -1244, 23283, 2260);      // Riverdale / Fieldston / Kingsbridge / Spuyten Duyvil / Marble Hill
+  registerDcpChunk('bx-parks.json', 3370, 22783, 5391);           // Van Cortlandt / Bronx Park / Pelham Bay Park structures
 
   // Manhattan — real DCP massing, Battery Park City → Inwood + Randalls/Wards + Central Park
   registerDcpChunk('mn-battery-bpc.json', 86, 1502, 809);            // Battery Park City / South St Seaport
