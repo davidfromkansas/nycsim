@@ -6,7 +6,28 @@ the rules on adding entries.
 
 ---
 
-## 🏖️ Queens complete: Jamaica to the Rockaways, and Jamaica Bay gets both shores
+## 💬 Tap-to-expand dialogues — headlines first, detail on demand
+
+**Shipped:** July 13, 2026
+
+**TL;DR:** Every floating dialogue in the scene (trains, buses, ferries, flights,
+Citi Bike, birds, 311, closures, street speeds) now starts as a single-line headline;
+tap it once to expand the full detail, tap again for its usual action.
+
+**What you'll see:** instead of two-line boxes stacking up over the city, chips read as
+one crisp line each — "Q Train — Uptown", "≈266 birds migrating SW", "311 · Illegal
+Parking", "M31 Bus", "42 bikes · 3 docks", "Closure · Thomas St", "Amsterdam Av ·
+24 mph" — with a dim ⋯ marking that there's more. First tap expands to everything the
+chip used to show (next stops, addresses, radar provenance, data sources); a second
+tap does what tapping always did (ride along, open the camera, fly over). Expanded
+chips fold back up after 10 seconds, and only one is open at a time. The pinned focus
+dialogue still always shows its full text.
+
+**How it works:** all dialogue chips share one HTML shape (headline + detail span), so
+a single document-level handler intercepts the first tap to unhide the detail and lets
+the second tap through to each layer's own behavior — no per-layer logic changed, and
+the underlying data (MTA GTFS-realtime, NYC Ferry, adsb.lol, GBFS, BirdCast, NYC 311,
+511NY, DOT/E-ZPass speeds) is untouched; the chips just say less until asked.
 
 **Shipped:** July 12, 2026
 

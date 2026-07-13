@@ -243,6 +243,13 @@
   .fybl b { color:#fff; font-weight:600; }
   .fybl .sub { color:rgba(255,255,255,.55); }
   body.photo .fybl { display:none !important; }
+  /* §25x CHIP EXPANDER — every dialogue starts as its one-line headline; the detail
+     (.sub) shows only once tapped (document-capture handler in §25x). A dim ⋯ marks
+     chips that have more to show. #focusChip (the pinned dialogue) is always full. */
+  .fybl:not(.open):not(#focusChip) .sub, .swlbl:not(.open) .sub, .flbl:not(.open) .sub { display:none; }
+  .fybl:not(.open):not(#focusChip) br, .swlbl:not(.open) br, .flbl:not(.open) br { display:none; }
+  .fybl:not(.open):not(#focusChip):has(.sub)::after, .swlbl:not(.open):has(.sub)::after,
+  .flbl:not(.open):has(.sub)::after { content:' ⋯'; color:rgba(255,255,255,.45); font-weight:700; }
   .fybl.bus { border-color:rgba(255,196,80,.4); } /* bus chips: MTA-bus amber accent */
   .fybl.bus b { color:#ffc450; }
   .fybl.bike { border-color:rgba(80,214,255,.4); }
@@ -6871,8 +6878,8 @@ const flights = (() => {
       if (!p) continue;
       const sub = p.route ? p.route
         : Math.max(0, Math.round(p.pos.y / FT)).toLocaleString('en-US') + ' ft · ' + Math.round(p.spd / KT) + ' kt'; // baro can read <0 in low pressure
-      const html = '<b>' + p.cs + '</b>' + (p.type ? ' · ' + p.type : '') +
-        '<br><span class="sub">' + sub + '</span>';
+      const html = '<b>' + p.cs + '</b><br><span class="sub">' + // §25x: callsign headline; type + route/alt on tap
+        (p.type ? p.type + ' · ' : '') + sub + '</span>';
       if (html !== L.html) { L.html = html; L.el.innerHTML = html; }
     }
   }
@@ -7399,8 +7406,8 @@ const subway = (() => {
       const ch = chips[i], tr = i < _near.length ? _near[i] : null;
       ch.tr = tr;
       if (!tr) continue;
-      const html = '<b>' + tr.route + ' · ' + tr.dir + '</b><br><span class="sub">next ' +
-        trunc(tr.next) + ' → ' + trunc(tr.dest) + '</span>';
+      const html = '<b>' + tr.route + ' Train — ' + tr.dir + '</b><br><span class="sub">next ' +
+        trunc(tr.next) + ' → ' + trunc(tr.dest) + '</span>'; // §25x: headline only; detail on tap
       if (html !== ch.html) { ch.html = html; ch.el.innerHTML = html; }
     }
   }
@@ -8040,7 +8047,8 @@ const buses = (() => {
       if (!v) { if (ch.html) { ch.html = ''; ch.el.style.display = 'none'; } continue; }
       const dst = v.dest && v.dest.length > 26 ? v.dest.slice(0, 25) + '…' : v.dest;
       const stNm = v.street ? v.street.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()) : '';
-      const html = '<b>' + (v.route || 'Bus') + (dst ? ' → ' + dst : '') + '</b><br><span class="sub">' +
+      const html = '<b>' + (v.route ? v.route + ' Bus' : 'Bus') + '</b><br><span class="sub">' + // §25x: headline only; detail on tap
+        (dst ? '→ ' + dst + ' · ' : '') +
         (v.spd > 0.4 ? Math.round(v.spd * 2.237) + ' mph' : 'stopped') + (stNm ? ' · on ' + stNm : '') + '</span>';
       if (html !== ch.html) { ch.html = html; ch.el.innerHTML = html; ch.el.style.display = 'block'; } // .fybl base CSS is display:none
     }
@@ -8334,8 +8342,8 @@ const citibike = (() => {
       const ch = chips[i], st = i < near.length ? near[i] : null;
       ch.st = st;
       if (!st) { if (ch.html) { ch.html = ''; ch.el.style.display = 'none'; } continue; }
-      const html = '<b>' + st.name + '</b><br><span class="sub">' +
-        (st.on ? st.bikes + ' bikes' + (st.ebikes ? ' (' + st.ebikes + ' e)' : '') + ' · ' + st.docks + ' docks' : 'offline') + '</span>';
+      const html = '<b>' + (st.on ? st.bikes + ' bikes · ' + st.docks + ' docks' : 'Citi Bike · offline') + '</b>' + // §25x: the counts ARE the headline
+        '<br><span class="sub">' + st.name + (st.on && st.ebikes ? ' · ' + st.ebikes + ' e-bikes' : '') + '</span>';
       if (html !== ch.html) { ch.html = html; ch.el.innerHTML = html; ch.el.style.display = 'block'; }
     }
   }
@@ -8630,13 +8638,13 @@ const birds = (() => {
     const lowConf = s.enabled === false || (s.enabled === undefined && D && D.enabled === false);
     return { s, lowConf };
   }
-  function chipHTML(b) { // deliberately spare: count · height · speed (detail lives in the concierge)
+  function chipHTML(b) { // §25x: "N birds migrating DIR" headline; radar provenance on tap
     const { s, lowConf } = boData(b);
     const mph = Math.round((s.speedMs || 0) * 2.237);
     const comp = COMP8[Math.round((s.dirDeg || 0) / 45) % 8];
-    return '<b>Migration radar · ' + (BONAMES[b.bo] || 'NYC') + '</b><br><span class="sub">' +
-      '≈' + Math.round(s.aloft || 0).toLocaleString('en-US') + ' birds aloft (radar est.) · ~' +
-      Math.round(s.hMeanM || 0) + ' m · ' + comp + ' ' + mph + ' mph' +
+    return '<b>≈' + Math.round(s.aloft || 0).toLocaleString('en-US') + ' birds migrating ' + comp + '</b>' +
+      '<br><span class="sub">Migration radar · ' + (BONAMES[b.bo] || 'NYC') + ' (radar est.) · ~' +
+      Math.round(s.hMeanM || 0) + ' m · ' + mph + ' mph' +
       (lowConf ? ' · daytime — low confidence' : '') + '</span>';
   }
   const _bcV = new THREE.Vector3();
@@ -9145,8 +9153,8 @@ const personas = (() => {
               const ins = Math.min(9, sl * 0.25), off = Math.min(e.w * 0.5 + 3.5, 15);
               for (const side of (R() < 0.5 ? [1, -1] : [-1, 1])) {
                 const ox = -vz * off * side, oz = vx * off * side;
-                const x1 = a[0] + vx * ins + ox, z1 = a[1] + vz * ins + oz;
-                const x2 = b[0] - vx * ins + ox, z2 = b[1] - vz * ins + oz;
+                const x1 = p[s2] + vx * ins + ox, z1 = p[s2 + 1] + vz * ins + oz;     // segment endpoints,
+                const x2 = p[s2 + 2] - vx * ins + ox, z2 = p[s2 + 3] - vz * ins + oz; // stride-2 (M2)
                 if (!landOr(x1, z1) || !landOr(x2, z2)) continue;
                 // path interior too — shoreline streets can dip over water mid-segment
                 if (!landOr((x1 + x2) / 2, (z1 + z2) / 2) ||
@@ -9504,6 +9512,30 @@ const chipLimiter = (() => {
   }
   return { tick };
 })();
+
+/* ============================================================
+   25x. CHIP EXPANDER — dialogues start as one-line headlines (the
+   .sub detail is hidden by the §25x CSS). First tap/click expands
+   the chip to its full detail; a second tap runs the chip's own
+   action (ride-along/viewer/fly-to) exactly as before. Document-
+   level CAPTURE listener so the first tap never reaches the chip's
+   own handler. One chip open at a time; auto-collapses after 10 s.
+   Chips without a .sub (kiosk labels) pass through untouched, and
+   #focusChip (the pinned dialogue) is exempt.
+   ============================================================ */
+{
+  let openEl = null, closeT = 0;
+  const close = () => { clearTimeout(closeT); if (openEl) { openEl.classList.remove('open'); openEl = null; } };
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest && e.target.closest('.fybl, .swlbl, .flbl');
+    if (!el || el.id === 'focusChip' || !el.querySelector('.sub')) return; // detail-less → original action
+    if (el.classList.contains('open')) return;                            // expanded → original action
+    e.stopPropagation(); e.preventDefault();                               // first tap: expand only
+    close();
+    el.classList.add('open'); openEl = el;
+    closeT = setTimeout(close, 10000);
+  }, true);
+}
 
 /* ============================================================
    25u. PERSONA AVATAR — the resident's own voxel figure, rendered
@@ -10112,8 +10144,8 @@ const rtraffic = (() => {
       _v.set(L.mid[0], L.mid[1] + 6, L.mid[2]).project(camera);
       if (_v.z > 1 || _v.x < -1 || _v.x > 1 || _v.y < -1 || _v.y > 1) continue;
       near.push({ d, x: L.mid[0], y: L.mid[1] + 6, z: L.mid[2],
-        html: '<b>' + title(L.name) + '</b><br><span class="sub">' + Math.round(mph) + ' mph' +
-          (tt > 0 ? ' · ' + Math.max(1, Math.round(tt / 60)) + ' min' : '') + '</span>' });
+        html: '<b>' + title(L.name) + ' · ' + Math.round(mph) + ' mph</b><br><span class="sub">' + // §25x: speed in the headline
+          (tt > 0 ? Math.max(1, Math.round(tt / 60)) + ' min traversal · ' : '') + 'DOT real-time feed</span>' });
     }
     for (const e of EV) {
       const d = _v.set(e.x, e.y, e.z).distanceTo(camera.position);
@@ -10133,8 +10165,8 @@ const rtraffic = (() => {
       _v.set(L.mid[0], L.mid[1] + 5, L.mid[2]).project(camera);
       if (_v.z > 1 || _v.x < -1 || _v.x > 1 || _v.y < -1 || _v.y > 1) continue;
       near.push({ d, x: L.mid[0], y: L.mid[1] + 5, z: L.mid[2],
-        html: '<b>' + ezLabel(L.name) + '</b><br><span class="sub">' + Math.round(mph) +
-          ' mph · E-ZPass ' + EZ.shown.day.slice(5) + ' · ' + EZ.shown.hh + ':00</span>' });
+        html: '<b>' + ezLabel(L.name) + ' · ' + Math.round(mph) + ' mph</b><br><span class="sub">' + // §25x: speed in the headline
+          'E-ZPass ' + EZ.shown.day.slice(5) + ' · ' + EZ.shown.hh + ':00</span>' });
     }
     for (const p of PRB.edges) { // live bus probes: honest about the estimate's origin
       const d = _v.set(p.mid[0], p.mid[1], p.mid[2]).distanceTo(camera.position);
@@ -10142,8 +10174,8 @@ const rtraffic = (() => {
       _v.set(p.mid[0], p.mid[1] + 5, p.mid[2]).project(camera);
       if (_v.z > 1 || _v.x < -1 || _v.x > 1 || _v.y < -1 || _v.y > 1) continue;
       near.push({ d: d * 1.15, x: p.mid[0], y: p.mid[1] + 5, z: p.mid[2],
-        html: '<b>' + (p.nm ? title(p.nm) : 'Street') + '</b><br><span class="sub">~' +
-          Math.round(p.mph) + ' mph moving · ' + p.n + ' live buses</span>' });
+        html: '<b>' + (p.nm ? title(p.nm) : 'Street') + ' · ~' + Math.round(p.mph) + ' mph</b><br><span class="sub">' + // §25x: speed in the headline
+          'moving estimate from ' + p.n + ' live buses</span>' });
     }
     near.sort((a, b) => a.d - b.d);
     for (let i = 0; i < chips.length; i++) {
@@ -10694,6 +10726,7 @@ window.__perfReport = () => {
     frame: f.length ? { n: f.length, avgMs: +(1000 * f.reduce((s, v) => s + v, 0) / f.length).toFixed(1), p95Ms: +(1000 * f[Math.floor(f.length * 0.95)]).toFixed(1), maxMs: +(1000 * f[f.length - 1]).toFixed(1) } : null,
     calls: renderer.info.render.calls, trisM: +(renderer.info.render.triangles / 1e6).toFixed(2),
     geometries: renderer.info.memory.geometries, buildings: B.length,
+    personas: personas.list.length, vehicles: traffic.total, // smoke counts (AGENTS.md: check after data-shape changes)
     glLosses: +(localStorage.getItem('glLossCount') || 0)
   };
 };
@@ -10902,8 +10935,11 @@ function frame() {
       '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' +
       '<span class="src">' + esc(it.src) + '</span>' + esc(it.t) + '</a><i class="sep">✦</i>').join('');
     tin.innerHTML = seq + seq; // doubled content: the −50% keyframe wraps seamlessly
-    tin.style.animationDuration = Math.round(Math.max(60, items.length * 9) * (matchMedia('(max-width: 700px)').matches ? 0.55 : 1)) + 's'; // ~9 s per headline; phones scroll ~1.8× faster (one strip, less dwell time)
-    tk.style.display = 'block';
+    tk.style.display = 'block'; // BEFORE measuring — scrollWidth is 0 inside display:none
+    // constant PIXEL speed (the −50% loop travels half the strip) — see the thought
+    // ticker's note; short strips no longer crawl, phones scroll faster than desktop
+    const spd = matchMedia('(max-width: 700px)').matches ? 95 : 55; // px/s
+    tin.style.animationDuration = Math.max(8, Math.round(tin.scrollWidth / 2 / spd)) + 's';
   }
   function pollNews() {
     liveBridge.get('headlines')
@@ -10955,7 +10991,11 @@ if (!/cam=|tgt=|scrub=|snap/.test(location.hash)) autoPan.start();
       '<span class="th" data-k="' + k + '"><span class="ic">' + it.ic + '</span>“' + esc(it.t) + '”' +
       '<span class="who">' + esc(it.who) + '</span></span><i class="sep">✦</i>').join('');
     tin.innerHTML = seq + seq; // doubled content: the −50% keyframe wraps seamlessly
-    tin.style.animationDuration = Math.round(Math.max(60, items.length * 7) * (matchMedia('(max-width: 700px)').matches ? 0.55 : 1)) + 's'; // phones scroll ~1.8× faster
+    tk.style.display = 'block'; // BEFORE measuring — scrollWidth is 0 inside display:none (vis() re-gates 2 s later)
+    // constant PIXEL speed (the −50% loop travels half the strip): short strips no longer
+    // crawl under a fixed-duration floor; phones scroll faster than desktop
+    const spd = matchMedia('(max-width: 700px)').matches ? 95 : 55; // px/s
+    tin.style.animationDuration = Math.max(8, Math.round(tin.scrollWidth / 2 / spd)) + 's';
   }
   tin.addEventListener('click', (e) => {
     const el = e.target.closest('.th');
@@ -10969,7 +11009,7 @@ if (!/cam=|tgt=|scrub=|snap/.test(location.hash)) autoPan.start();
     tk.classList.toggle('solo', document.getElementById('ticker').style.display !== 'block');
     document.body.classList.toggle('thticker', !!on);
   }
-  const boot = setInterval(() => { if (!items.length) { build(); vis(); } else clearInterval(boot); }, 2500);
+  const boot = setInterval(() => { if (items.length < 12) { build(); vis(); } else clearInterval(boot); }, 2500); // keep resampling until the crowd is actually loaded — a 1-thought strip used to lock in for 3 min
   setInterval(build, 180000); // fresh crowd sample every 3 min
   setInterval(vis, 2000);
 }

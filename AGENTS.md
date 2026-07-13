@@ -66,6 +66,17 @@ node server.js            # http://localhost:4173 — that's it, no install
   - `window.__buses / __cams / __citibike / __timeline / __audit` (audit = land/coast/graph predicates)
   - URL hash driver: `#cam=…&tgt=…&mode=live&q=high&scrub=-1440&faketime=<ms>&fakeweather=<json>&snap`
 - Verify visually before pushing (screenshot at a few presets; keys 0–6 are camera presets).
+- **Smoke counts before pushing** — after ANY change to shared data shapes (street graph,
+  blocks, persona tables) or the load path, check in the console after a full load:
+  `__personas.list.length` ≈ 12,700 (≈ half that on `low` tier), `__traffic.total` > 10,000,
+  `matchStreet(300, 6800, 200)` returns an object, `__perfReport()` runs clean. A 2026-07-13
+  regression shipped a ONE-resident city because a data-shape refactor left stale variable
+  references in a consumer further down the file: `node --check` can't catch undeclared
+  identifiers (runtime ReferenceError, not a parse error), and the error died inside a
+  promise `.catch` — only the counts betrayed it.
+- **When you change a shared data structure's shape**, grep EVERY consumer of it and read
+  each use site to its end — including code BELOW the lines you edited in the same block.
+  Verify each consumer's feature actually runs afterward, not just the ones easy to see.
 
 ## THE IRON RULES (violating these has burned days of work)
 
@@ -96,7 +107,11 @@ node server.js            # http://localhost:4173 — that's it, no install
 
 Edges `E[i] = {pid, nm, bo, rw, w, ln, td, a, b, p}`: `nm` name, `bo` borough,
 `rw` 0 street / 1 highway / 2 bridge / 3 ramp / 4 tunnel (tunnels not drawn),
-`td` 1 a→b / 2 b→a / 3 two-way, `a`/`b` node ids, `p` polyline `[x,z]…`.
+`td` 1 a→b / 2 b→a / 3 two-way, `a`/`b` node ids. **`p` is a flat stride-2
+Float32Array** (repacked at load from the JSON's `[x,z]…` pairs — plan-mobile-memory.md
+M2): read `x = p[2i]`, `z = p[2i+1]`, point count `p.length >> 1`; `matchStreet`'s `seg`
+is a POINT index (segment i spans `p[2i..2i+3]`). The JSON on disk keeps the nested-pair
+shape (the server agent reads it directly).
 Nodes `N[j] = [x, z, edgeIds…]`. Runtime helpers (module scope):
 `matchStreet(x, z, maxD, wantAng)` snap to best edge · `nearestNode(x, z, maxD)` ·
 `EDGE_HASH` 200 m cells. **Join keys** every live entity carries (agent-ready):
