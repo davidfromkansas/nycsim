@@ -610,7 +610,7 @@
   body.gba #agentFab { bottom:var(--sh); right:0; width:76px; } /* flush with the console top edge + right viewport edge, over the tickers */
   /* compact top panel: dense chip innards + a higher scale — same readable text in a
      much smaller box (one tight row instead of two airy ones), kept within the screen */
-  body.gba #hud { transform:scale(.75); transform-origin:top left; max-width:calc((100vw - 16px) / 0.75); }
+  body.gba #hud { transform:scale(.7); transform-origin:top left; max-width:calc((100vw - 122px) / 0.7); } /* narrower: leaves the top-right corner to the credit pill */
   body.gba #chip { padding:2px 4px; border-radius:12px; }
   body.gba #chip .seg { padding:1px 5px; gap:4px; }
   body.gba #chip .seg svg { width:17px; height:17px; }
@@ -620,7 +620,16 @@
   body.gba #chip .v span { font-size:7.5px; }
   body.gba #chip .sep { margin:1px 0; }
   body.gba #chSnd { width:22px; height:22px; margin-left:2px; padding:3px; }
-  body.gba #credit { top:calc(64px + env(safe-area-inset-top, 0px)); } /* below the single-row chip + timeline, not over them */
+  body.gba #credit { top:calc(10px + env(safe-area-inset-top, 0px)); right:8px; } /* top-right corner beside the narrowed chip (§26e swaps the text to "Made by David") */
+  body.gba #thoughtTicker .th { color:#000; }        /* persona ticker reads black on phones */
+  body.gba #thoughtTicker .th .who { color:#555; }
+  /* RESET — same hardware dome/well language as UP/DOWN but rectangular; centered
+     below the shortcut row. Reloads the scene → boot screen → auto-tour (§26e). */
+  #gbaReset { display:none; }
+  body.gba #gbaReset {
+    display:block; position:absolute; left:50%; top:74px; transform:translateX(-50%);
+    width:68px; height:26px; border-radius:9px;
+  }
   body.gba #wxAlerts { display:none !important; } /* drop the weather-alert card on phones */
   body.gba #camview { top:calc(var(--rh) / 2); } /* center the cam card on the screen, not the viewport */
   body.gba #personaCard { bottom:calc(var(--sh) + 10px); z-index:32; } /* dock the resident card just above the shell, IN FRONT of the concierge fab (z31) */
@@ -702,6 +711,8 @@
     <button class="ssb" data-act="ed" data-l="DOWN" aria-label="descend"></button>
     <button class="ssb" data-act="eu" data-l="UP" aria-label="ascend"></button>
   </div>
+  <button id="gbaReset" class="ssb" data-l="RESET" aria-label="reset the scene"></button><!-- reload → boot → auto-tour (§26e) -->
+
 </div>
 <div id="gbaBoot"><!-- §26e boot screen (phones): shown by the inline script below, removed on first frame -->
   <img src="nycsim-logo.png" alt="NYC Simulator">
@@ -1503,7 +1514,7 @@ function streamDcpChunks() {
     // hysteresis so a chunk at the full/LOD boundary doesn't swap-thrash. Mobile blankets the city
     // with box-LOD (nearest ~40) so there are no flat holes; the 3 nearest upgrade to full detail.
     DCP_CAP = TIER === 'low' ? 3 : TIER === 'medium' ? 6 : 16;
-    DCP_LOD_CAP = TIER === 'low' ? 64 : TIER === 'medium' ? 48 : 60;
+    DCP_LOD_CAP = TIER === 'low' ? 80 : TIER === 'medium' ? 60 : 80;
     DCP_LOAD = TIER === 'low' ? 3200 : TIER === 'medium' ? 4800 : 13000;
     DCP_LOD_RADIUS = TIER === 'low' ? 60000 : 60000;
     _dcpTierSet = true;
@@ -2559,8 +2570,8 @@ function landOK(x, z) {
   if (bayContains(x, z)) return false;
   { const qw = qwShoreX(z); if (qw !== null && x < qw && !riIslContains(x, z)) return false; } // East Channel is water (real DCP bank)
   if (typeof inQnEast === 'function' && inQnEast(x, z)) return true;   // eastern Queens real-fabric land (CD6/CD7 + Glendale)
-  if (typeof inBkSouth === 'function' && BK_SOUTH && (z < -8480 || x > 8780) && x > 1200 && z < 400 && z > -11900 && x < 12600)
-    return inBkSouth(x, z);                                           // south Brooklyn off-plate: building-coverage mask is authoritative (bays/basins = water)
+  if (typeof inBkSouth === 'function' && BK_SOUTH && (z < -8480 || x > 8780) && x > 1200 && z < 19500 && z > -11900 && x < 22600)
+    return inBkSouth(x, z);                                           // south Brooklyn + SE Queens + Rockaways off-plate: building-coverage mask is authoritative (Jamaica Bay = water)
   if (z > 12800 && z < 21500) { // Harlem corridor: keep east of the visual channel
     const ee = Math.max(bxShoreX(z) ?? -1e9, coastAt(Math.min(z, 21000)).e + 40) + 12;
     if (x < ee) return false;
@@ -3882,6 +3893,21 @@ await bootStep(0.7, 'paving the boroughs…'); // §26e boot bar (yield → repa
   registerDcpChunk('bk-brownsville.json', 8269, 894, 1553);       // Brownsville / Ocean Hill
   registerDcpChunk('bk-canarsie.json', 10341, -1068, 1544);       // Canarsie / Paerdegat Basin
   registerDcpChunk('bk-millbasin.json', 9769, -4051, 2585);       // Mill Basin / Marine Park / Flatlands / Bergen Beach / Georgetown
+
+  // SE Queens + the Rockaways (QN08-14) — finishes Queens; Jamaica Bay gets both shores
+  registerDcpChunk('qn-kewgardens.json', 11579, 7640, 1444);      // Kew Gardens
+  registerDcpChunk('qn-ozonepark.json', 12801, 5092, 2349);       // Ozone Park / S Ozone Park / Woodhaven / Richmond Hill S
+  registerDcpChunk('qn-howardbeach.json', 13062, 3156, 1571);     // Howard Beach / Lindenwood / Old Howard Beach
+  registerDcpChunk('qn-jamaica.json', 13806, 8767, 2350);         // Jamaica / Jamaica Center / Briarwood / S Jamaica / Richmond Hill
+  registerDcpChunk('qn-freshmeadows.json', 12787, 11888, 2665);   // Fresh Meadows / KG Hills / Pomonok / Utopia / Hillcrest / Jamaica Estates
+  registerDcpChunk('qn-hollis.json', 15497, 11891, 1857);         // Hollis / Holliswood / Jamaica Hills
+  registerDcpChunk('qn-springfield.json', 18238, 7454, 2908);     // Springfield Gdns / Rochdale / Laurelton / Brookville / Rosedale
+  registerDcpChunk('qn-queensvillage-e.json', 18137, 12195, 4105);// Queens Village / St Albans / Cambria Hts / Bellerose / Floral Park
+  registerDcpChunk('qn-hollishills.json', 14543, 14693, 2006);    // Hollis Hills / Oakland Gardens
+  registerDcpChunk('qn-bayside-e.json', 16193, 17324, 3358);      // Bayside / Douglaston / Little Neck / Glen Oaks / New Hyde Park
+  registerDcpChunk('qn-rockaway-w.json', 14905, -6588, 4989);     // Breezy Point / Roxbury / Neponsit / Belle Harbor / Rockaway Park
+  registerDcpChunk('qn-rockaway-e.json', 19982, -258, 3626);      // Hammels / Arverne / Edgemere / Far Rockaway / Bayswater
+  registerDcpChunk('qn-broadchannel.json', 17079, -1296, 1500);   // Broad Channel (island in Jamaica Bay)
 
   // Manhattan — real DCP massing, Battery Park City → Inwood + Randalls/Wards + Central Park
   registerDcpChunk('mn-battery-bpc.json', 86, 1502, 809);            // Battery Park City / South St Seaport
@@ -5768,16 +5794,18 @@ await bootStep(0.93, 'waking the city…'); // §26e boot bar: scene built, live
 {
   // ---- mode gating: rotate/resize across the breakpoint flips the class + re-frames ----
   const GBA_HINT = 'D-pad moves · stick rotates · +/− lifts · drag to look';
+  const gbaChrome = () => { // phone-only text tweaks (idempotent)
+    const fh = document.getElementById('flyhint'); if (fh) fh.textContent = GBA_HINT;
+    const cr = document.getElementById('credit'); if (cr) cr.textContent = 'Made by David'; // short pill fits the top-right corner
+  };
   function applyGbaMode() {
     const on = gbaActive();
     document.body.classList.toggle('gba', on);
-    if (on) { const fh = document.getElementById('flyhint'); if (fh) fh.textContent = GBA_HINT; }
+    if (on) gbaChrome();
     resizeRenderer(); // recompute RENDER_H + --sh, resize the canvas to match
   }
   GBA_MQ.addEventListener('change', applyGbaMode);
-  if (document.body.classList.contains('gba')) { // set at load too (the early gate already added the class)
-    const fh = document.getElementById('flyhint'); if (fh) fh.textContent = GBA_HINT;
-  }
+  if (document.body.classList.contains('gba')) gbaChrome(); // set at load too (the early gate already added the class)
 
   // ---- the two console pads drive the SAME fly camera as drag-to-look (§26c), so
   //      the D-pad and look joystick coexist with dragging the screen. Movement and
@@ -5841,6 +5869,12 @@ await bootStep(0.93, 'waking the city…'); // §26e boot bar: scene built, live
   for (const b of document.querySelectorAll('#gbaDpad .dp')) bindHold(b, DIR2MOVE[b.dataset.dir]);
   for (const b of document.querySelectorAll('#gbaSS .ssb')) bindHold(b, b.dataset.act); // +/− elevation pills
   for (const b of document.querySelectorAll('#presets button')) b.addEventListener('pointerdown', buzz); // shortcut icons buzz too
+  { // RESET: full reload → boot screen → auto-tour (the tour auto-runs on load on phones)
+    const rst = document.getElementById('gbaReset');
+    rst.addEventListener('pointerdown', () => { rst.classList.add('pressed'); buzz(); });
+    for (const t of ['pointerup', 'pointercancel', 'pointerleave']) rst.addEventListener(t, () => rst.classList.remove('pressed'));
+    rst.addEventListener('click', () => location.reload());
+  }
 
   // ---- look joystick: analog rotation. Tracks like §26c's #joy (rect math, pointer
   //      capture); the knob rides the thumb up to ~26px and lk feeds rotStep. The 'lk'

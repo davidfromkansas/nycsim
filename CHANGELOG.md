@@ -6,6 +6,37 @@ the rules on adding entries.
 
 ---
 
+## 🏖️ Queens complete: Jamaica to the Rockaways, and Jamaica Bay gets both shores
+
+**Shipped:** July 12, 2026
+
+**TL;DR:** The rest of Queens now renders real DCP massing — Kew Gardens, Richmond Hill,
+Woodhaven, Ozone Park, Howard Beach, Jamaica (Center/South/Hills/Estates), Briarwood,
+Fresh Meadows, Kew Gardens Hills, Pomonok, Utopia, Hillcrest, Hollis, Holliswood,
+St. Albans, Springfield Gardens, Rochdale, Laurelton, Brookville, Rosedale, Cambria
+Heights, Queens Village, Bellerose, Floral Park, Glen Oaks, Hollis Hills, Oakland
+Gardens, Bayside, Douglaston, Little Neck — **plus the whole Rockaway peninsula**
+(Breezy Point, Roxbury, Neponsit, Belle Harbor, Rockaway Park, Hammels, Arverne,
+Edgemere, Bayswater, Far Rockaway) **and Broad Channel island**. Jamaica Bay finally
+reads as a real bay: mainland shore on one side, the Rockaways on the other, Broad
+Channel in the middle, JFK on its edge.
+
+**What you'll see:** the bay as open water ringed by real fabric — the Rockaway barrier
+beach with a sand strip along the Atlantic, Broad Channel's street spine crossing the
+bay, Howard Beach's canals-edge blocks, and the SE Queens mainland grid running out to
+the Nassau line.
+
+**How it works:** geometry from DCP tiles **QN08–QN14** baked to 13 streamed chunks
+(~4.3M tris) — two of those tiles use a third layer-naming scheme (`Srf_Facade`) the
+baker now understands. Existing chunks (Forest Hills, Flushing, Bayside/Auburndale, JFK)
+are excluded from the bake so nothing doubles. The south-east **building-coverage land
+mask** now spans south Brooklyn AND SE Queens/the Rockaways in one asset (~114k cells):
+the peninsula, Broad Channel and the bay's shores all emerge from where buildings
+actually stand, and `landOK` respects it (personas/streets stay off the water). LOD
+caps raised so the now-95-chunk city still fills in whole when zoomed out.
+
+---
+
 ## 🎢 South Brooklyn: Coney Island to Canarsie, with the real Atlantic / Jamaica Bay shore
 
 **Shipped:** July 12, 2026

@@ -10,17 +10,17 @@ import rhino3dm, struct, json, base64, time, gc
 import numpy as np
 from georaw import sp_to_scene, geoRaw_ll
 CELL=40.0
-X0,X1,Z0,Z1=1200,12600,-11900,400
+X0,X1,Z0,Z1=1200,22600,-11900,19500
 W=int((X1-X0)//CELL); H=int((Z1-Z0)//CELL)
 mask=np.zeros((W,H),bool)
 t0=time.time()
-for T in ['BK10','BK11','BK12','BK13','BK14','BK15','BK16','BK17','BK18']:
+for T in ['BK10','BK11','BK12','BK13','BK14','BK15','BK16','BK17','BK18','QN08','QN09','QN10','QN11','QN12','QN13','QN14']:
     m=rhino3dm.File3dm.Read(f'/Users/david_lietjauw/Downloads/NYC_3DModel_{T}.3dm')
     layers={i:l.FullPath for i,l in enumerate(m.Layers)}
     n=0
     for o in m.Objects:
         lp=layers[o.Attributes.LayerIndex]
-        if 'oot' not in lp or 'urface' not in lp: continue
+        if 'oot' not in lp or not ('urface' in lp or 'Srf' in lp): continue
         g=o.Geometry
         try: bb=g.GetBoundingBox()
         except: continue
@@ -78,11 +78,17 @@ json.dump({'x0':X0,'z0':Z0,'cell':CELL,'w':W,'h':H,'bits':base64.b64encode(bits.
 # 2) ground mesh: off-plate cells only, greedy row-merge per gx column over gz runs
 gc_col=(0.44,0.38,0.31); sand=(0.72,0.66,0.52); marsh=(0.29,0.35,0.25)
 offp=land.copy()
+OLDPLATES=[(10632,9030,1080),(10170,12906,1613),(11941,13131,794),(11307,16530,2329),(8460,16065,1854),
+           (9081,11723,1010),(10406,6645,886),(8771,6360,1582),(9181,9444,947),(5496,12664,974)]
+JFK=(14800,20400,1900,6300)
 for gx in range(W):
     x=X0+gx*CELL
     for gz in range(H):
         z=Z0+gz*CELL
-        if not (z< -8480 or x>8780): offp[gx,gz]=False
+        if not (z< -8480 or x>8780): offp[gx,gz]=False; continue
+        if JFK[0]<x<JFK[1] and JFK[2]<z<JFK[3]: offp[gx,gz]=False; continue
+        for cx0,cz0,rr in OLDPLATES:
+            if (x-cx0)**2+(z-cz0)**2 < rr*rr: offp[gx,gz]=False; break
 # beach: southernmost land run edge (Coney/Manhattan Beach) → sand for the 2 cells bordering south water, z<-9300
 V=[];F=[];C=[]
 def quad(x0,x1,z0,z1,col):
@@ -101,12 +107,14 @@ for gx in range(W):
         pk=park[gx,(gz)] if gz<H else False
         if pk:
             quad(x,x+CELL,z0,z1,tuple(int(c*255) for c in (0.30,0.40,0.24)))
-        elif z0< -9300:
+        elif z0< -9300 or (x>11000 and z0< -2000 and x<22600):
             zs=min(z1,z0+2*CELL)
             quad(x,x+CELL,z0,zs,tuple(int(c*255) for c in sand))
             if zs<z1: quad(x,x+CELL,zs,z1,tuple(int(c*255) for c in (marsh if x>9300 and z0>-8000 else gc_col)))
         else:
-            col=marsh if (x>9300 and z0>-6000) else gc_col
+            isBkBay = 9300<x<12600 and -6000<z0<400
+            isBC = 16000<x<17800 and -2600<z0<900
+            col=marsh if (isBkBay or isBC) else gc_col
             quad(x,x+CELL,z0,z1,tuple(int(c*255) for c in col))
         gz=g2
 V=np.array(V,np.float32);F=np.array(F,np.uint32);C=np.array(C,np.uint8)
