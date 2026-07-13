@@ -1434,6 +1434,15 @@ function registerDcpChunk(url, cx, cz, r) { DCP_CHUNKS.push({ url, cx, cz, r, st
 // them in a geometry. No JSON.parse of megabytes and no dequant loop on the main thread → the
 // per-chunk pan hitch is gone. (The 3 resident landmarks keep JSON + decodeBakedMesh; they load
 // once at startup.)
+// M0 metrics store (plan-mobile-memory.md): decode latencies, load heap peak, first-frame
+// time, and an opt-in frame-delta capture. Read via window.__perfReport(); near-zero cost
+// when idle. Heap numbers are Chrome-only (performance.memory is absent on iOS Safari —
+// there the chunk-byte counters below are the proxy).
+const PERF_M = { decodeMs: [], heapPeakLoad: 0, tFirstFrame: 0, frames: null };
+{ const t = setInterval(() => {
+    if (performance.memory) PERF_M.heapPeakLoad = Math.max(PERF_M.heapPeakLoad, performance.memory.usedJSHeapSize);
+    if (PERF_M.tFirstFrame) clearInterval(t);
+  }, 500); }
 const DCP_WORKERS = [], DCP_PEND = new Map(); let _dcpWi = 0, _dcpId = 1;
 function dcpWorker() {
   if (DCP_WORKERS.length < 2) {
@@ -1452,6 +1461,10 @@ function dcpWorker() {
       c.mesh = new THREE.Mesh(g, c.loadingDetail === 'lod' ? DCP_MAT_LOD : DCP_MAT);
       c.detail = c.loadingDetail;
       if (c.proc) { g.computeBoundingBox(); const bb = g.boundingBox; c.aabb = [bb.min.x, bb.min.z, bb.max.x, bb.max.z]; }
+      // M0 metrics (plan-mobile-memory.md): decode latency + this chunk's attribute bytes
+      if (c._t0) { PERF_M.decodeMs.push(performance.now() - c._t0); c._t0 = 0; }
+      c._gpuBytes = 0; for (const k in g.attributes) c._gpuBytes += g.attributes[k].array.byteLength;
+      c._gpuBytes += g.index.array.byteLength;
       c.mesh.matrixAutoUpdate = false; scene.add(c.mesh); c.state = 'loaded';
     };
     DCP_WORKERS.push(w);
@@ -1460,6 +1473,7 @@ function dcpWorker() {
 }
 function loadDcpChunk(c, detail) {
   const id = _dcpId++; DCP_PEND.set(id, c); c.loadingDetail = detail;
+  c._t0 = performance.now(); // M0 metrics: decode latency start (fetch+decode+transfer)
   const base = c.url.replace(/\.json$/, '');
   dcpWorker().postMessage({ id, url: detail === 'lod' ? base + '.lod.bin' : base + '.bin' });
 }
@@ -2055,6 +2069,7 @@ document.body.appendChild(renderer.domElement);
 // allows: one automatic reload, guarded so two quick losses can't loop forever.
 renderer.domElement.addEventListener('webglcontextlost', (e) => {
   e.preventDefault();
+  try { localStorage.setItem('glLossCount', 1 + (+localStorage.getItem('glLossCount') || 0)); } catch { } // M0 metric
   if (sessionStorage.getItem('glLost') !== '1') { sessionStorage.setItem('glLost', '1'); location.reload(); }
 }, false);
 setTimeout(() => sessionStorage.removeItem('glLost'), 30000); // a session that survives 30 s re-arms recovery
@@ -10568,6 +10583,51 @@ const clock = new THREE.Clock();
 let T = 0, fpsT = 0, fpsN = 0;
 const _focus = new THREE.Vector3();
 function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+// ---- M0 metrics report + capture route (plan-mobile-memory.md). Dev-only console
+// tools: __perfReport() returns one comparable JSON blob; __perfRoute() flies the
+// scripted 60 s route (hero → Midtown street → Brooklyn pan → Queens) with frame-delta
+// capture on, then resolves with the report. Use #faketime for comparable sun/weather.
+window.__perfReport = () => {
+  let cpuB = 0, gpuB = 0, full = 0, lod = 0;
+  for (const c of DCP_CHUNKS) {
+    if (c.state !== 'loaded' || !c.mesh) continue;
+    (c.detail === 'lod' ? lod++ : full++);
+    gpuB += c._gpuBytes || 0;
+    const g = c.mesh.geometry;
+    for (const k in g.attributes) { const a = g.attributes[k].array; if (a) cpuB += a.byteLength; }
+    if (g.index && g.index.array) cpuB += g.index.array.byteLength;
+  }
+  const d = PERF_M.decodeMs.slice().sort((a, b) => a - b);
+  const f = (PERF_M.frames || []).slice().sort((a, b) => a - b);
+  const q = (arr, p) => arr.length ? +arr[Math.min(arr.length - 1, Math.floor(arr.length * p))].toFixed(1) : null;
+  return {
+    heapMB: performance.memory ? +(performance.memory.usedJSHeapSize / 1048576).toFixed(0) : null,
+    heapPeakLoadMB: PERF_M.heapPeakLoad ? +(PERF_M.heapPeakLoad / 1048576).toFixed(0) : null,
+    tFirstFrameS: PERF_M.tFirstFrame ? +(PERF_M.tFirstFrame / 1000).toFixed(1) : null,
+    chunks: { full, lod, cpuMB: +(cpuB / 1048576).toFixed(1), gpuMB: +(gpuB / 1048576).toFixed(1) },
+    decodeMs: { n: d.length, avg: d.length ? +(d.reduce((s, v) => s + v, 0) / d.length).toFixed(0) : null, p95: q(d, 0.95) },
+    frame: f.length ? { n: f.length, avgMs: +(1000 * f.reduce((s, v) => s + v, 0) / f.length).toFixed(1), p95Ms: +(1000 * f[Math.floor(f.length * 0.95)]).toFixed(1), maxMs: +(1000 * f[f.length - 1]).toFixed(1) } : null,
+    calls: renderer.info.render.calls, trisM: +(renderer.info.render.triangles / 1e6).toFixed(2),
+    geometries: renderer.info.memory.geometries, buildings: B.length,
+    glLosses: +(localStorage.getItem('glLossCount') || 0)
+  };
+};
+window.__perfRoute = () => new Promise((res) => {
+  const W = [ // [px,py,pz, tx,ty,tz, dwell ms] — hero, Midtown street level, Brooklyn pan, Queens
+    [-9200, 4700, -3900, 300, 0, 10500, 12000],
+    [600, 420, 6200, 350, 40, 7200, 12000],
+    [5200, 900, -4800, 6800, 60, -6200, 18000],
+    [11000, 1400, 6200, 12500, 80, 7600, 18000]
+  ];
+  PERF_M.frames = []; PERF_M.decodeMs.length = 0;
+  let i = 0;
+  const step = () => {
+    if (i >= W.length) { const r = window.__perfReport(); PERF_M.frames = null; console.log(JSON.stringify(r)); res(r); return; }
+    const w = W[i++]; window.__cam(w[0], w[1], w[2], w[3], w[4], w[5]); setTimeout(step, w[6]);
+  };
+  step();
+});
 function frame() {
   if (window.__gbaBoot) window.__gbaBoot.done(); // §26e: first real frame → fade the boot screen (one-shot; done() nulls the hook)
   requestAnimationFrame(frame);
@@ -10632,13 +10692,19 @@ function frame() {
   chipLimiter.tick(); // phones: cap on-screen transit/incident dialogues at 2
   renderer.render(scene, camera);
   precipOverlay.render(); // screen-space rain/snow veil, drawn on top
+  if (!PERF_M.tFirstFrame) PERF_M.tFirstFrame = performance.now(); // M0: time-to-first-frame
+  if (PERF_M.frames) PERF_M.frames.push(dt);                       // M0: opt-in frame-delta capture (__perfRoute)
   fpsN++; fpsT += dt;
   if (fpsT > 1 && ui.dbg.style.display === 'block') {
+    let full = 0, lod = 0;
+    for (const c of DCP_CHUNKS) if (c.state === 'loaded') (c.detail === 'lod' ? lod++ : full++);
     ui.dbg.textContent = 'fps ' + (fpsN / fpsT).toFixed(0) +
       '\ncalls ' + renderer.info.render.calls +
       '\ntris ' + (renderer.info.render.triangles / 1e6).toFixed(2) + 'M' +
       '\ngeom ' + renderer.info.memory.geometries +
-      '\nbuildings ' + B.length + ' vehicles ' + traffic.total;
+      '\nbuildings ' + B.length + ' vehicles ' + traffic.total +
+      '\nmem ' + (performance.memory ? (performance.memory.usedJSHeapSize / 1048576).toFixed(0) + 'MB' : 'n/a') +
+      ' · chunks ' + full + 'f/' + lod + 'l'; // M0 metrics line
     fpsT = 0; fpsN = 0;
   } else if (fpsT > 1) { fpsT = 0; fpsN = 0; }
 }
