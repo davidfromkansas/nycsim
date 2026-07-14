@@ -3,6 +3,8 @@ opensky-credentials.json
 mta-bus-key.json
 ai-gateway-key.json
 google-maps-key.json
+session-secret.json
+google-oauth-client.json
 .env*.local
 
 .vercel
