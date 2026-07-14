@@ -433,7 +433,7 @@
     border-radius:7px; padding:1px 7px; max-width:150px; overflow:hidden; text-overflow:ellipsis;
   }
   #personaCard {
-    display:none; position:fixed; left:14px; top:50%; transform:translateY(-50%); z-index:25;
+    display:none; position:fixed; left:14px; top:50%; transform:translateY(-50%); z-index:31; /* above #focusChip (z30) — the pinned chip must never bury the card's ✕ */
     width:min(250px, 70vw); font:11px/1.5 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,.9);
     background:rgba(10,13,20,.72); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border:1px solid rgba(232,165,88,.3); border-radius:12px; padding:11px 13px;
@@ -5612,6 +5612,16 @@ const autoPan = (() => {
 renderer.domElement.addEventListener('pointerdown', autoPan.stop);
 renderer.domElement.addEventListener('wheel', autoPan.stop, { passive: true });
 document.getElementById('joy').addEventListener('pointerdown', autoPan.stop); // mobile fly joystick = user input
+// Closing any modal (persona card, cam viewer, concierge ✕) resumes the city auto-tour.
+// The synthetic canvas pointerdown is the canonical release signal (cancels every
+// ride-along follow + focus mode — same trick fly.enter uses); the matched pointerup
+// keeps fly's drag-look pointer tracking from wedging on the fake id. start() comes
+// AFTER the dispatch because that same pointerdown is also an autoPan.stop hook above.
+function resumeTour() {
+  renderer.domElement.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: -9 }));
+  renderer.domElement.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: -9 }));
+  autoPan.start();
+}
 // live-entity buttons: each click jumps to a REAL plane/train/ferry/bus/station/flock
 // and rides along via that module's own tuned _fly (glide + focus chip + follow).
 // A RANDOM qualifying entity each click (nearest would re-pick what you already ride).
@@ -7969,7 +7979,7 @@ const cams = (() => {
     active = null; clearInterval(timer); timer = null;
     view.style.display = 'none';
   }
-  vX.addEventListener('click', close);
+  vX.addEventListener('click', () => { close(); resumeTour(); }); // ✕ → back to the city auto-tour
   vImg.addEventListener('error', () => { if (active) vName.textContent = active.name + ' · camera offline'; });
   addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   // ---- marker picking: click (not drag) → nearest marker within 26 px ----
@@ -9340,7 +9350,7 @@ const personas = (() => {
     camera.position.x += dx; camera.position.z += dz;   // move with the walker
     controls.target.set(px, 5, pz);                     // keep them centered
   }
-  cardX.addEventListener('click', close);
+  cardX.addEventListener('click', () => { close(); resumeTour(); }); // ✕ → back to the city auto-tour
   addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   // ---- picking (cams pattern: click-not-drag → nearest sprite ≤ 20 px) ----
   const _pv = new THREE.Vector3(), _pd = new THREE.Vector3();
@@ -10736,7 +10746,7 @@ const concierge = (() => {
     }
   }
   infoBtn.addEventListener('click', () => document.body.classList.toggle('aguses'));
-  document.getElementById('agentCloseBtn').addEventListener('click', () => document.body.classList.remove('agent'));
+  document.getElementById('agentCloseBtn').addEventListener('click', () => { document.body.classList.remove('agent'); resumeTour(); }); // ✕ → back to the city auto-tour
   fab.addEventListener('click', () => {
     const on = document.body.classList.toggle('agent');
     if (on && !greeted) { greeted = true; add('ai', 'Ask me about live NYC — or tell me where to fly, what to map, or when to rewind to. Tap ⓘ for everything I can do.'); }
