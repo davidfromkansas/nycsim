@@ -151,6 +151,7 @@ offp=land.copy()
 OLDPLATES=[(10632,9030,1080),(10170,12906,1613),(11941,13131,794),(11307,16530,2329),(8460,16065,1854),
            (9081,11723,1010),(10406,6645,886),(8771,6360,1582),(9181,9444,947),(5496,12664,974)]
 JFK=(14800,20400,1900,6300)
+deep=np.zeros((W,H),bool)   # backfill ground at y=1.02: never vanishes when a chunk is LOD/evicted
 for gx in range(W):
     x=X0+gx*CELL
     for gz in range(H):
@@ -158,7 +159,27 @@ for gx in range(W):
         if not (z< -8480 or x>8780 or (z>15400 and x>4900) or (x<1200 and z<-7000)): offp[gx,gz]=False; continue
         if JFK[0]<x<JFK[1] and JFK[2]<z<JFK[3]: offp[gx,gz]=False; continue
         for cx0,cz0,rr in OLDPLATES:
-            if (x-cx0)**2+(z-cz0)**2 < rr*rr: offp[gx,gz]=False; break
+            if (x-cx0)**2+(z-cz0)**2 < rr*rr: offp[gx,gz]=False; deep[gx,gz]=(cx0!=5496); break  # full backfill (old chunks painted full plates); LGA circle stays land-gated (straddles Flushing Bay)
+# east-Queens land bitmask (qn-east-land.json, CD5/6/7 + Glendale + cemetery belt): landOK already
+# treats these as land; give them permanent resident ground too (their only ground was inside the
+# streamed chunks' baked plates -> water pools whenever a chunk was in LOD state or evicted).
+import base64 as _b64
+try:
+    QE=json.load(open('/Users/david_lietjauw/manhattan-island/public/qn-east-land.json'))
+    qb=_b64.b64decode(QE['bits'])
+    for gx in range(W):
+        x=X0+gx*CELL+CELL/2
+        qgx=int((x-QE['x0'])//QE['cell'])
+        if not (0<=qgx<QE['w']): continue
+        for gz in range(H):
+            z=Z0+gz*CELL+CELL/2
+            qgz=int((z-QE['z0'])//QE['cell'])
+            if not (0<=qgz<QE['h']): continue
+            k=qgx*QE['h']+qgz
+            if (qb[k>>3]>>(7-(k&7)))&1 and not offp[gx,gz]: deep[gx,gz]=True
+except Exception as e:
+    print('qn-east-land backfill failed:',e)
+print('deep backfill cells:',int(deep.sum()))
 # beach: southernmost land run edge (Coney/Manhattan Beach) → sand for the 2 cells bordering south water, z<-9300
 V=[];F=[];C=[]
 def bcell(cx,cz,w,h,col):
@@ -207,6 +228,19 @@ for gx in range(W):
             isBC = 16000<x<17800 and -2600<z0<900
             col=marsh if (isBkBay or isBC) else gc_col
             quad(x,x+CELL,z0,z1,tuple(int(c*255) for c in col))
+        gz=g2
+def quad_deep(x0,x1,z0,z1,col):
+    b=len(V)
+    for (x,z) in [(x0,z0),(x1,z0),(x1,z1),(x0,z1)]: V.append((x,1.02,z)); C.append(col)
+    F.append((b,b+2,b+1)); F.append((b,b+3,b+2))
+for gx in range(W):
+    x=X0+gx*CELL
+    gz=0
+    while gz<H:
+        if not deep[gx,gz]: gz+=1; continue
+        g2=gz
+        while g2<H and deep[gx,g2]: g2+=1
+        quad_deep(x,x+CELL,Z0+gz*CELL,Z0+g2*CELL,tuple(int(c*255) for c in gc_col))
         gz=g2
 V=np.array(V,np.float32);F=np.array(F,np.uint32);C=np.array(C,np.uint8)
 lo=V.min(0);span=V.max(0)-lo;span[span==0]=1;Q=np.round((V-lo)/span*65535).astype('<u2')
