@@ -6,6 +6,30 @@ the rules on adding entries.
 
 ---
 
+## 🕹️ Console controls on desktop — joystick, D-pad & height switch
+
+**Shipped:** July 15, 2026
+
+**TL;DR:** The desktop camera dials are gone; in their place is the mobile GBA shell's
+control set — an analog look joystick, a Knicks-orange movement D-pad, and a new
+fader-style height switch — and they all work at the same time as WASD/arrow keys.
+
+**What you'll see:** Bottom-right, the recessed navy well with the knurled orange knob
+(push to look around — farther = faster, any angle mixes turn and tilt), a vertical
+height rail beside it with an orange switch cap (drag up to climb, down to descend,
+springs back to center), and the orange direction cross below for forward/back/left/
+right glides. Keys light up while held, exactly like the phone console. Hold W and
+drag the stick and the switch at once — all three compose.
+
+**How it works:** The stick reuses the retired rotation dial's in-place yaw/pitch math
+(target swung around a stationary camera, pitch with the ground-rest clamp) in orbit
+mode, and feeds the §26c fly integrator directly when key-flight is active — the same
+route the mobile stick takes, which is what lets keys and analog controls run
+concurrently. The height rail is the old +/− elevation math made analog, scaled by
+knob displacement. Styling is lifted verbatim from the §26e GBA shell.
+
+---
+
 ## 🌳 Every NYC park · 🗺️ Official-map lore audit · 🌊 Real lakes, creeks & canals
 
 **Shipped:** July 15, 2026

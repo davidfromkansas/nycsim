@@ -313,28 +313,94 @@
   #agentFab img.talk { position:absolute; left:14%; bottom:8%; width:72%; } /* pill overlaps his chest, per the source art */
   #agentFab:hover { transform:scale(1.05) translateY(-2px); }
   @media (max-width: 600px) { #agentFab { width:84px; right:6px; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); } } /* just above the two ticker strips */
-  #camDial { /* Sims-style movement dial above the concierge: up/down/left/right + zoom, click or hold */
-    position:fixed; right:22px; bottom:216px; z-index:31; width:112px; height:112px;
+  #movePad { /* desktop movement D-pad (replaces the old Sims dial): the SAME Knicks-orange
+     cross as the mobile GBA shell — forward/back/left/right, click = nudge, hold = glide. */
+    display:grid; position:fixed; right:22px; bottom:216px; z-index:31; width:112px; height:112px;
+    grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
     user-select:none; -webkit-user-select:none; touch-action:none;
     filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); transition:opacity .4s;
   }
-  #rotDial { /* rotation dial stacked above: orbit left/right, tilt over/under + zoom center */
+  #movePad .mp {
+    -webkit-appearance:none; appearance:none; border:none; margin:0; padding:0; cursor:pointer;
+    position:relative; background:linear-gradient(180deg,#f28a3e,#dd6e1e); touch-action:none; /* Knicks orange */
+    background-color:#e87f30;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
+  }
+  #movePad .mp.up    { grid-area:1/2/2/3; border-radius:9px 9px 0 0; }
+  #movePad .mp.left  { grid-area:2/1/3/2; border-radius:9px 0 0 9px; }
+  #movePad .mp.right { grid-area:2/3/3/4; border-radius:0 9px 9px 0; }
+  #movePad .mp.down  { grid-area:3/2/4/3; border-radius:0 0 9px 9px; }
+  #movePad .mp-hub   { grid-area:2/2/3/3; background:#c4661d; box-shadow:inset 0 0 6px rgba(90,40,0,.5); pointer-events:none; }
+  #movePad .mp::after { /* direction triangle */
+    content:''; position:absolute; left:50%; top:50%; width:0; height:0; opacity:.72; pointer-events:none;
+  }
+  #movePad .mp.up::after    { transform:translate(-50%,-70%); border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:8px solid #fff; }
+  #movePad .mp.down::after  { transform:translate(-50%,-30%); border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #fff; }
+  #movePad .mp.left::after  { transform:translate(-70%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-right:8px solid #fff; }
+  #movePad .mp.right::after { transform:translate(-30%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:8px solid #fff; }
+  #movePad .mp:hover { background:linear-gradient(180deg,#f79a52,#e57826); background-color:#ef8c3c; }
+  #movePad .mp.pressed, #movePad .mp:active { background:linear-gradient(180deg,#ffc078,#f2913f); background-color:#f9a85c; }
+  #lookStick { /* desktop look joystick (replaces the old rotation dial): the SAME analog
+     stick as the mobile GBA shell — recessed navy well + knurled Knicks-orange knob;
+     push to rotate the view (x = yaw, y = pitch), analog all the way out. */
     position:fixed; right:22px; bottom:338px; z-index:31; width:112px; height:112px;
-    user-select:none; -webkit-user-select:none; touch-action:none;
+    border-radius:50%; touch-action:none; cursor:pointer; user-select:none; -webkit-user-select:none;
+    background:radial-gradient(circle at 50% 42%, #16418a, #0e2f66 72%); /* recessed well */
+    background-color:#113779;
+    box-shadow:inset 0 3px 8px rgba(6,16,42,.75), inset 0 -1px 0 rgba(255,255,255,.14), 0 2px 4px rgba(10,12,35,.4);
     filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); transition:opacity .4s;
   }
-  #camDial svg, #rotDial svg { display:block; width:100%; height:100%; }
-  #camDial .db, #rotDial .db { fill:url(#cdNavy); stroke:#101a36; stroke-width:1.4; cursor:pointer; }
-  #camDial .db:hover, #rotDial .db:hover { fill:url(#cdNavyHi); }
-  #camDial .db:active, #rotDial .db:active { fill:#5f77bd; }
-  #camDial .ic, #rotDial .ic { pointer-events:none; }
-  body.agent #camDial, body.photo #camDial, body.agent #rotDial, body.photo #rotDial { display:none !important; }
-  @media (max-width: 600px) { /* phones: drop the dials entirely — joystick + drag-to-look cover navigation */
-    #camDial, #rotDial { display:none !important; }
+  #lookStickK { /* the knob: concentric knurl rings + a top highlight + grip dimples */
+    position:absolute; left:50%; top:50%; width:58px; height:58px; border-radius:50%;
+    transform:translate(-50%,-50%); pointer-events:none;
+    background:
+      radial-gradient(circle at 35% 28%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
+      radial-gradient(circle at 50% 50%, rgba(120,45,0,.5) 0 4px, transparent 5px),
+      repeating-radial-gradient(circle at 50% 50%, #ee833a 0 3px, #d96a1a 3px 6px);
+    background-color:#e87f30;
+    border:1.5px solid #b95f18;
+    box-shadow:0 4px 7px rgba(10,12,35,.55), inset 0 2px 3px rgba(255,255,255,.3), inset 0 -4px 7px rgba(120,45,0,.45);
   }
-  @media (min-width: 601px) and (hover: none) { /* touch tablets keep the dials, idling at low opacity */
-    #camDial, #rotDial { opacity:.42; transition:opacity .35s; }
-    body.dialing #camDial, body.dialing #rotDial { opacity:1; }
+  #lookStick.pressed #lookStickK { filter:brightness(1.15); }
+  #elevRail { /* height rail: a one-axis joystick — drag the knob up/down to climb/descend,
+     analog rate, springs back to center. Same recessed navy well + orange knob theme. */
+    position:fixed; right:144px; bottom:338px; z-index:31; width:34px; height:112px;
+    border-radius:17px; touch-action:none; cursor:pointer; user-select:none; -webkit-user-select:none;
+    background:radial-gradient(120% 60% at 50% 40%, #16418a, #0e2f66 78%); /* recessed well */
+    background-color:#113779;
+    box-shadow:inset 0 3px 8px rgba(6,16,42,.75), inset 0 -1px 0 rgba(255,255,255,.14), 0 2px 4px rgba(10,12,35,.4);
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); transition:opacity .4s;
+  }
+  #elevRail .er { /* etched +/− end glyphs on the well */
+    position:absolute; left:50%; transform:translateX(-50%); pointer-events:none;
+    font:800 13px/1 system-ui,sans-serif; color:rgba(223,233,255,.65); text-shadow:0 1px 1px rgba(8,20,50,.8);
+  }
+  #elevRail .er.plus { top:5px; }
+  #elevRail .er.minus { bottom:5px; }
+  #elevRailK { /* the thumb: a hardware fader switch — Knicks-orange cap with grip ridges
+     and a center index line, riding the rail like a mixing-console slider */
+    position:absolute; left:50%; top:50%; width:30px; height:20px; border-radius:5px;
+    transform:translate(-50%,-50%); pointer-events:none;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 40%),
+      repeating-linear-gradient(180deg, #ee833a 0 3px, #d96a1a 3px 6px);
+    background-color:#e87f30;
+    border:1.5px solid #b95f18;
+    box-shadow:0 3px 5px rgba(10,12,35,.55), inset 0 1px 2px rgba(255,255,255,.35), inset 0 -2px 4px rgba(120,45,0,.45);
+  }
+  #elevRailK::after { /* center index line */
+    content:''; position:absolute; left:3px; right:3px; top:50%; height:2px; margin-top:-1px;
+    border-radius:1px; background:#7a3c0c; box-shadow:0 1px 0 rgba(255,255,255,.35);
+  }
+  #elevRail.pressed #elevRailK { filter:brightness(1.15); }
+  body.agent #movePad, body.photo #movePad, body.agent #lookStick, body.photo #lookStick,
+  body.agent #elevRail, body.photo #elevRail { display:none !important; }
+  @media (max-width: 600px) { /* phones: drop the pad + stick entirely — the GBA shell covers navigation */
+    #movePad, #lookStick, #elevRail { display:none !important; }
+  }
+  @media (min-width: 601px) and (hover: none) { /* touch tablets: idle at low opacity */
+    #movePad, #lookStick, #elevRail { opacity:.42; transition:opacity .35s; }
+    body.dialing #movePad, body.dialing #lookStick, body.dialing #elevRail { opacity:1; }
   }
   #vitals { /* City Vitals — live counts from every layer, matches the status panel */
     position:fixed; right:12px; top:12px; z-index:30; min-width:216px;
@@ -805,60 +871,20 @@
 <a id="credit" href="https://www.linkedin.com/in/davidfromkansas/" target="_blank" rel="noopener noreferrer">Made by David Lietjauw</a>
 <div id="ticker"><div class="tkin"></div></div>
 <div id="thoughtTicker"><div class="tkin"></div></div>
-<div id="rotDial"><!-- rotation module: orbit left/right, tilt over/under -->
-  <svg viewBox="0 0 120 120">
-    <circle cx="60" cy="60" r="58" fill="url(#cdM)"/>
-    <circle cx="60" cy="60" r="52" fill="#141f3f"/>
-    <path class="db" data-act="ro" d="M27.9 21.7 A50 50 0 0 1 92.1 21.7 L78 38.6 A28 28 0 0 0 42 38.6 Z"><title>rotate over (bird's-eye)</title></path>
-    <path class="db" data-act="rl" d="M98.3 27.9 A50 50 0 0 1 98.3 92.1 L81.4 78 A28 28 0 0 0 81.4 42 Z"><title>rotate left</title></path>
-    <path class="db" data-act="ru" d="M92.1 98.3 A50 50 0 0 1 27.9 98.3 L42 81.4 A28 28 0 0 0 78 81.4 Z"><title>rotate under (street level)</title></path>
-    <path class="db" data-act="rr" d="M21.7 92.1 A50 50 0 0 1 21.7 27.9 L38.6 42 A28 28 0 0 0 38.6 78 Z"><title>rotate right</title></path>
-    <path class="db" data-act="eu" d="M36.5 58 A23.5 23.5 0 0 1 83.5 58 Z"><title>move up</title></path>
-    <path class="db" data-act="ed" d="M83.5 62 A23.5 23.5 0 0 1 36.5 62 Z"><title>move down</title></path>
-    <g class="ic" fill="none" stroke="#dfe9ff" stroke-width="4" stroke-linecap="round">
-      <path d="M60 41v12M54 47h12"/>
-      <path d="M54 73h12"/>
-      <path d="M31 60 A9 9 0 1 1 22 51" transform="translate(22 60) scale(.9) translate(-22 -60)"/>
-      <path d="M89 60 A9 9 0 1 0 98 51" transform="translate(98 60) scale(.9) translate(-98 -60)"/>
-      <path d="M52 25 A8 8 0 0 1 68 25"/>
-      <path d="M52 95 A8 8 0 0 0 68 95"/>
-    </g>
-    <g class="ic" fill="#dfe9ff" stroke="none">
-      <path d="M30 51 L22 46 L22 56 Z" transform="translate(22 60) scale(.9) translate(-22 -60)"/>
-      <path d="M90 51 L98 46 L98 56 Z" transform="translate(98 60) scale(.9) translate(-98 -60)"/>
-      <path d="M68 32 L64 23.5 L72 23.5 Z"/>
-      <path d="M68 88 L64 96.5 L72 96.5 Z"/>
-    </g>
-  </svg>
+<div id="lookStick" title="look joystick — push to rotate the view"><!-- desktop twin of the mobile GBA stick -->
+  <div id="lookStickK"></div>
 </div>
-<div id="camDial"><!-- movement module: up/down/left/right + zoom -->
-  <svg viewBox="0 0 120 120">
-    <defs>
-      <linearGradient id="cdM" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#eef2f8"/><stop offset=".45" stop-color="#8f98ac"/><stop offset="1" stop-color="#343b4e"/>
-      </linearGradient>
-      <linearGradient id="cdNavy" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#5a6fae"/><stop offset=".5" stop-color="#33437c"/><stop offset="1" stop-color="#222e5a"/>
-      </linearGradient>
-      <linearGradient id="cdNavyHi" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#7288c9"/><stop offset=".5" stop-color="#425492"/><stop offset="1" stop-color="#2c3a6e"/>
-      </linearGradient>
-    </defs>
-    <rect x="38" y="2" width="44" height="116" rx="14" fill="url(#cdM)"/>
-    <rect x="2" y="38" width="116" height="44" rx="14" fill="url(#cdM)"/>
-    <rect x="43" y="7" width="34" height="106" rx="11" fill="#141f3f"/>
-    <rect x="7" y="43" width="106" height="34" rx="11" fill="#141f3f"/>
-    <rect class="db" data-act="zi" x="46" y="10" width="28" height="34" rx="9"><title>move forward</title></rect>
-    <rect class="db" data-act="zo" x="46" y="76" width="28" height="34" rx="9"><title>move backward</title></rect>
-    <rect class="db" data-act="pl" x="10" y="46" width="34" height="28" rx="9"><title>move left</title></rect>
-    <rect class="db" data-act="pr" x="76" y="46" width="34" height="28" rx="9"><title>move right</title></rect>
-    <g class="ic" fill="#dfe9ff" stroke="none">
-      <path d="M60 21l8 10.5h-16z"/>
-      <path d="M60 99l-8-10.5h16z"/>
-      <path d="M21.5 60l10.5-8v16z"/>
-      <path d="M98.5 60l-10.5-8v16z"/>
-    </g>
-  </svg>
+<div id="elevRail" title="height — drag the knob up/down"><!-- one-axis analog: climb/descend -->
+  <span class="er plus">+</span>
+  <span class="er minus">−</span>
+  <div id="elevRailK"></div>
+</div>
+<div id="movePad"><!-- movement D-pad: the mobile GBA cross on desktop (forward/back/left/right) -->
+  <button class="mp up"    data-act="zi" title="move forward"></button>
+  <button class="mp left"  data-act="pl" title="move left"></button>
+  <span   class="mp-hub"></span>
+  <button class="mp right" data-act="pr" title="move right"></button>
+  <button class="mp down"  data-act="zo" title="move backward"></button>
 </div>
 <button id="agentFab" title="City Concierge — ask about live NYC, or say where to fly">
   <img src="concierge-portrait.png" alt="City Concierge">
@@ -5542,8 +5568,8 @@ window.__cam = (px, py, pz, tx, ty, tz) => { camTween = null; camera.position.se
 renderer.domElement.addEventListener('pointerdown', () => { camTween = null; });
 renderer.domElement.addEventListener('wheel', () => { camTween = null; }, { passive: true });
 
-// camera dial (#camDial, Sims-style): zoom / orbit / elevation; click = one nudge,
-// hold = continuous. Any press cancels a fly-tween, like grabbing the view.
+// camera pad (#movePad D-pad, GBA-style) + height rail (#elevRail): move / elevation; click =
+// one nudge, hold = continuous. Any press cancels a fly-tween, like grabbing the view.
 {
   const _doff = new THREE.Vector3();
   let dialAct = null, dialT = 0, dialRaf = 0, dialFadeT = 0;
@@ -5610,12 +5636,13 @@ renderer.domElement.addEventListener('wheel', () => { camTween = null; }, { pass
     dialT = T;
     dialRaf = requestAnimationFrame(dialLoop);
   }
-  for (const b of document.querySelectorAll('#camDial .db, #rotDial .db')) {
+  for (const b of document.querySelectorAll('#movePad .mp')) {
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       try { b.setPointerCapture(e.pointerId); } catch (_) {}
-      autoPan.stop(); // dial press = the user taking the camera
-      document.body.classList.add('dialing'); // touch devices: wake the faded dials
+      autoPan.stop(); // pad press = the user taking the camera
+      document.body.classList.add('dialing'); // touch devices: wake the faded controls
+      b.classList.add('pressed'); // GBA-key light-up while held
       clearTimeout(dialFadeT);
       dialAct = b.dataset.act; dialT = performance.now();
       dialStep(0.07); // the click nudge; holding keeps going from here
@@ -5624,11 +5651,126 @@ renderer.domElement.addEventListener('wheel', () => { camTween = null; }, { pass
     });
     const dialEnd = () => {
       dialAct = null; cancelAnimationFrame(dialRaf);
+      b.classList.remove('pressed');
       clearTimeout(dialFadeT);
-      dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500); // touch: dials fade back after use
+      dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500); // touch: controls fade back after use
     };
     b.addEventListener('pointerup', dialEnd);
     b.addEventListener('pointercancel', dialEnd);
+  }
+  // ---- desktop look joystick (#lookStick): the mobile GBA stick brought to desktop.
+  //      Analog yaw/pitch IN PLACE using the same math the old rotation dial's buttons
+  //      used (rl/rr yaw = swing the target around the camera; ro/ru pitch = tilt with
+  //      the ground-rest clamp), scaled by how far the knob is pushed. ----
+  {
+    const stick = document.getElementById('lookStick'), knob = document.getElementById('lookStickK');
+    const lk = { x: 0, y: 0 };
+    let sid = null, sRaf = 0, sT = 0;
+    const setKnob = () => { knob.style.transform = 'translate(calc(-50% + ' + (lk.x * 26) + 'px), calc(-50% + ' + (lk.y * 26) + 'px))'; };
+    function stickStep(dt) {
+      camTween = null;
+      if (fly.st.on) { // WASD/arrow flight active: feed the fly integrator directly (the
+        // GBA stick's route) so keys + stick work TOGETHER — same signs as mouse-look
+        fly.st.yaw += DIAL_RATE * dt * lk.x;                                        // push right → turn right
+        fly.st.pitch = clamp(fly.st.pitch - DIAL_RATE * dt * lk.y, -1.5, 1.5);      // push up → look up
+        return;
+      }
+      const t = controls.target;
+      _doff.copy(camera.position).sub(t);
+      const vx = -_doff.x, vy = -_doff.y, vz = -_doff.z; // camera → target
+      let r = Math.hypot(vx, vy, vz) || 1;
+      let theta = Math.atan2(vx, vz) + DIAL_RATE * dt * lk.x;                 // push right → turn right (the dial's rr sense)
+      let phi = Math.acos(clamp(vy / r, -1, 1));                             // 0 = looking straight up
+      phi = clamp(phi + DIAL_RATE * dt * lk.y, 0.06, 3.08);                  // push up (screen −y) → look up
+      const cy = Math.cos(phi);
+      if (cy < -0.001) r = Math.min(r, (camera.position.y - 1.9) / -cy);      // rest on the ground plane
+      else if (cy > 0.001) r = Math.min(r, Math.max((6480 - camera.position.y) / cy, 30)); // stay under the t.y cloud cap
+      r = Math.max(r, 30);
+      t.set(camera.position.x + Math.sin(phi) * Math.sin(theta) * r,
+            camera.position.y + cy * r,
+            camera.position.z + Math.sin(phi) * Math.cos(theta) * r);
+      controls.update();
+    }
+    function stickLoop(T) {
+      if (sid === null) { sRaf = 0; return; }
+      stickStep(Math.min((T - sT) / 1000, 0.05));
+      sT = T;
+      sRaf = requestAnimationFrame(stickLoop);
+    }
+    const track = (e) => {
+      const rc = stick.getBoundingClientRect();
+      let dx = (e.clientX - (rc.left + rc.width / 2)) / (rc.width / 2);
+      let dy = (e.clientY - (rc.top + rc.height / 2)) / (rc.height / 2);
+      const m = Math.hypot(dx, dy);
+      if (m > 1) { dx /= m; dy /= m; }
+      lk.x = dx; lk.y = dy;
+      setKnob();
+    };
+    stick.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); try { stick.setPointerCapture(e.pointerId); } catch (_) {}
+      autoPan.stop(); // stick grab = the user taking the camera
+      document.body.classList.add('dialing'); clearTimeout(dialFadeT);
+      sid = e.pointerId; stick.classList.add('pressed');
+      track(e);
+      sT = performance.now();
+      cancelAnimationFrame(sRaf);
+      sRaf = requestAnimationFrame(stickLoop);
+    });
+    stick.addEventListener('pointermove', (e) => { if (e.pointerId === sid) track(e); });
+    for (const t of ['pointerup', 'pointercancel'])
+      stick.addEventListener(t, (e) => {
+        if (e.pointerId !== sid) return;
+        sid = null; lk.x = lk.y = 0; setKnob(); stick.classList.remove('pressed');
+        clearTimeout(dialFadeT);
+        dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500);
+      });
+  }
+  // ---- height rail (#elevRail): one-axis analog — drag the knob up/down to climb/descend
+  //      at a rate scaled by displacement (the old +/− buttons' eu/ed math, made analog).
+  //      Springs back to center on release, same as the look stick. ----
+  {
+    const rail = document.getElementById('elevRail'), knob = document.getElementById('elevRailK');
+    let eid = null, eRaf = 0, eT = 0, ev = 0; // ev: −1 (knob at top, climb) … +1 (bottom, descend), screen sense
+    const KNOB_TRAVEL = 38; // px of knob ride each way inside the 112px well
+    const setKnob = () => { knob.style.transform = 'translate(-50%, calc(-50% + ' + (ev * KNOB_TRAVEL) + 'px))'; };
+    function railStep(dt) {
+      camTween = null;
+      const v = -ev * Math.max(camera.position.y * DIAL_RATE, 25) * dt; // push up (screen −y) → rise
+      const ny = clamp(camera.position.y + v, 6, 26000);
+      if (fly.st.on) { camera.position.y = ny; return; } // WASD flight: fly.tick re-aims the target each frame
+      controls.target.y += ny - camera.position.y;
+      camera.position.y = ny;
+      controls.update();
+    }
+    function railLoop(T) {
+      if (eid === null) { eRaf = 0; return; }
+      railStep(Math.min((T - eT) / 1000, 0.05));
+      eT = T;
+      eRaf = requestAnimationFrame(railLoop);
+    }
+    const track = (e) => {
+      const rc = rail.getBoundingClientRect();
+      ev = clamp((e.clientY - (rc.top + rc.height / 2)) / (rc.height / 2 - 14), -1, 1);
+      setKnob();
+    };
+    rail.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); try { rail.setPointerCapture(e.pointerId); } catch (_) {}
+      autoPan.stop(); // rail grab = the user taking the camera
+      document.body.classList.add('dialing'); clearTimeout(dialFadeT);
+      eid = e.pointerId; rail.classList.add('pressed');
+      track(e);
+      eT = performance.now();
+      cancelAnimationFrame(eRaf);
+      eRaf = requestAnimationFrame(railLoop);
+    });
+    rail.addEventListener('pointermove', (e) => { if (e.pointerId === eid) track(e); });
+    for (const t of ['pointerup', 'pointercancel'])
+      rail.addEventListener(t, (e) => {
+        if (e.pointerId !== eid) return;
+        eid = null; ev = 0; setKnob(); rail.classList.remove('pressed');
+        clearTimeout(dialFadeT);
+        dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500);
+      });
   }
 }
 
@@ -5988,8 +6130,8 @@ await bootStep(0.93, 'waking the city…'); // §26e boot bar: scene built, live
    Advance: canvas in the top 2/3 (RENDER_H), console shell in the bottom
    1/3. Here we (1) toggle body.gba as the phone rotates across the
    breakpoint, and (2) wire the console controls: a D-pad (left) for
-   horizontal-plane movement and a rotation dial (right, cloned from the
-   desktop #rotDial) for yaw/pitch + elevation. Both drive the §26c fly
+   horizontal-plane movement and an analog look stick (right — the same
+   stick desktop now has as #lookStick) for yaw/pitch + elevation. Both drive the §26c fly
    camera so drag-to-look on the screen keeps working. Wiring always
    attaches (testable on desktop by adding body.gba); elements hide off gba.
    ============================================================ */
