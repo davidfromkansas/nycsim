@@ -84,6 +84,7 @@ node server.js            # http://localhost:4173 — that's it, no install
 ```
 - Secrets live in git-ignored root files (ask the user if you don't have them):
   `opensky-credentials.json` (flights), `mta-bus-key.json` (buses),
+  `google-maps-key.json` or `GOOGLE_MAPS_API_KEY` (enable Places API (New) + Weather API),
   `gh-data-token.json` (history playback reads the private data branch),
   `ai-gateway-key.json` or `.env.local` via `vercel env pull` (concierge agent LLM;
   on Vercel deployments the OIDC token is automatic — enable AI Gateway on the project).

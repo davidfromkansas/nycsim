@@ -6,27 +6,78 @@ the rules on adding entries.
 
 ---
 
-## 🕹️ Console controls on desktop — joystick, D-pad & height switch
+## 🐦 City Concierge can answer and map air-quality questions
+
+**Shipped:** July 16, 2026
+
+**TL;DR:** Ask the City Concierge about official regional AQI, measured monitors, estimated neighborhood conditions, source freshness, comparisons, rankings, or recent recorded readings.
+
+**What you'll see:** The Concierge can report the official AirNow NYC-region current AQI, forecast, and Action Day status; search and compare NYCCAS monitors by 24-hour average, latest hourly PM2.5, change, peak, age, or derived NowCast; estimate and compare neighborhood AQI with confidence labels; find nearby monitors; and place monitor or neighborhood results directly on the map. It identifies delayed data as measurement age rather than claiming a device is offline, and keeps official AirNow values, measured NYCCAS readings, NYC SIM-derived station NowCasts, and NYC SIM neighborhood estimates clearly distinguished.
+
+**How it works:** A read-only `get_air_quality` agent tool uses the same cached `/api/air-quality` response as the Air Quality Hub, so questions add no upstream traffic. Compact NYCCAS rows are decoded into labeled metrics with the Hub's freshness thresholds. Live neighborhood estimates use official 2020 NTA centroids and inverse-distance-squared interpolation from up to four current NYCCAS monitors, matching the Hub method. The existing layer tool maps results, while timeline queries decode recorded NYCCAS snapshots without inventing historical AirNow forecasts or neighborhood estimates.
+
+---
+
+## 🌦️ Hyperlocal NYC conditions — Google Weather with measured fallbacks
+
+**Shipped:** July 16, 2026
+
+**TL;DR:** The city clock's temperature, conditions, wind, cloud cover, visibility, and
+precipitation now use Google Maps Platform Weather as the primary live source.
+
+**What you'll see:** The existing time-and-weather panel keeps the same compact controls,
+but its current conditions now come from Google's hyperlocal weather service. Wind still
+shows a compass direction and mph, while rain, snow, clouds, visibility, lighting, water,
+steam, birds, and street effects continue responding to the same live weather state.
+
+**How it works:** The server calls Google Weather for Central Park coordinates with the
+server-only Maps credential, converts its units and condition types into NYC SIM's existing
+weather contract, and caches the result for five minutes. If Google is unavailable or the
+Weather API is not enabled for the key, the route automatically falls back to the measured
+Central Park/LaGuardia/Newark NWS station cluster and then Open-Meteo. The browser receives
+only the normalized same-origin `/api/weather` response; the Google key is never exposed.
+
+---
+
+## 🌬️ Air Quality Hub — official NowCast, neighborhood estimates + measured sensors
+
+**Shipped:** July 16, 2026
+
+**TL;DR:** The Air Quality Hub combines an official AirNow NYC-region NowCast meter, borough-organized neighborhood AQI estimates, the complete measured NYCCAS sensor network, and the existing all-borough PM2.5 map.
+
+**What you'll see:** Select the air-quality icon on the lower-left to reveal measured pillars at active NYCCAS monitor locations and a low translucent field across land in all five boroughs. The estimated disk field is anchored just above the city surface, rather than floating above the skyline, so it appears with the layer while roads and buildings remain legible. The **AIR QUALITY HUB** opens on a **Neighborhoods** tab with Manhattan, Brooklyn, Queens, Bronx, and Staten Island subtabs covering 197 residential 2020 Neighborhood Tabulation Areas, while the **Sensor Network** tab lists every monitor present in the latest source feed with its rolling 24-hour average PM2.5 in µg/m³—the same primary metric shown by NYC Health—plus its latest hourly reading, one-hour change, exact measurement interval, time since that interval ended, and highest measurement from the latest 12-hour window. Rows say **CURRENT**, **DATA DELAYED**, or **UPDATE OVERDUE** based on measurement age; these describe data freshness, not device connectivity. The panel reports when its source refresh is delayed, counts recently updated monitors, shows when it will check again, and identifies whether the newest station rows came from the dashboard **PORTAL**, monthly **ARCHIVE**, or a **MIXED** combination. A color-scaled meter at the top shows the official EPA AirNow NYC-region current PM2.5 NowCast, today's forecast, and any active Air Quality Action Day. Neighborhood cards label the result **EST. AQI** and show its category, nearest-monitor distance, and coverage confidence; only the regional AirNow meter and individual station calculations use the NowCast label. Select a row or map label to fly to that monitor and see NYC SIM's independently calculated station-level EPA-style PM2.5 NowCast when enough recent hours exist. The legend reports the measured city range and distinguishes measured beacons from the estimated surface. Recorded timeline snapshots say **RECORDED** and never mix present-day readings into the past.
+
+**How it works:** NYC SIM reads the same rolling [portal measurements CSV](https://raw.githubusercontent.com/nychealth/nyccas-data/refs/heads/main/portal/view.csv) used by the official [NYC Health real-time air-quality dashboard](https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/), plus the dynamically selected current and previous [monthly UTC archives](https://github.com/nychealth/nyccas-data/tree/main/hist/csv) and [monitor metadata CSV](https://raw.githubusercontent.com/nychealth/nyccas-data/refs/heads/main/portal/station-new.csv), all maintained in the [NYC Health + Queens College data repository](https://github.com/nychealth/nyccas-data). The backend bypasses intermediary caches, checks all candidates every minute, normalizes the portal's daylight-aware New York timestamps and archive UTC timestamps, treats each observation timestamp as the beginning of its one-hour averaging interval, deduplicates matching observations by SiteID and time, and serves each monitor's newest valid row from whichever official file is ahead. Content hashes, source timestamps, and bounded change/failure states make upstream changes observable without exposing raw files in the UI. Delayed observations remain visible with their real age rather than inventing a device-offline state; if a source fails, the other candidates and then the last successful response remain available. The source publishes hourly, and its corrected DustTrak measurements are preliminary and subject to change. When sufficient recent hours exist, NYC SIM derives a PM2.5 NowCast using the [US EPA NowCast method](https://usepa.servicenowservices.com/airnow?id=kb_article_view&sysparm_article=KB0011856). Beacon colors and the estimated surface use the rolling 24-hour averages for direct comparison with NYC Health, while details retain the latest hourly measurement and NYC SIM's derived EPA-style NowCast. Neighborhood AQI estimates use official NTA polygon centroids, interpolate NowCast PM2.5 concentration from up to four nearest current non-stale monitors with inverse-distance-squared weighting, and only then convert concentration through EPA's nonlinear AQI breakpoints; they are estimates, not official AirNow neighborhood values. Official regional AQI context comes from AirNow's PM2.5 current-condition, forecast, and Action Day RSS feeds and is cached separately so an AirNow failure cannot suppress NYCCAS monitor data. The estimated surface starts from the official [2024 NYCCAS 300 m annual PM2.5 raster](https://data.cityofnewyork.us/Environment/NYCCAS-Air-Pollution-Rasters/q68s-8qxv), baked into a 28 KB/600 m grid, then interpolates each monitor's departure from that long-term baseline; distance and monitor coverage reduce opacity. The surface between monitors is a visualization estimate, not a measured block-level reading or official AQI prediction. Both layers use the twin's frozen geographic calibration and land mask, load only when enabled, and are captured by both recorder paths.
+
+---
+
+## 🕹️ Controlled-angle desktop camera — orbit, elevation & pitch dials
 
 **Shipped:** July 15, 2026
 
-**TL;DR:** The desktop camera dials are gone; in their place is the mobile GBA shell's
-control set — an analog look joystick, a Knicks-orange movement D-pad, and a new
-fader-style height switch — and they all work at the same time as WASD/arrow keys.
+**TL;DR:** Desktop navigation now uses dedicated tactile controls for orbit, elevation,
+zoom, movement, and a safely adjustable cinematic pitch.
 
-**What you'll see:** Bottom-right, the recessed navy well with the knurled orange knob
-(push to look around — farther = faster, any angle mixes turn and tilt), a vertical
-height rail beside it with an orange switch cap (drag up to climb, down to descend,
-springs back to center), and the orange direction cross below for forward/back/left/
-right glides. Keys light up while held, exactly like the phone console. Hold W and
-drag the stick and the switch at once — all three compose.
+**What you'll see:** Lower-left on desktop, a compact retro life-sim-style blue hardware
+panel houses a metallic-rimmed circular control split into four beveled navy wedges, a
+vertical pitch fader, and integrated City Vitals. Trains, buses, ferries, and available bikes use live
+filled activity bars instead of ratio rings. Pale cyan arrows surround a raised steel-blue +/−
+capsule. The pitch fader sits beside the dial: pull up to look higher or down to look toward the ground, with tilt speed
+proportional to displacement, and release to spring back to center while retaining the
+selected angle. The outer curved left/right arrows orbit around the current city pivot;
+outer up/down raises or lowers camera and pivot together; center +/− zooms. Tap for a measured nudge or hold for continuous
+movement. WASD/arrow keys translate forward, backward, left, and right while preserving
+framing, and remain fully composable with any held on-screen control. Free-look, pan,
+scroll-zoom, and desktop fly controls remain disabled; mobile keeps its GBA controls.
 
-**How it works:** The stick reuses the retired rotation dial's in-place yaw/pitch math
-(target swung around a stationary camera, pitch with the ground-rest clamp) in orbit
-mode, and feeds the §26c fly integrator directly when key-flight is active — the same
-route the mobile stick takes, which is what lets keys and analog controls run
-concurrently. The height rail is the old +/− elevation math made analog, scaled by
-knob displacement. Styling is lifted verbatim from the §26e GBA shell.
+**How it works:** Fine-pointer desktop OrbitControls hold the current controlled polar angle.
+The dial rotates or scales the camera offset around its target, or translates camera and
+target vertically together. Zoom retains a minimum linear rate near the ground instead of
+slowing toward zero. The pitch fader tilts the target around the stationary camera within
+safe view limits while preserving heading and orbit distance. Every held pointer and key is
+tracked independently, while keyboard movement translates both camera and target so pitch
+and orbit distance do not drift. Programmatic views and Home flights still choose the pivot
+and distance, then settle into the currently controlled angle.
 
 ---
 
@@ -62,6 +113,64 @@ refit vertex-by-vertex to Census TIGER AREAWATER polygons — the hand-drawn New
 Creek ran up to 280 m off the real channel — and the ground-mask bake carves the same
 shapes from the backfill layer ([scripts/bk_south_land.py](scripts/bk_south_land.py),
 [scripts/qn_east_streets.py](scripts/qn_east_streets.py)).
+
+---
+
+##  Home — sign in and the city opens at your block
+
+**Shipped:** July 14, 2026
+
+**TL;DR:** Sign in with Google, type your address once, and every visit to NYC Sim
+opens at your home — with a resident dashboard of your nearest trains, Citi Bikes,
+buses and ferries, live.
+
+**What you'll see:** A **HOME** button — on phones it takes over the GBA button that
+used to say RESET; on desktop it's a pill under the logo. Signed out, it opens Google
+sign-in; then you type your address ("350 5th Ave, Manhattan") and see live Google
+Places autocomplete suggestions as you type, the camera pre-flies to the block it
+found, and you confirm "Yes, that's home." From then on: a 2.4 km-tall pulsing light column
+sized to the saved address's real building footprint marks your block, a clickable 🏠 Home chip
+tracks it, and returning signed-in visits replace the default Manhattan tour with a close
+ambient orbit around the saved block. Selecting Home again first refreshes the latest saved
+location, flies there, then resumes the slow orbit; grabbing the city hands rotation back to
+you immediately. The 25%-wider **Transport Hub** uses a
+Sims-inspired glossy blue frame in the upper-right City Vitals position, animated green
+plumbob, and four toggleable tabs —
+Subway, Buses, Bikes, and Ferry — with white segmented status cards inside a fixed-height
+scrolling body, so tab changes never resize the module. Subway stations within 1 km can
+be pinned persistently to the top; every bus stop within 0.5 miles is listed nearest-first,
+can also be pinned persistently, and shows live SIRI arrivals when available or the next
+official scheduled service beyond the live window; every
+open Citi Bike station within 500 m that has an electric bike is listed nearest-first and can
+be pinned persistently, with distance and availability counts aligned beneath its title;
+and the closest ferry terminal shows live route, destination, and arrival countdowns, falling
+back to its next official scheduled departure when no vessel call is currently predicted. Only
+upcoming trains are listed, using
+official [MTA trunk-color bullets](https://en.wikipedia.org/wiki/New_York_City_Subway_nomenclature),
+including rush-hour diamonds. Arrivals come from complete GTFS stop sequences (not
+the 3D renderer’s clipped track geometry), so stations such as Clark St remain populated.
+Station distance sits below its name; Uptown and Downtown labels each sit above a vertically
+aligned arrival row; the bike row includes
+electric/classic bike and free-dock counts. A ⚙ manages everything: change address,
+sign out, or delete your data outright.
+During timeline replay the panel says "replaying \<day\> — not live." On desktop, City
+Vitals now sits beneath the timeline while time/weather, timeline, and Vitals share one width.
+
+**How it works:** Identity is [Google Sign-In](https://developers.google.com/identity/gsi/web)
+(verified server-side; we keep your first name and email — the email privately, only so
+we can reach out about feedback). As you type, the address input calls a server-side
+[Google Places Autocomplete](https://developers.google.com/maps/documentation/places/web-service/autocomplete)
+endpoint biased to the NYC area; selecting a suggestion fills the field and the chosen
+full address is geocoded once through the same Google Places service and
+then **discarded — the street address is never stored**; only the map coordinates
+(encrypted at rest in a private store) and the public-safe neighborhood name are kept.
+Nothing about your home is visible to anyone else. The dashboard invents no new data:
+it reads the same live [MTA GTFS-realtime](https://api.mta.info/) and
+[Citi Bike GBFS](https://gbfs.citibikenyc.com/) feeds the map already shows, plus
+24-hour-cached official [MTA Bus static GTFS](https://www.mta.info/developers) and
+[NYC Ferry GTFS](http://nycferry.connexionz.net/rtt/public/utility/gtfs.aspx) stop
+lists, all anchored to your saved point. Deleting your home removes the stored record
+entirely and signs you out.
 
 ---
 

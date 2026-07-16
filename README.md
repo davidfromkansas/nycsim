@@ -9,8 +9,8 @@ real city flowing through it live.
   Census PUMS records, thinking Sims-style thoughts.
 - **Live layers**: flights (ADS-B), subway (MTA GTFS-realtime, every trunk incl. the
   G), NYC Ferry GPS, MTA buses, Citi Bike docks, 800+ traffic cameras you can watch,
-  bird migration radar (BirdCast), 311 calls, street speeds, NWS weather — rain in
-  the city is rain in the sim.
+  bird migration radar (BirdCast), 311 calls, street speeds, Google Weather with
+  NWS/Open-Meteo fallbacks — rain in the city is rain in the sim.
 - **Time travel**: a nightly recorder snapshots everything; the timeline slider
   replays the last 7 days.
 - **City Concierge**: an LLM agent with spatial tools — ask it anything about what

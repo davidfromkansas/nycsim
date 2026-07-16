@@ -36,10 +36,10 @@ module.exports = async (req, res) => {
       try { const r = await fetch(base + p, { signal: AbortSignal.timeout(45000) }); return r.ok ? r.json() : null; }
       catch { return null; }
     };
-    const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds, n311] = await Promise.all([
+    const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds, n311, airQuality] = await Promise.all([
       get('/api/buses'), get('/api/citibike'), get('/api/ferries'),
       get('/api/flights'), get('/api/weather'), get('/api/subway'),
-      get('/api/traffic'), get('/api/traffic-events'), get('/api/birds'), get('/api/nyc311')
+      get('/api/traffic'), get('/api/traffic-events'), get('/api/birds'), get('/api/nyc311'), get('/api/air-quality')
     ]);
     const r5 = (v) => Math.round(v * 1e5) / 1e5;
     const now = new Date();
@@ -48,10 +48,12 @@ module.exports = async (req, res) => {
       v: 1, t: now.toISOString(), kind: 'daily',
       weather: weather?.current ?? null,
       buses: (buses?.buses ?? []).map(b => [b.id.replace(/^[^_]*_/, ''), b.route, r5(b.lat), r5(b.lon),
-        Math.round(b.bearing ?? -1), Math.round((b.speedMs ?? 0) * 10) / 10, b.dest || '']),
+        Math.round(b.bearing ?? -1), Math.round((b.speedMs ?? 0) * 10) / 10, b.dest || '',
+        (b.calls || []).map(c => [c.stopId, c.at])]),
       bikes: (bikes?.stations ?? []).map(s => [s.id, s.bikes, s.ebikes, s.docks, s.on ? 1 : 0]),
       ferries: (ferries?.vessels ?? []).map(v => [v.id, v.label, r5(v.lat), r5(v.lon),
-        Math.round(v.heading ?? -1), Math.round((v.speedMs ?? 0) * 10) / 10, v.route || '', v.headsign || '', v.docked ? 1 : 0]),
+        Math.round(v.heading ?? -1), Math.round((v.speedMs ?? 0) * 10) / 10, v.route || '', v.headsign || '', v.docked ? 1 : 0,
+        (v.calls || []).map(c => [c.stopId, c.name, c.at])]),
       flights: (flights?.ac ?? []).map(a => [a.hex, a.cs, r5(a.lat), r5(a.lon),
         Math.round(a.altM), Math.round(a.gsMs), Math.round(a.track), a.kind === 'heli' ? 'heli' : 'jet']),
       subway: subway ? { trips: subway.trips, vehStatus: subway.vehStatus } : null,
@@ -65,6 +67,7 @@ module.exports = async (req, res) => {
       trafficEvents: (trafficEvents?.events ?? []).map(e => [e.id, e.kind, e.sev,
         e.road || '', e.dir || '', r5(e.lat), r5(e.lon), e.desc || '']),
       nyc311: n311?.rows ?? [], // already compact rows straight off /api/nyc311
+      airQuality: airQuality?.rows ?? [],
       schema: {
         buses: 'id,route,lat,lon,bearing,speedMs,dest',
         bikes: 'stationId,bikes,ebikes,docks,on',
@@ -72,7 +75,8 @@ module.exports = async (req, res) => {
         flights: 'hex,callsign,lat,lon,altM,gsMs,track,kind',
         traffic: 'linkId,speedMph,travelTimeS',
         trafficEvents: 'id,kind,severity,road,direction,lat,lon,desc',
-        nyc311: 'lat,lon,type,descriptor,address,borough,status,createdEpochMin'
+        nyc311: 'lat,lon,type,descriptor,address,borough,status,createdEpochMin',
+        airQuality: 'siteId,name,lat,lon,latestHourlyPm25,observedEpochMin,delta1h,nowcastAqi,peak12hPm25,peak12hEpochMin,average24hPm25,average24hObservationCount,nowcastPm25'
       }
     };
 
@@ -110,7 +114,8 @@ module.exports = async (req, res) => {
     res.end(JSON.stringify({ ok: true, day, counts: {
       buses: frame.buses.length, bikes: frame.bikes.length, ferries: frame.ferries.length,
       flights: frame.flights.length, subwayTrips: frame.subway ? frame.subway.trips.length : 0,
-      traffic: frame.traffic.length, trafficEvents: frame.trafficEvents.length }, kept }));
+      traffic: frame.traffic.length, trafficEvents: frame.trafficEvents.length,
+      airQuality: frame.airQuality.length }, kept }));
   } catch (e) {
     console.error('[record]', e.message || e);
     res.statusCode = 500;

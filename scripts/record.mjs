@@ -41,11 +41,11 @@ const Y = now.getUTCFullYear(), M = pad(now.getUTCMonth() + 1), D = pad(now.getU
 const q = Math.floor(now.getUTCMinutes() / 15) * 15;
 const stamp = `${pad(now.getUTCHours())}${pad(q)}`;
 
-const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds, n311] = await Promise.all([
+const [buses, bikes, ferries, flights, weather, subway, traffic, trafficEvents, birds, n311, airQuality] = await Promise.all([
   tryGet('/api/buses'), tryGet('/api/citibike'), tryGet('/api/ferries'),
   tryGet('/api/flights'), tryGet('/api/weather'),
   DAILY ? tryGet('/api/subway') : Promise.resolve(null),
-  tryGet('/api/traffic'), tryGet('/api/traffic-events'), tryGet('/api/birds'), tryGet('/api/nyc311')
+  tryGet('/api/traffic'), tryGet('/api/traffic-events'), tryGet('/api/birds'), tryGet('/api/nyc311'), tryGet('/api/air-quality')
 ]);
 
 const frame = {
@@ -54,10 +54,12 @@ const frame = {
   kind: DAILY ? 'daily' : 'frame',
   weather: weather?.current ?? null,
   buses: (buses?.buses ?? []).map(b => [b.id.replace(/^[^_]*_/, ''), b.route, r5(b.lat), r5(b.lon),
-    Math.round(b.bearing ?? -1), Math.round((b.speedMs ?? 0) * 10) / 10, b.dest || '']),
+    Math.round(b.bearing ?? -1), Math.round((b.speedMs ?? 0) * 10) / 10, b.dest || '',
+    (b.calls || []).map(c => [c.stopId, c.at])]),
   bikes: (bikes?.stations ?? []).map(s => [s.id, s.bikes, s.ebikes, s.docks, s.on ? 1 : 0]),
   ferries: (ferries?.vessels ?? []).map(v => [v.id, v.label, r5(v.lat), r5(v.lon),
-    Math.round(v.heading ?? -1), Math.round((v.speedMs ?? 0) * 10) / 10, v.route || '', v.headsign || '', v.docked ? 1 : 0]),
+    Math.round(v.heading ?? -1), Math.round((v.speedMs ?? 0) * 10) / 10, v.route || '', v.headsign || '', v.docked ? 1 : 0,
+    (v.calls || []).map(c => [c.stopId, c.name, c.at])]),
   flights: (flights?.ac ?? []).map(a => [a.hex, a.cs, r5(a.lat), r5(a.lon),
     Math.round(a.altM), Math.round(a.gsMs), Math.round(a.track), a.kind === 'heli' ? 'heli' : 'jet']),
   // BirdCast (Cornell Lab) radar migration over Manhattan
@@ -69,6 +71,7 @@ const frame = {
   trafficEvents: (trafficEvents?.events ?? []).map(e => [e.id, e.kind, e.sev,
     e.road || '', e.dir || '', r5(e.lat), r5(e.lon), e.desc || '']),
   nyc311: n311?.rows ?? [], // already compact rows straight off /api/nyc311
+  airQuality: airQuality?.rows ?? [],
   schema: {
     buses: 'id,route,lat,lon,bearing,speedMs,dest',
     bikes: 'stationId,bikes,ebikes,docks,on',
@@ -76,7 +79,8 @@ const frame = {
     flights: 'hex,callsign,lat,lon,altM,gsMs,track,kind',
     traffic: 'linkId,speedMph,travelTimeS',
     trafficEvents: 'id,kind,severity,road,direction,lat,lon,desc',
-    nyc311: 'lat,lon,type,descriptor,address,borough,status,createdEpochMin'
+    nyc311: 'lat,lon,type,descriptor,address,borough,status,createdEpochMin',
+    airQuality: 'siteId,name,lat,lon,latestHourlyPm25,observedEpochMin,delta1h,nowcastAqi,peak12hPm25,peak12hEpochMin,average24hPm25,average24hObservationCount,nowcastPm25'
   }
 };
 if (DAILY && subway) frame.subway = { trips: subway.trips, vehStatus: subway.vehStatus };
@@ -86,7 +90,7 @@ const file = path.join(ROOT, rel);
 await mkdir(path.dirname(file), { recursive: true });
 await writeFile(file, JSON.stringify(frame));
 console.log('wrote', file,
-  `(${frame.buses.length} buses, ${frame.bikes.length} docks, ${frame.ferries.length} ferries, ${frame.flights.length} aircraft${DAILY ? ', + subway' : ''})`);
+  `(${frame.buses.length} buses, ${frame.bikes.length} docks, ${frame.ferries.length} ferries, ${frame.flights.length} aircraft, ${frame.airQuality.length} air monitors${DAILY ? ', + subway' : ''})`);
 
 // ---- prune frames beyond retention (daily keyframes use the same window) ----
 const cutoff = Date.now() - RETENTION_DAYS * 86400_000;

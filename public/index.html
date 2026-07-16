@@ -9,7 +9,7 @@
   canvas { display:block; }
   button, select, .thoughtB, .fybl { touch-action:manipulation; } /* no Safari double-tap zoom on controls */
   #ui {
-    position:fixed; left:50%; bottom:42px; transform:translateX(-50%); /* clears the 34 px #ticker strip */
+    position:fixed; left:50%; bottom:42px; transform:translateX(-50%); /* clears the #thoughtTicker strip */
     display:flex; gap:10px; align-items:center; z-index:10;
     font:11px/1.4 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.85);
     background:rgba(10,13,20,.55); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
@@ -67,8 +67,9 @@
     filter:drop-shadow(0 4px 12px rgba(0,10,30,.4));
   }
   #brand img { display:block; width:100%; height:auto; }
-  #fbBtn { /* Give Feedback — mailto pill centered below the logo (desktop only, rides #brand) */
-    display:block; width:max-content; margin:6px auto 0; pointer-events:auto; /* #brand itself is pointer-events:none */
+  #brandActions { display:flex; align-items:center; justify-content:center; gap:6px; }
+  #fbBtn { /* Give Feedback — mailto pill below the logo (desktop only, rides #brand) */
+    display:block; width:max-content; margin:6px 0 0; pointer-events:auto; /* #brand itself is pointer-events:none */
     font:600 11px/1.2 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.92); text-decoration:none;
     background:rgba(10,13,20,.55); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:5px 11px;
     backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
@@ -76,15 +77,11 @@
   #fbBtn:hover { background:rgba(25,45,70,.78); border-color:rgba(140,190,255,.4); }
   body.photo #brand { display:none !important; } /* clean screenshots */
   @media (max-width: 820px) { #brand { display:none; } } /* the top bar is full on phones/tablets — no room to center it */
-  #credit { /* attribution badge — shared style; positioned per breakpoint below */
-    display:block; position:fixed; z-index:11;
+  #credit {
+    display:block; width:max-content; margin:6px 0 0; pointer-events:auto;
     font:600 11px/1.2 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.92); text-decoration:none;
     background:rgba(10,13,20,.55); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:5px 9px;
     backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); touch-action:manipulation;
-  }
-  @media (min-width: 701px) { #credit { top:227px; right:12px; } } /* desktop: just below City Vitals */
-  @media (max-width: 700px) { /* phones: top-right corner */
-    #credit { top:calc(10px + env(safe-area-inset-top, 0px)); right:calc(8px + env(safe-area-inset-right, 0px)); }
   }
   body.photo #credit, body.agent #credit, body.focusmode #credit { display:none !important; } /* clean screenshots + declutter */
   body.touchnav #joy { display:block; }
@@ -127,12 +124,20 @@
     display:flex; flex-direction:column; align-items:stretch; gap:8px;
     transform:scale(.75); transform-origin:top left; /* 25% smaller (mobile query overrides to .72) */
   }
-  #chip { /* Sims-style status panel: glossy white segments (time/temp/weather/wind) + city-radio speaker */
+  @media (min-width:901px) {
+    #hud { width:512.5px; }
+    #chipRow { width:max-content; }
+    #chipRow #chip { flex:0 0 512.5px; width:512.5px; }
+    #scrub, #vitals, #wxAlerts, #aqLegend { width:100%; box-sizing:border-box; }
+  }
+  #chipRow { display:flex; align-items:center; gap:8px; }
+  #chip { /* Sims-style status panel: glossy white segments (time/temp/weather/wind) */
     display:flex; align-items:center; flex-wrap:wrap; justify-content:space-evenly;
     font:12px/1.2 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
     color:#1d4f9c; user-select:none; transition:opacity .4s; white-space:nowrap;
     background:linear-gradient(180deg,#fff 0%,#f3f8fe 45%,#e2edfb 100%);
     background-color:#f3f8fe; /* solid fallback — iOS sheds gradient layers under memory pressure */
+    flex:1; min-width:0; box-sizing:border-box;
     border:2px solid #fff; border-radius:18px; padding:6px 8px;
     box-shadow:0 5px 16px rgba(8,20,50,.4), inset 0 1px 0 #fff, inset 0 -3px 8px rgba(130,160,210,.28);
   }
@@ -145,9 +150,9 @@
   #chip .sep { align-self:stretch; width:1px; margin:3px 0;
     background:linear-gradient(180deg,transparent,#b9cdea,transparent); }
   #chip .wxi { font-size:23px; }
-  #chSnd { width:36px; height:36px; margin-left:6px; padding:4px; cursor:pointer; border-radius:50%;
-    border:1px solid #d3e2f6; background:linear-gradient(180deg,#fff,#e7f0fc);
-    box-shadow:0 1px 3px rgba(20,40,90,.25), inset 0 1px 0 #fff; transition:transform .15s; }
+  #chSnd { width:44px; height:44px; flex:none; padding:5px; cursor:pointer; border-radius:50%;
+    border:2px solid #fff; background:linear-gradient(180deg,#fff,#e7f0fc);
+    box-shadow:0 5px 16px rgba(8,20,50,.4),inset 0 1px 0 #fff,inset 0 -3px 8px rgba(130,160,210,.22); transition:transform .15s; }
   #chSnd:hover { transform:scale(1.08); }
   #chSnd svg { display:block; width:100%; height:100%; }
   #chip .xtra { flex-basis:100%; display:none; text-align:right; padding:3px 6px 0;
@@ -165,27 +170,8 @@
   #wxAlerts .wxr { display:flex; gap:7px; align-items:baseline; padding:1px 0;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #wxAlerts .wxr b { color:#7a2d12; flex:none; }
-  #ticker { /* live NYC headlines (amNY + THE CITY) — strip flush with the screen bottom (#ui floats above) */
-    position:fixed; left:0; right:0; bottom:0; z-index:12; height:34px; display:none; /* z12: above the entity chips (z9) — nothing covers the tickers */
-    overflow:hidden; user-select:none;
-    font:12.5px/34px 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
-    background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(226,237,251,.72));
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    border-top:1px solid rgba(255,255,255,.75); border-bottom:1px solid rgba(180,200,230,.5);
-  }
-  #ticker .tkin { display:inline-flex; white-space:nowrap; will-change:transform;
-    animation:tkscroll linear infinite; }
-  #ticker:hover .tkin { animation-play-state:paused; }
-  #ticker a { color:#000; text-decoration:none; padding:0 14px; } /* black: legible over the busy scene */
-  #ticker a:hover { text-decoration:underline; }
-  #ticker .src { color:#555; font-size:10px; margin-right:7px; letter-spacing:.4px; }
-  #ticker i.sep { color:#9fb6da; font-style:normal; }
   @keyframes tkscroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
-  body.photo #ticker, body.focusmode #ticker, body.manual #ticker { display:none !important; }
   @media (max-width: 700px) { /* phones: entity nav becomes an icon-only vertical column on the right, above David */
-    /* both tickers stay, pinned full-width at the very bottom (news below thoughts),
-       above the home indicator; David + the icon column stack above them */
-    #ticker { bottom:env(safe-area-inset-bottom, 0px); }
     #ui {
       left:auto; right:8px; transform:none; bottom:calc(198px + env(safe-area-inset-bottom, 0px));
       flex-direction:column; gap:7px; max-width:none;
@@ -201,15 +187,14 @@
       backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     }
   }
-  #thoughtTicker { /* resident-thought marquee — stacked right above the headlines */
-    position:fixed; left:0; right:0; bottom:34px; z-index:12; height:30px; display:none; /* z12: above the entity chips (z9) */
+  #thoughtTicker { /* resident-thought marquee */
+    position:fixed; left:0; right:0; bottom:0; z-index:12; height:30px; display:none; /* z12: above the entity chips (z9) */
     overflow:hidden; user-select:none;
     font:12px/30px 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
     background:linear-gradient(180deg,rgba(240,246,255,.66),rgba(216,230,249,.66));
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     border-top:1px solid rgba(255,255,255,.75); border-bottom:1px solid rgba(190,208,235,.45);
   }
-  #thoughtTicker.solo { bottom:0; } /* headlines strip hidden → drop flush with the screen edge */
   #thoughtTicker .tkin { display:inline-flex; white-space:nowrap; will-change:transform; animation:tkscroll linear infinite; }
   #thoughtTicker:hover .tkin { animation-play-state:paused; }
   #thoughtTicker .th { color:#000; cursor:pointer; padding:0 14px; } /* black: legible over the busy scene */
@@ -217,9 +202,9 @@
   #thoughtTicker .th .ic { margin-right:6px; text-decoration:none; display:inline-block; }
   #thoughtTicker .th .who { color:#555; font-size:10px; margin-left:7px; letter-spacing:.3px; }
   #thoughtTicker i.sep { color:#9fb6da; font-style:normal; }
-  @media (min-width: 701px) { body.thticker #ui { bottom:74px; } } /* clears both strips; phones hide the tickers + dock the bar flush */
+  @media (min-width: 701px) { body.thticker #ui { bottom:42px; } }
   body.photo #thoughtTicker, body.focusmode #thoughtTicker, body.manual #thoughtTicker { display:none !important; }
-  @media (max-width: 700px) { #thoughtTicker { bottom:calc(34px + env(safe-area-inset-bottom, 0px)); } }
+  @media (max-width: 700px) { #thoughtTicker { bottom:env(safe-area-inset-bottom, 0px); } }
   .flbl {
     position:fixed; left:0; top:0; z-index:9; display:none; pointer-events:auto; cursor:pointer;
     font:10px/1.35 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.85);
@@ -272,6 +257,15 @@
   #focusChip .off { color:rgba(255,255,255,.4); }
   .fybl.traffic { border-color:rgba(255,130,95,.4); } /* traffic chips: incident ember accent */
   .fybl.n311 { border-color:rgba(150,190,255,.4); } /* 311 chips: civic blue accent */
+  .fybl.airq {
+    min-width:260px; max-width:min(420px,calc(100vw - 24px));
+    border-color:rgba(107,190,110,.52); border-radius:9px; padding:7px 10px;
+    font-size:11px; line-height:1.45; white-space:normal;
+  }
+  .fybl.airq b { color:#b9f2a8; }
+  .fybl.airq:not(.open):not(#focusChip) .sub { display:inline; }
+  .fybl.airq:not(.open):not(#focusChip) br { display:block; }
+  .fybl.airq:not(.open):not(#focusChip):has(.sub)::after { content:none; }
   .fybl.traffic b { color:#ff8a66; }
   .flbl b { color:#fff; font-weight:600; }
   .flbl .sub { color:rgba(255,255,255,.55); }
@@ -303,129 +297,266 @@
     background:linear-gradient(180deg,#fff,#e7f0fc); border:1px solid #d3e2f6;
     border-radius:8px; padding:2px 8px; box-shadow:0 1px 3px rgba(20,40,90,.2), inset 0 1px 0 #fff;
   }
-  body.photo #chip, body.manual #chip, body.photo #scrub, body.manual #scrub { opacity:0; pointer-events:none; }
-  #agentFab { /* the concierge persona — portrait + "Talk to me!" pill (public/concierge-*.png) */
-    position:fixed; right:12px; bottom:8px; z-index:31; width:128px; cursor:pointer;
+  body.photo #chipRow, body.manual #chipRow, body.photo #scrub, body.manual #scrub { opacity:0; pointer-events:none; }
+  #agentFab { /* the concierge persona — pigeon + "Talk to me!" artwork (public/pigeon_back.png) */
+    position:fixed; right:12px; bottom:8px; z-index:31; width:192px; cursor:pointer;
     padding:0; border:none; background:none; transition:opacity .4s, transform .25s;
     filter:drop-shadow(0 4px 10px rgba(0,0,0,.5));
   }
   #agentFab img { display:block; width:100%; pointer-events:none; }
-  #agentFab img.talk { position:absolute; left:14%; bottom:8%; width:72%; } /* pill overlaps his chest, per the source art */
   #agentFab:hover { transform:scale(1.05) translateY(-2px); }
-  @media (max-width: 600px) { #agentFab { width:84px; right:6px; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); } } /* just above the two ticker strips */
-  #movePad { /* desktop movement D-pad (replaces the old Sims dial): the SAME Knicks-orange
-     cross as the mobile GBA shell — forward/back/left/right, click = nudge, hold = glide. */
-    display:grid; position:fixed; right:22px; bottom:216px; z-index:31; width:112px; height:112px;
-    grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
-    user-select:none; -webkit-user-select:none; touch-action:none;
-    filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); transition:opacity .4s;
-  }
-  #movePad .mp {
-    -webkit-appearance:none; appearance:none; border:none; margin:0; padding:0; cursor:pointer;
-    position:relative; background:linear-gradient(180deg,#f28a3e,#dd6e1e); touch-action:none; /* Knicks orange */
-    background-color:#e87f30;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
-  }
-  #movePad .mp.up    { grid-area:1/2/2/3; border-radius:9px 9px 0 0; }
-  #movePad .mp.left  { grid-area:2/1/3/2; border-radius:9px 0 0 9px; }
-  #movePad .mp.right { grid-area:2/3/3/4; border-radius:0 9px 9px 0; }
-  #movePad .mp.down  { grid-area:3/2/4/3; border-radius:0 0 9px 9px; }
-  #movePad .mp-hub   { grid-area:2/2/3/3; background:#c4661d; box-shadow:inset 0 0 6px rgba(90,40,0,.5); pointer-events:none; }
-  #movePad .mp::after { /* direction triangle */
-    content:''; position:absolute; left:50%; top:50%; width:0; height:0; opacity:.72; pointer-events:none;
-  }
-  #movePad .mp.up::after    { transform:translate(-50%,-70%); border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:8px solid #fff; }
-  #movePad .mp.down::after  { transform:translate(-50%,-30%); border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #fff; }
-  #movePad .mp.left::after  { transform:translate(-70%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-right:8px solid #fff; }
-  #movePad .mp.right::after { transform:translate(-30%,-50%); border-top:6px solid transparent; border-bottom:6px solid transparent; border-left:8px solid #fff; }
-  #movePad .mp:hover { background:linear-gradient(180deg,#f79a52,#e57826); background-color:#ef8c3c; }
-  #movePad .mp.pressed, #movePad .mp:active { background:linear-gradient(180deg,#ffc078,#f2913f); background-color:#f9a85c; }
-  #lookStick { /* desktop look joystick (replaces the old rotation dial): the SAME analog
-     stick as the mobile GBA shell — recessed navy well + knurled Knicks-orange knob;
-     push to rotate the view (x = yaw, y = pitch), analog all the way out. */
-    position:fixed; right:22px; bottom:338px; z-index:31; width:112px; height:112px;
-    border-radius:50%; touch-action:none; cursor:pointer; user-select:none; -webkit-user-select:none;
-    background:radial-gradient(circle at 50% 42%, #16418a, #0e2f66 72%); /* recessed well */
-    background-color:#113779;
-    box-shadow:inset 0 3px 8px rgba(6,16,42,.75), inset 0 -1px 0 rgba(255,255,255,.14), 0 2px 4px rgba(10,12,35,.4);
-    filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); transition:opacity .4s;
-  }
-  #lookStickK { /* the knob: concentric knurl rings + a top highlight + grip dimples */
-    position:absolute; left:50%; top:50%; width:58px; height:58px; border-radius:50%;
-    transform:translate(-50%,-50%); pointer-events:none;
+  @media (max-width: 600px) { #agentFab { width:126px; right:6px; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); } } /* just above the two ticker strips */
+  #cameraPanel {
+    position:fixed; left:0; bottom:0; z-index:31; width:650px; height:184px; box-sizing:border-box;
+    display:flex; align-items:center; justify-content:center; gap:20px; padding:25px 14px 12px;
+    border:2px solid #15243c; border-radius:18px 18px 11px 11px; user-select:none;
     background:
-      radial-gradient(circle at 35% 28%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
-      radial-gradient(circle at 50% 50%, rgba(120,45,0,.5) 0 4px, transparent 5px),
-      repeating-radial-gradient(circle at 50% 50%, #ee833a 0 3px, #d96a1a 3px 6px);
-    background-color:#e87f30;
-    border:1.5px solid #b95f18;
-    box-shadow:0 4px 7px rgba(10,12,35,.55), inset 0 2px 3px rgba(255,255,255,.3), inset 0 -4px 7px rgba(120,45,0,.45);
+      linear-gradient(180deg,rgba(177,218,255,.28),transparent 3px),
+      linear-gradient(180deg,#416fa7 0 17px,#274f86 18px,#173b70 55%,#102c59 100%);
+    box-shadow:inset 0 0 0 2px #7392b6,inset 0 3px 3px rgba(225,242,255,.32),inset 0 -7px 11px rgba(1,9,27,.5),0 6px 16px rgba(0,0,0,.55);
+    transition:opacity .4s;
   }
-  #lookStick.pressed #lookStickK { filter:brightness(1.15); }
-  #elevRail { /* height rail: a one-axis joystick — drag the knob up/down to climb/descend,
-     analog rate, springs back to center. Same recessed navy well + orange knob theme. */
-    position:fixed; right:144px; bottom:338px; z-index:31; width:34px; height:112px;
-    border-radius:17px; touch-action:none; cursor:pointer; user-select:none; -webkit-user-select:none;
-    background:radial-gradient(120% 60% at 50% 40%, #16418a, #0e2f66 78%); /* recessed well */
-    background-color:#113779;
-    box-shadow:inset 0 3px 8px rgba(6,16,42,.75), inset 0 -1px 0 rgba(255,255,255,.14), 0 2px 4px rgba(10,12,35,.4);
-    filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); transition:opacity .4s;
+  #cameraPanel::before {
+    content:'CAMERA'; position:absolute; left:13px; top:6px; color:#d5edff;
+    font:800 9px/1 system-ui,sans-serif; letter-spacing:1.2px; text-shadow:0 1px 2px #061329;
   }
-  #elevRail .er { /* etched +/− end glyphs on the well */
-    position:absolute; left:50%; transform:translateX(-50%); pointer-events:none;
-    font:800 13px/1 system-ui,sans-serif; color:rgba(223,233,255,.65); text-shadow:0 1px 1px rgba(8,20,50,.8);
+  #cameraPanel::after {
+    content:''; position:absolute; left:62px; right:10px; top:9px; height:1px; pointer-events:none;
+    background:linear-gradient(90deg,rgba(190,224,255,.65),rgba(190,224,255,.08));
   }
-  #elevRail .er.plus { top:5px; }
-  #elevRail .er.minus { bottom:5px; }
-  #elevRailK { /* the thumb: a hardware fader switch — Knicks-orange cap with grip ridges
-     and a center index line, riding the rail like a mixing-console slider */
-    position:absolute; left:50%; top:50%; width:30px; height:20px; border-radius:5px;
-    transform:translate(-50%,-50%); pointer-events:none;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 40%),
-      repeating-linear-gradient(180deg, #ee833a 0 3px, #d96a1a 3px 6px);
-    background-color:#e87f30;
-    border:1.5px solid #b95f18;
-    box-shadow:0 3px 5px rgba(10,12,35,.55), inset 0 1px 2px rgba(255,255,255,.35), inset 0 -2px 4px rgba(120,45,0,.45);
+  #orbitDial {
+    display:block; position:relative; right:auto; bottom:auto; z-index:1; flex:none; order:2; width:126px; height:126px;
+    border:3px solid #17243a; border-radius:50%; touch-action:none; user-select:none; -webkit-user-select:none;
+    background:radial-gradient(circle,#07142d 0 29%,#0b1d3e 30% 72%,#334b69 73% 77%,#101a2b 78% 100%);
+    box-shadow:inset 0 2px 3px rgba(193,224,255,.3),inset 0 -5px 9px rgba(0,5,18,.8),0 0 0 2px #6c8098,0 0 0 4px #101827,0 6px 13px rgba(0,0,0,.55);
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.42)); transition:opacity .4s;
   }
-  #elevRailK::after { /* center index line */
-    content:''; position:absolute; left:3px; right:3px; top:50%; height:2px; margin-top:-1px;
-    border-radius:1px; background:#7a3c0c; box-shadow:0 1px 0 rgba(255,255,255,.35);
+  #orbitDial::before {
+    content:''; position:absolute; inset:5px; z-index:0; border-radius:50%; pointer-events:none;
+    background:radial-gradient(circle,transparent 0 34%,rgba(132,174,217,.12) 35% 69%,transparent 70%);
+    box-shadow:inset 0 2px 4px rgba(177,215,255,.2),inset 0 -5px 8px rgba(0,5,18,.72);
   }
-  #elevRail.pressed #elevRailK { filter:brightness(1.15); }
-  body.agent #movePad, body.photo #movePad, body.agent #lookStick, body.photo #lookStick,
-  body.agent #elevRail, body.photo #elevRail { display:none !important; }
-  @media (max-width: 600px) { /* phones: drop the pad + stick entirely — the GBA shell covers navigation */
-    #movePad, #lookStick, #elevRail { display:none !important; }
+  #orbitDial .od {
+    position:absolute; inset:2px; width:auto; height:auto; margin:0; padding:0; z-index:1;
+    cursor:pointer; touch-action:none; border:0; border-radius:50%; color:#a8d8ff;
+    background:linear-gradient(145deg,#244b82 0%,#173866 42%,#0b234b 78%,#08182f 100%);
+    box-shadow:inset 0 3px 3px rgba(180,220,255,.22),inset 0 -5px 8px rgba(0,5,20,.58);
+    filter:drop-shadow(0 0 1.2px #030916); text-shadow:0 1px 2px #020817;
+    transition:filter .14s,background .14s,transform .14s;
   }
-  @media (min-width: 601px) and (hover: none) { /* touch tablets: idle at low opacity */
-    #movePad, #lookStick, #elevRail { opacity:.42; transition:opacity .35s; }
-    body.dialing #movePad, body.dialing #lookStick, body.dialing #elevRail { opacity:1; }
+  #orbitDial .od.up { clip-path:polygon(15% 0,85% 0,69% 32%,62% 42%,38% 42%,31% 32%); }
+  #orbitDial .od.right { clip-path:polygon(100% 15%,100% 85%,68% 69%,58% 62%,58% 38%,68% 31%); }
+  #orbitDial .od.down { clip-path:polygon(85% 100%,15% 100%,31% 68%,38% 58%,62% 58%,69% 68%); }
+  #orbitDial .od.left { clip-path:polygon(0 85%,0 15%,32% 31%,42% 38%,42% 62%,32% 69%); }
+  #orbitDial .od:hover { background:linear-gradient(145deg,#315d98,#1e477c 47%,#102d5a); filter:brightness(1.14) drop-shadow(0 0 1.2px #030916); }
+  #orbitDial button:focus-visible { outline:2px solid #b9e1ff; outline-offset:-4px; }
+  #orbitDial .od.pressed,#orbitDial .od:active { background:linear-gradient(145deg,#102950,#1d4678 65%,#2a568d); filter:brightness(1.18) drop-shadow(0 0 1.2px #030916); transform:scale(.985); }
+  #orbitDial .od::after { content:''; position:absolute; z-index:2; opacity:.98; filter:drop-shadow(0 1px 1px #020817); }
+  #orbitDial .od.up::after { left:50%; top:13px; transform:translateX(-50%); border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:9px solid #a8d8ff; }
+  #orbitDial .od.down::after { left:50%; bottom:13px; transform:translateX(-50%); border-left:6px solid transparent; border-right:6px solid transparent; border-top:9px solid #a8d8ff; }
+  #orbitDial .od.left::after,#orbitDial .od.right::after {
+    content:''; top:50%; width:27px; height:27px; background:#a8d8ff;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 38'%3E%3Cpath d='M6 1C8.2 1 9.4 2.8 9.3 5.1 8.9 15.7 14.7 22.1 25.4 23.2l-3.9-3.9a2.3 2.3 0 0 1 3.3-3.3l8.9 8.9a2.3 2.3 0 0 1 0 3.3l-8.9 8.9a2.3 2.3 0 0 1-3.3-3.3l4.6-4.6C12.4 28.2 3.8 19.7 3.7 6.1 3.7 3.2 4.5 1 6 1Z'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 38'%3E%3Cpath d='M6 1C8.2 1 9.4 2.8 9.3 5.1 8.9 15.7 14.7 22.1 25.4 23.2l-3.9-3.9a2.3 2.3 0 0 1 3.3-3.3l8.9 8.9a2.3 2.3 0 0 1 0 3.3l-8.9 8.9a2.3 2.3 0 0 1-3.3-3.3l4.6-4.6C12.4 28.2 3.8 19.7 3.7 6.1 3.7 3.2 4.5 1 6 1Z'/%3E%3C/svg%3E") center/contain no-repeat;
   }
+  #orbitDial .od.left::after { left:8px; transform:translateY(-50%) rotate(135deg) scaleX(-1); }
+  #orbitDial .od.right::after { right:8px; transform:translateY(-50%) rotate(225deg); }
+  #orbitDial .odCenter {
+    position:absolute; left:50%; top:50%; z-index:3; width:48px; height:72px; transform:translate(-50%,-50%); overflow:hidden;
+    border:2px solid #7188a4; border-radius:24px; background:#173a6b;
+    box-shadow:0 5px 9px rgba(0,5,18,.72),inset 0 2px 3px rgba(196,226,255,.22),inset 0 -4px 6px rgba(1,9,28,.55),0 0 0 2px #071326;
+  }
+  #orbitDial .odCenter button {
+    display:block; width:100%; height:50%; border:0; margin:0; padding:0; cursor:pointer; color:#b8e0ff;
+    font:900 20px/1 system-ui,sans-serif; text-shadow:0 1px 2px #020817;
+    transition:background .14s,box-shadow .14s,transform .14s;
+  }
+  #orbitDial .odCenter button:first-child {
+    background:linear-gradient(180deg,#386aa6 0%,#28588f 58%,#183d70 100%);
+    box-shadow:inset 0 2px 2px rgba(218,238,255,.32),inset 0 -3px 4px rgba(0,10,32,.38),0 2px 3px rgba(0,4,16,.55);
+  }
+  #orbitDial .odCenter button+button {
+    border-top:2px solid #07172f; background:linear-gradient(180deg,#173b6d 0%,#102e5c 55%,#0a234b 100%);
+    box-shadow:inset 0 3px 5px rgba(0,7,24,.48),inset 0 1px 0 rgba(137,184,226,.16);
+  }
+  #orbitDial .odCenter button:hover { color:#e0f3ff; filter:brightness(1.14); }
+  #orbitDial .odCenter button.pressed,#orbitDial .odCenter button:active { background:#0c2853; color:#e0f3ff; box-shadow:inset 0 4px 7px rgba(0,4,18,.7); transform:translateY(1px); }
+  #pitchDial {
+    display:block; position:relative; right:auto; bottom:auto; z-index:1; flex:none; order:1; width:38px; height:130px;
+    border:2px solid #17243a; border-radius:21px; touch-action:none; user-select:none; -webkit-user-select:none;
+    background:linear-gradient(90deg,#07152f,#1c477b 42%,#0b2854); color:#a8d8ff;
+    box-shadow:inset 0 3px 6px rgba(193,224,255,.18),inset 0 -6px 9px rgba(0,5,18,.72),0 0 0 2px #6c8098,0 5px 11px rgba(0,0,0,.5);
+    cursor:ns-resize; transition:opacity .4s;
+  }
+  #pitchDial::before {
+    content:''; position:absolute; left:50%; top:22px; bottom:22px; width:4px; transform:translateX(-50%);
+    border-radius:3px; background:#061a43; box-shadow:inset 1px 0 2px rgba(0,0,0,.7),1px 0 rgba(255,255,255,.12);
+  }
+  #pitchDial::after { content:'PITCH'; position:absolute; left:50%; bottom:-17px; transform:translateX(-50%); font:700 8px/1 system-ui,sans-serif; letter-spacing:.8px; color:#a8d8ff; text-shadow:0 1px 2px #000; }
+  #pitchDial .ydDir { position:absolute; left:50%; transform:translateX(-50%); font:700 13px/1 system-ui,sans-serif; color:#a8d8ff; pointer-events:none; text-shadow:0 1px 2px #000; }
+  #pitchDial .ydDir.top { top:7px; }
+  #pitchDial .ydDir.bottom { bottom:6px; }
+  #pitchDialK {
+    position:absolute; left:50%; top:50%; width:28px; height:32px; transform:translate(-50%,-50%); pointer-events:none;
+    border:1.5px solid #7188a4; border-radius:11px; background:linear-gradient(180deg,#315f98,#153b6e);
+    box-shadow:inset 0 2px 2px rgba(255,255,255,.2),inset 0 -3px 4px rgba(2,11,35,.5),0 3px 5px rgba(0,0,0,.55);
+  }
+  #pitchDialK::before { content:''; position:absolute; left:5px; right:5px; top:50%; height:2px; transform:translateY(-50%); background:#a8d8ff; border-radius:2px; box-shadow:0 -5px rgba(168,216,255,.38),0 5px rgba(168,216,255,.38); }
+  #pitchDial.pressed #pitchDialK { background:linear-gradient(180deg,#173b6d,#0a234b); }
+  #pitchDial:focus-visible { outline:2px solid #b9e1ff; outline-offset:3px; }
+  body.agent #cameraPanel,body.photo #cameraPanel { display:none !important; }
+  @media (max-width:600px) { #cameraPanel { display:none !important; } }
+  @media (min-width:601px) and (hover:none) {
+    #cameraPanel { opacity:.42; }
+    body.dialing #cameraPanel { opacity:1; }
+  }
+  body.orbit-only #lockbtn { display:none !important; }
   #vitals { /* City Vitals — live counts from every layer, matches the status panel */
-    position:fixed; right:12px; top:12px; z-index:30; min-width:216px;
-    font:11px/1.4 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
-    color:#5f81b6; user-select:none; transition:opacity .4s;
-    background:linear-gradient(180deg,rgba(255,255,255,.75) 0%,rgba(243,248,254,.75) 45%,rgba(226,237,251,.75) 100%);
-    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-    border:2px solid rgba(255,255,255,.75); border-radius:16px; padding:8px 13px 9px;
-    box-shadow:0 5px 16px rgba(8,20,50,.4), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 8px rgba(130,160,210,.28);
+    position:static; z-index:1; order:3; align-self:stretch; width:400px; min-width:0; box-sizing:border-box;
+    font:9.5px/1.15 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+    color:#c6e2ff; user-select:none; transition:opacity .4s; padding:3px 5px 2px 14px;
+    border-left:2px solid rgba(7,23,53,.75); box-shadow:inset 1px 0 rgba(158,197,235,.28);
   }
   #vitals .vh { display:flex; align-items:center; justify-content:space-between; gap:8px;
-    font-size:12.5px; color:#17418a; letter-spacing:.3px;
-    margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid rgba(23,65,138,.15); }
-  #vitals .ecg { width:132px; height:15px; flex:none; overflow:hidden; opacity:.9; }
-  #vitals .ecg polyline { fill:none; stroke:#053d2b; stroke-width:1.4;
-    stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(0 0 1px rgba(5,61,43,.6)); }
-  #vitals .vrow { display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:1px 0; white-space:nowrap; color:#000; }
-  #vitals .vrow b { color:#000; }
-  #vitals .vval { display:inline-flex; align-items:center; gap:6px; } /* radial ratio ring + number */
-  #vitals .vring { width:15px; height:15px; flex:none; transform:rotate(-90deg); } /* arc starts at 12 o'clock */
-  #vitals .vring circle { fill:none; stroke:#c3d5ee; stroke-width:3.5; } /* track = the denominator */
-  #vitals .vring .fg { stroke:#2e6bc4; stroke-linecap:round; transition:stroke-dasharray .6s; } /* fill = numerator */
+    font-size:11px; font-weight:800; color:#e4f4ff; letter-spacing:.5px;
+    margin-bottom:5px; padding-bottom:4px; border-bottom:1px solid rgba(185,220,255,.22); }
+  #vitals .ecg { width:180px; height:12px; flex:none; overflow:hidden; opacity:.95; }
+  #vitals .ecg polyline { fill:none; stroke:#9ee9b2; stroke-width:1.5;
+    stroke-linejoin:round; stroke-linecap:round; filter:drop-shadow(0 0 2px rgba(80,210,130,.45)); }
+  #vitals .vgrid { display:grid; grid-template-columns:158px minmax(0,1fr); gap:14px; }
+  #vitals .vsect { margin-bottom:3px; color:#8fb9e2; font-size:8px; font-weight:800; letter-spacing:.85px; text-transform:uppercase; }
+  #vitals .vbars { padding-right:14px; border-right:1px solid rgba(185,220,255,.18); }
+  #vitals .vrow { white-space:nowrap; color:#c6e2ff; }
+  #vitals button.vrow { width:100%; padding:0; border:0; font:inherit; text-align:left; background:none; cursor:pointer; }
+  #vitals button.vrow:hover { color:#fff; background:rgba(126,198,245,.1); }
+  #vitals button.vrow:focus-visible { outline:1px solid #91d8ff; outline-offset:2px; }
+  #vitals .vbars .vrow { display:grid; grid-template-columns:27px minmax(0,1fr); align-items:center; min-height:25px; }
+  #vitals .vbars .vico { grid-row:1 / span 2; align-self:center; font-size:19px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.45)); }
+  #vitals .vbars .vlab { grid-column:2; display:block; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; }
+  #vitals .vbars .vval { grid-column:2; display:block; min-width:0; }
+  #vitals .vbars .vval b { display:none; }
+  #vitals .vbar { display:block; width:100%; height:8px; overflow:hidden; border:1px solid #07182f; border-radius:5px; background:#091d3c; box-shadow:inset 0 1px 3px rgba(0,5,18,.85),0 1px rgba(170,211,248,.16); }
+  #vitals .vbar i { display:block; width:0; height:100%; border-radius:4px; background:linear-gradient(90deg,#56b7e8,#72e3ba); box-shadow:inset 0 1px rgba(224,250,255,.42),0 0 5px rgba(87,210,204,.4); transition:width .6s; }
+  #vitals .vmetrics .vrow { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; min-height:17px; }
+  #vitals .vmetrics .vrow b { color:#fff; text-align:right; font-weight:750; }
+  #vitals .vmetrics .vrow>span { overflow:hidden; text-overflow:ellipsis; }
   body.photo #vitals, body.manual #vitals { opacity:0; pointer-events:none; }
   body.agent #vitals, body.focusmode #vitals { display:none; }
-  @media (max-width: 900px) { #vitals { display:none; } }
+  @media (max-width:900px) { #cameraPanel { width:226px; } #vitals { display:none; } }
+  #aqBtn {
+    position:fixed; left:8px; bottom:192px; z-index:32; display:block; width:104px; height:104px;
+    box-sizing:border-box; overflow:hidden; cursor:pointer; padding:0; border:2px solid rgba(232,246,255,.92); border-radius:22px;
+    background:#163c73; box-shadow:0 5px 15px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.5);
+    filter:saturate(.96); transition:transform .16s,filter .16s,box-shadow .16s;
+  }
+  #aqBtn img { display:block; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+  #aqBtn:hover { transform:translateY(-2px) scale(1.035); filter:saturate(1.08) brightness(1.05); }
+  #aqBtn[aria-pressed="true"] { box-shadow:0 0 0 3px #8ee5a6,0 0 20px rgba(94,220,128,.8),0 5px 15px rgba(0,0,0,.55); }
+  #aqBtn[aria-pressed="true"]::after { content:'ON'; position:absolute; right:7px; top:7px; padding:3px 6px; border-radius:8px; color:#073c1b; background:#a8f0b8; font:900 9px/1 system-ui,sans-serif; box-shadow:0 1px 4px rgba(0,0,0,.45); }
+  #aqBtn:focus-visible { outline:3px solid #b9e1ff; outline-offset:3px; }
+  #aqBtn:disabled { opacity:.58; cursor:default; filter:grayscale(.7); }
+  @media (max-width:600px) { #aqBtn { left:7px; bottom:calc(70px + env(safe-area-inset-bottom, 0px)); width:78px; height:78px; border-radius:17px; } }
+  #aqDock {
+    position:fixed; top:12px; right:12px; z-index:28; display:flex; flex-direction:column; gap:8px;
+    width:min(430px,calc(100vw - 24px)); height:calc(60vh - 33.6px); max-height:calc(100vh - 56px); pointer-events:none;
+  }
+  #aqLegend {
+    display:none; width:100%; box-sizing:border-box; flex:none; pointer-events:auto;
+    color:#274a78; font:10px/1.35 system-ui,sans-serif;
+    background:rgba(244,249,255,.93); border:2px solid rgba(255,255,255,.85);
+    border-radius:13px; padding:8px 10px; box-shadow:0 4px 12px rgba(8,20,50,.32);
+  }
+  #aqLegend .aqh { display:flex; justify-content:space-between; gap:8px; font-weight:750; color:#173f7c; }
+  #aqLegend .aqscale { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-top:5px; color:#3d5b82; font-size:7px; font-weight:800; text-align:center; }
+  #aqLegend .aqlevel { --disk:#00441b; min-width:0; }
+  #aqLegend .aqlevel:nth-child(2) { --disk:#0072b2; }
+  #aqLegend .aqlevel:nth-child(3) { --disk:#f0e442; }
+  #aqLegend .aqlevel:nth-child(4) { --disk:#d55e00; }
+  #aqLegend .aqlevel:nth-child(5) { --disk:#ffb3d9; }
+  #aqLegend .aqhexes { position:relative; display:block; width:38px; height:34px; margin:0 auto 2px; }
+  #aqLegend .aqhexes i { position:absolute; left:50%; bottom:0; width:30px; height:10px; transform:translateX(-50%); background:var(--disk); clip-path:polygon(18% 0,82% 0,100% 50%,82% 100%,18% 100%,0 50%); filter:drop-shadow(0 0 1px rgba(0,19,46,.95)); }
+  #aqLegend .aqhexes i:nth-child(2) { bottom:6px; }
+  #aqLegend .aqhexes i:nth-child(3) { bottom:12px; }
+  #aqLegend .aqhexes i:nth-child(4) { bottom:18px; }
+  #aqLegend .aqhexes i:nth-child(5) { bottom:24px; }
+  #aqLegend .aqscale b { display:block; color:#173f7c; font-size:7.5px; white-space:nowrap; }
+  #aqLegend .aqscale small { display:block; margin-top:1px; font:800 6.5px/1.2 system-ui,sans-serif; }
+  #aqLegend .aqmeta { margin-top:5px; color:#4e6d96; font-size:clamp(6px,1.8vw,8px); font-weight:750; text-align:center; white-space:nowrap; }
+  #aqLegend a { color:#174f91; }
+  #aqSensors {
+    --aq-live:#75eba0; position:relative; z-index:28; display:none; flex:1; min-height:0; flex-direction:column;
+    width:100%; max-height:none; box-sizing:border-box; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#38678b transparent; pointer-events:auto;
+    color:#d8ebff; font:600 10px/1.3 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+    background:linear-gradient(160deg,rgba(7,24,51,.96),rgba(9,42,66,.93)); border:1px solid rgba(129,205,255,.42);
+    border-radius:16px; box-shadow:0 12px 36px rgba(0,8,28,.52),inset 0 1px rgba(220,245,255,.14); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px);
+  }
+  #aqSensors::after { content:''; position:absolute; z-index:3; left:0; right:0; height:50px; top:-60px; pointer-events:none; background:linear-gradient(180deg,transparent,rgba(112,220,255,.08),transparent); animation:aqScan 5.4s linear infinite; }
+  #aqSensors.recorded::after { display:none; }
+  @keyframes aqScan { to { transform:translateY(calc(100vh + 120px)); } }
+  #aqSensors .aqsHead { position:relative; z-index:4; flex:none; padding:12px 13px 9px; border-bottom:1px solid rgba(147,211,255,.2); background:linear-gradient(180deg,rgba(32,88,119,.36),rgba(5,27,54,.15)); }
+  #aqSensors.sync .aqsHead { animation:aqSync .75s ease-out; }
+  @keyframes aqSync { from { box-shadow:inset 0 0 30px rgba(101,224,255,.34); } to { box-shadow:inset 0 0 0 transparent; } }
+  #aqSensors .aqsTitle { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#eff9ff; font-size:12px; font-weight:900; letter-spacing:.7px; }
+  #aqSensors .aqsLive { display:inline-flex; align-items:center; gap:6px; color:var(--aq-live); font-size:9px; letter-spacing:1px; }
+  #aqSensors .aqsLive i,#aqSensors .aqsDot { display:inline-block; width:7px; height:7px; flex:none; border-radius:50%; background:var(--aq-live); box-shadow:0 0 0 3px rgba(117,235,160,.12),0 0 9px rgba(117,235,160,.85); animation:aqPulse 1.8s ease-in-out infinite; }
+  #aqSensors.recorded .aqsLive,#aqSensors.feedDelayed .aqsLive { color:#f1c76d; } #aqSensors.recorded .aqsLive i,#aqSensors.feedDelayed .aqsLive i { background:#f1c76d; box-shadow:0 0 7px rgba(241,199,109,.7); }
+  @keyframes aqPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.38; transform:scale(.72); } }
+  #aqSensors .aqsSub { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; color:#86afd2; font-size:8px; letter-spacing:.35px; }
+  #aqSensors .aqm { position:relative; z-index:4; flex:none; padding:10px 13px 9px; color:#a9c9e3; background:rgba(3,18,40,.48); border-bottom:1px solid rgba(147,211,255,.16); }
+  #aqSensors .aqm a { color:inherit; text-decoration:none; }
+  #aqSensors .aqmTop { display:flex; align-items:center; width:100%; }
+  #aqSensors .aqmContent { width:100%; }
+  #aqSensors .aqmHeading { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; width:100%; }
+  #aqSensors .aqmReadout { display:block; width:100%; margin-top:8px; }
+  #aqSensors .aqmEyebrow { color:#87afd0; font-size:7.5px; font-weight:850; letter-spacing:.7px; }
+  #aqSensors .aqmScore { min-width:56px; color:#fff; font-size:27px; font-weight:950; line-height:.95; text-align:right; font-variant-numeric:tabular-nums; }
+  #aqSensors .aqmScore small { display:block; margin-top:4px; color:#dbeeff; font-size:8px; letter-spacing:.55px; text-align:right; }
+  #aqSensors .aqmProgress { width:100%; min-width:0; }
+  #aqSensors .aqmProgressTrack { height:15px; overflow:hidden; border:1px solid rgba(225,244,255,.58); border-radius:8px; background:rgba(3,15,34,.72); box-shadow:inset 0 1px 4px rgba(0,0,0,.65); }
+  #aqSensors .aqmProgressFill { display:block; height:100%; border-radius:7px; background:#f4f8fc; box-shadow:0 0 8px rgba(235,247,255,.72); }
+  #aqSensors .aqmProgressTicks { display:grid; grid-template-columns:10% 10% 20% 20% 40%; margin-top:4px; color:#8db2d0; font-size:6px; font-weight:850; line-height:1; text-align:center; white-space:nowrap; }
+  #aqSensors .aqmProgressTicks span { position:relative; padding-top:5px; }
+  #aqSensors .aqmProgressTicks span::before { content:''; position:absolute; top:-4px; left:0; width:1px; height:6px; background:#8db2d0; }
+  #aqSensors .aqmProgressTicks span:last-child::after { content:''; position:absolute; top:-4px; right:0; width:1px; height:6px; background:#8db2d0; }
+  #aqSensors .aqmMeta { margin-top:6px; color:#8eb4d1; font-size:7.5px; line-height:1.35; }
+  #aqSensors .aqHubTabs { position:relative; z-index:4; display:grid; grid-template-columns:1fr 1fr; gap:4px; flex:none; padding:7px 8px; background:rgba(4,20,43,.6); border-bottom:1px solid rgba(147,211,255,.16); }
+  #aqSensors .aqHubTabs button,#aqSensors .aqBoroughTabs button { min-width:0; cursor:pointer; color:#7fa6c8; font:850 8px/1.2 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif; letter-spacing:.4px; border:1px solid rgba(133,195,233,.16); border-radius:8px; background:rgba(40,87,119,.14); padding:6px 5px; }
+  #aqSensors .aqHubTabs button.on,#aqSensors .aqBoroughTabs button.on { color:#eff9ff; border-color:rgba(117,235,160,.52); background:rgba(51,126,126,.36); box-shadow:inset 0 -2px rgba(117,235,160,.72); }
+  #aqSensors .aqBoroughTabs { position:relative; z-index:4; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; flex:none; padding:6px 7px 3px; background:rgba(4,20,43,.36); }
+  #aqSensors .aqBoroughTabs button { padding:5px 2px; font-size:6.6px; letter-spacing:0; overflow:hidden; text-overflow:ellipsis; }
+  #aqSensors .aqScroll { position:relative; z-index:2; flex:none; min-height:0; overflow:visible; padding:6px; }
+  #aqNeighborhoodList .aqIntro { padding:5px 7px 8px; color:#739cbd; font-size:7.2px; line-height:1.4; }
+  #aqNeighborhoodList .aqNbhd { --aq:#75eba0; display:grid; grid-template-columns:7px minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; min-height:49px; box-sizing:border-box; margin:0 0 4px; padding:7px 9px; color:inherit; font:inherit; text-align:left; cursor:pointer; border:1px solid rgba(133,195,233,.13); border-radius:10px; background:rgba(40,87,119,.17); }
+  #aqNeighborhoodList .aqNbhd:hover { border-color:rgba(126,215,255,.4); background:rgba(48,113,151,.3); }
+  #aqNeighborhoodList .aqNbhd i { width:7px; height:7px; border-radius:50%; background:var(--aq); box-shadow:0 0 8px var(--aq); }
+  #aqNeighborhoodList .aqNbhdName { display:block; overflow:hidden; color:#f1f8ff; font-size:10px; font-weight:850; white-space:nowrap; text-overflow:ellipsis; }
+  #aqNeighborhoodList .aqNbhdMeta { display:block; margin-top:3px; color:#83a8c8; font-size:7.2px; white-space:nowrap; }
+  #aqNeighborhoodList .aqNbhdValue { min-width:62px; color:#fff; font-size:17px; font-weight:950; text-align:right; font-variant-numeric:tabular-nums; }
+  #aqNeighborhoodList .aqNbhdValue small { display:block; color:#8db4d3; font-size:6.5px; font-weight:800; }
+  #aqSensors .aqsSignal { display:flex; align-items:flex-end; gap:2px; height:10px; }
+  #aqSensors .aqsSignal i { width:2px; border-radius:2px; background:#68dca2; animation:aqBars 1.25s ease-in-out infinite; }
+  #aqSensors.feedDelayed .aqsSignal i { background:#f1c76d; }
+  #aqSensors .aqsSignal i:nth-child(1) { height:4px; } #aqSensors .aqsSignal i:nth-child(2) { height:7px; animation-delay:-.35s; } #aqSensors .aqsSignal i:nth-child(3) { height:10px; animation-delay:-.7s; }
+  @keyframes aqBars { 0%,100% { opacity:.35; transform:scaleY(.6); transform-origin:bottom; } 50% { opacity:1; transform:scaleY(1); transform-origin:bottom; } }
+  #aqSensorList .aqsEmpty { padding:26px 12px; color:#88abc9; text-align:center; letter-spacing:.4px; }
+  #aqSensorList .aqsRow { --dot:#75eba0; display:grid; grid-template-columns:12px minmax(0,1fr) auto; align-items:center; gap:8px; width:100%; min-height:52px; box-sizing:border-box; margin:0 0 4px; padding:7px 9px; color:inherit; font:inherit; text-align:left; cursor:pointer; border:1px solid rgba(133,195,233,.13); border-radius:10px; background:rgba(40,87,119,.17); transition:background .16s,border-color .16s,transform .16s; }
+  #aqSensorList .aqsRow>span { display:block; min-width:0; }
+  #aqSensorList .aqsRow:hover { transform:translateX(-2px); border-color:rgba(126,215,255,.4); background:rgba(48,113,151,.3); }
+  #aqSensorList .aqsDot { width:6px; height:6px; background:var(--dot); box-shadow:0 0 8px var(--dot); animation-delay:var(--pulse); }
+  #aqSensorList .delayed { --dot:#f1c76d; } #aqSensorList .delayed .aqsDot { animation-duration:3.2s; }
+  #aqSensorList .overdue { --dot:#8394a7; opacity:.78; } #aqSensorList .overdue .aqsDot { animation:none; box-shadow:none; }
+  #aqSensorList .recorded { --dot:#75bde8; } #aqSensorList .recorded .aqsDot { animation:none; }
+  #aqSensorList .aqsName { display:block; overflow:hidden; color:#f1f8ff; font-size:10.5px; font-weight:850; white-space:nowrap; text-overflow:ellipsis; }
+  #aqSensorList .aqsMeta { display:-webkit-box; overflow:hidden; margin-top:3px; color:#83a8c8; font-size:7.5px; font-weight:700; line-height:1.35; white-space:normal; text-overflow:clip; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; }
+  #aqSensorList .aqsState { color:var(--dot); margin-right:5px; letter-spacing:.55px; }
+  #aqSensorList .aqsReading { min-width:66px; text-align:right; }
+  #aqSensorList .aqsReading b { display:block; color:#fff; font-size:14px; font-variant-numeric:tabular-nums; }
+  #aqSensorList .aqsReading small { color:#8db4d3; font-size:7px; letter-spacing:.25px; }
+  #aqSensors .aqsFoot { position:relative; z-index:4; display:flex; justify-content:space-between; gap:8px; flex:none; padding:7px 12px; color:#6f99bc; font-size:7.5px; border-top:1px solid rgba(147,211,255,.16); background:rgba(3,18,40,.4); }
+  body.photo #aqBtn, body.photo #aqLegend, body.photo #aqSensors, body.manual #aqBtn, body.manual #aqLegend, body.manual #aqSensors, body.agent #aqSensors, body.focusmode #aqSensors { display:none !important; }
+  @media (max-width:700px) { #aqDock { top:54px; right:8px; width:min(370px,calc(100vw - 16px)); height:calc(60vh - 37.2px); max-height:calc(100vh - 62px); } #aqSensors .aqmScore { font-size:23px; } }
+  body.gba #aqDock { top:96px; right:8px; width:min(350px,calc(100vw - 88px)); height:calc(60vh - 62.4px); max-height:calc(100vh - 104px); }
+  @media (prefers-reduced-motion:reduce) { #aqSensors::after,#aqSensors .aqsLive i,#aqSensors .aqsDot,#aqSensors .aqsSignal i,#aqSensors.sync .aqsHead { animation:none; } }
   #agentPanel { /* full-height side panel, glass over the scene */
     position:fixed; right:0; top:0; bottom:0; z-index:31; width:min(380px, 88vw);
     display:none; flex-direction:column; gap:6px;
@@ -513,6 +644,129 @@
     font:10px system-ui; cursor:pointer; line-height:18px; text-align:center; padding:0;
   }
   body.photo #personaCard { display:none !important; }
+  /* §26f HOME — sign in, set your address, the city opens at your block */
+  #homeBtn {
+    position:fixed; left:8px; bottom:304px; z-index:32; display:block; width:104px; height:104px;
+    box-sizing:border-box; overflow:hidden; pointer-events:auto; cursor:pointer; padding:0;
+    border:2px solid rgba(232,246,255,.92); border-radius:22px; background:#163c73;
+    box-shadow:0 5px 15px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.5);
+    filter:saturate(.96); transition:transform .16s,filter .16s,box-shadow .16s;
+  }
+  #homeBtn img { display:block; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+  #homeBtn:hover { transform:translateY(-2px) scale(1.035); filter:saturate(1.08) brightness(1.05); }
+  #homeBtn[aria-pressed="true"] { box-shadow:0 0 0 3px #f4d080,0 0 20px rgba(244,196,96,.78),0 5px 15px rgba(0,0,0,.55); }
+  #homeBtn[aria-pressed="true"]::after { content:'ON'; position:absolute; right:7px; top:7px; padding:3px 6px; border-radius:8px; color:#4d3104; background:#f7d98f; font:900 9px/1 system-ui,sans-serif; box-shadow:0 1px 4px rgba(0,0,0,.45); }
+  #homeBtn:focus-visible { outline:3px solid #b9e1ff; outline-offset:3px; }
+  @media (max-width:600px) { #homeBtn { left:7px; bottom:calc(156px + env(safe-area-inset-bottom, 0px)); width:78px; height:78px; border-radius:17px; } }
+  #homeModal {
+    display:none; position:fixed; inset:0; z-index:60; background:rgba(4,7,12,.55);
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+  }
+  #homeModal .hm {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:min(320px, 86vw); font:12px/1.55 system-ui,-apple-system,sans-serif; color:rgba(255,255,255,.9);
+    background:rgba(10,13,20,.92); border:1px solid rgba(140,190,255,.25); border-radius:14px; padding:16px 18px;
+  }
+  #homeModal .hhead { font-size:15px; font-weight:700; color:#f4d9b0; margin-bottom:6px; padding-right:22px; }
+  #homeModal .hsub { color:rgba(255,255,255,.6); font-size:11px; }
+  #homeModal input {
+    width:100%; box-sizing:border-box; margin:10px 0 4px; padding:8px 10px; font:13px system-ui;
+    color:#fff; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2); border-radius:8px; outline:none;
+  }
+  #homeModal .hbtn {
+    display:inline-block; margin:8px 6px 0 0; padding:7px 13px; font:600 11px system-ui; cursor:pointer;
+    color:#fff; background:rgba(46,88,148,.55); border:1px solid rgba(140,190,255,.35); border-radius:9px;
+  }
+  #homeModal .hbtn:hover { background:rgba(60,110,180,.7); }
+  #homeModal .hbtn.dim { background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.18); color:rgba(255,255,255,.65); }
+  #homeModal .hbtn.warn { background:rgba(148,46,46,.4); border-color:rgba(255,140,140,.3); }
+  #homeModal .hstat { margin-top:8px; font-size:11px; color:#e8a558; min-height:14px; }
+  #homeModal #hmAuto { max-height: 160px; overflow-y: auto; display: none; margin-top:4px; background:rgba(10,13,20,.95); border:1px solid rgba(140,190,255,.25); border-radius:8px; font:12px/1.45 system-ui; color:rgba(255,255,255,.9); }
+  #homeModal .hauto { padding:6px 10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.08); }
+  #homeModal .hauto:last-child { border-bottom:none; }
+  #homeModal .hauto:hover { background:rgba(46,88,148,.55); color:#fff; }
+  #homeModal .x { position:absolute; top:9px; right:9px; width:20px; height:20px; border-radius:50%;
+    background:rgba(255,255,255,.08); color:rgba(255,255,255,.8); border:1px solid rgba(255,255,255,.2);
+    font:10px system-ui; cursor:pointer; line-height:18px; text-align:center; padding:0; }
+  #gsiBtn { margin:12px 0 4px; min-height:44px; }
+  #homePanel { /* the resident dashboard: nearest live info, computed from feeds already polling */
+    display:none; flex-direction:column; position:fixed; left:14px; bottom:118px; z-index:29; width:min(358px, calc(100vw - 34px));
+    height:min(430px,calc(100vh - 150px)); box-sizing:border-box; overflow:hidden; padding:0 10px 10px;
+    font:600 11px/1.45 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif; color:#173f70;
+    background:linear-gradient(145deg,rgba(247,252,255,.98),rgba(207,231,251,.97));
+    border:3px solid #eaf8ff; outline:2px solid #266da9; border-radius:17px;
+    box-shadow:0 9px 24px rgba(4,21,55,.48),inset 0 0 0 1px rgba(70,139,195,.52),inset 0 -10px 18px rgba(45,112,177,.13);
+  }
+  #homePanel::after { content:''; position:absolute; left:8px; right:8px; bottom:4px; height:3px; border-radius:3px; background:linear-gradient(90deg,#326da7,#79c6ef,#326da7); opacity:.62; }
+  #homePanel .phead { position:relative; margin:0 -10px 9px; min-height:20px; padding:10px 64px 9px 42px;
+    color:#fff; font-size:14px; font-weight:800; letter-spacing:.15px; text-shadow:0 1px 1px #164376;
+    background:linear-gradient(180deg,#74c6ef 0%,#3189c9 48%,#1d66aa 52%,#174f91 100%);
+    border-bottom:2px solid #123f78; box-shadow:inset 0 2px 0 rgba(255,255,255,.62),inset 0 -2px 0 rgba(10,43,91,.28);
+  }
+  #homePanel .phead::before { content:''; position:absolute; left:14px; top:6px; width:18px; height:28px;
+    background:linear-gradient(135deg,#c9ff78 0%,#51dc42 45%,#119c32 100%); clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+    filter:drop-shadow(0 1px 1px #083d25) drop-shadow(0 0 4px rgba(91,255,86,.65)); animation:homePlumbob 2.2s ease-in-out infinite;
+  }
+  @keyframes homePlumbob { 0%,100% { transform:translateY(0) rotateY(0deg); } 50% { transform:translateY(-2px) rotateY(180deg); } }
+  #homePanel .phead, #homePanel #hpTabs, #homePanel .pfoot { flex:0 0 auto; }
+  #homePanel #hpTabs { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; margin:0 0 8px; }
+  #homePanel #hpTabs button { min-width:0; padding:6px 2px 5px; cursor:pointer; border:1px solid #6ea8d1; border-radius:8px 8px 5px 5px;
+    color:#396b99; background:linear-gradient(180deg,#fafdff,#cfe6f7); box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(28,79,128,.16);
+    font:800 9px/1.1 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif; white-space:nowrap; }
+  #homePanel #hpTabs button::first-letter { font-size:13px; }
+  #homePanel #hpTabs button:hover { filter:brightness(1.05); }
+  #homePanel #hpTabs button.on { color:#fff; border-color:#164f8b; text-shadow:0 1px 1px #164376;
+    background:linear-gradient(180deg,#78cef2 0%,#328aca 49%,#1a5da0 52%,#174b88 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.72),0 2px 4px rgba(15,63,111,.32); }
+  #homePanel #hpBody { display:flex; flex:1 1 auto; flex-direction:column; gap:6px; min-height:0; overflow-y:auto; padding:1px; scrollbar-width:thin; scrollbar-color:#5ca9dc transparent; }
+  #homePanel .hrow { flex:0 0 auto; position:relative; margin:0; min-height:28px; padding:7px 8px 7px 36px;
+    color:#173f70; background:linear-gradient(180deg,#fff 0%,#f4f9ff 58%,#e3f0fb 100%);
+    border:1px solid #91bddd; border-radius:9px; box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(28,79,128,.18);
+  }
+  #homePanel .hrow.subway, #homePanel .hrow.bus, #homePanel .hrow.bike { padding-left:10px; padding-right:38px; }
+  #homePanel .hrow .ic { position:absolute; left:6px; top:6px; display:grid; place-items:center; width:23px; height:23px;
+    background:linear-gradient(180deg,#eaffff,#a9dcf3); border:1px solid #66a4cf; border-radius:50%; box-shadow:inset 0 1px 0 #fff; font-size:13px; }
+  #homePanel .hrow b { color:#174f91; font-weight:800; }
+  #homePanel .stationHead { padding-right:28px; }
+  #homePanel .stationHead b, #homePanel .stationDistance { display:block; }
+  #homePanel .stationDistance { margin-top:1px; }
+  #homePanel .stationPin { position:absolute; top:6px; right:7px; width:24px; height:24px; padding:0; cursor:pointer;
+    border:1px solid #86b4d6; border-radius:7px; color:#386a98; background:linear-gradient(180deg,#fff,#dceefa); opacity:.48; }
+  #homePanel .stationPin:hover, #homePanel .stationPin.on { opacity:1; filter:saturate(1.15); }
+  #homePanel .hrow.pinned { border-color:#4f9fd3; box-shadow:inset 3px 0 0 #328aca,inset 0 1px 0 #fff,0 1px 2px rgba(28,79,128,.18); }
+  #homePanel .rt { display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; width:18px; height:18px; margin:0 1px;
+    border-radius:50%; color:var(--rtc); background:var(--rt); box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+    font:800 11px/18px Helvetica,Arial,sans-serif; vertical-align:middle; letter-spacing:-.25px; }
+  #homePanel .rt.long { font-size:7px; letter-spacing:-.7px; }
+  #homePanel .rt.diamond { width:16px; height:16px; margin:0 4px; border-radius:2px; transform:rotate(45deg); vertical-align:-3px; }
+  #homePanel .rt.diamond > span { display:inline-block; transform:rotate(-45deg); }
+  #homePanel .dirRow { display:block; margin-top:6px; }
+  #homePanel .dir { display:block; color:#56789b; font-size:9px; font-weight:800; letter-spacing:.2px; text-transform:uppercase; }
+  #homePanel .dir.up::before { content:'↑'; margin-right:3px; color:#198448; }
+  #homePanel .dir.down::before { content:'↓'; margin-right:3px; color:#b34c42; }
+  #homePanel .etaList { display:flex; flex-wrap:wrap; align-items:center; gap:3px; min-height:20px; margin-top:2px; }
+  #homePanel .arrival { display:inline-flex; align-items:center; gap:2px; white-space:nowrap; }
+  #homePanel .eta { display:inline-flex; align-items:center; min-height:18px; color:#174f91; font-weight:800; white-space:nowrap; }
+  #homePanel .etaDot { color:#7292b1; margin:0 1px; }
+  #homePanel .busArrival, #homePanel .ferryArrival { display:grid; grid-template-columns:auto auto 1fr; align-items:center; gap:5px; margin-top:5px; }
+  #homePanel .busRoute, #homePanel .ferryRoute { display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:19px; padding:0 6px;
+    border:1px solid #082f61; border-radius:4px; color:#fff; background:#0b3f7d; box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+    font:800 10px/19px Arial,sans-serif; }
+  #homePanel .busDest, #homePanel .ferryDest { min-width:0; overflow:hidden; color:#56789b; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+  #homePanel .bikeCounts { margin-top:5px; color:#173f70; }
+  #homePanel .sub { color:#56789b; font-weight:600; }
+  #homePanel .pfoot { position:relative; margin:8px 2px 0; padding:6px 5px 2px 23px; min-height:14px; color:#47739e; font-size:10px;
+    border-top:1px solid #9bc5e2; background:linear-gradient(90deg,rgba(255,255,255,.56),transparent); }
+  #homePanel .pfoot::before { content:'◆'; position:absolute; margin-left:-17px; color:#35ba42; text-shadow:0 1px 0 #fff; }
+  #homePanel .x, #homePanel .gear { position:absolute; top:8px; z-index:2; width:23px; height:23px; border-radius:50%;
+    color:#fff; background:linear-gradient(180deg,#8ed5f3,#2c80c1 55%,#175696); border:1px solid #dff7ff;
+    box-shadow:0 1px 2px rgba(5,32,76,.55),inset 0 1px 0 rgba(255,255,255,.75); font:700 11px/20px system-ui; cursor:pointer; text-align:center; padding:0; }
+  #homePanel .x:hover, #homePanel .gear:hover { filter:brightness(1.15); transform:translateY(-1px); }
+  #homePanel .x { right:8px; } #homePanel .gear { right:35px; }
+  body.photo #homePanel, body.photo #homeBtn, body.photo #homeChip { display:none !important; }
+  body.focusmode #homePanel { display:none !important; }
+  @media (min-width:901px) { #homePanel { top:12px; right:12px; bottom:auto; left:auto; } }
+  @media (max-width:700px) { #homePanel { bottom:196px; left:8px; width:min(348px,calc(100vw - 16px)); height:min(430px,calc(100vh - 212px)); } } /* clear the GBA cluster */
   #pcAv { /* §25u: turntable voxel portrait floating to the card's right */
     display:none; position:absolute; right:-124px; top:50%; transform:translateY(-50%);
     width:110px; height:145px; border-radius:12px;
@@ -685,12 +939,11 @@
   }
   body.gba #ui .grp { flex-direction:row; gap:5px; }
   body.gba #presets button { width:40px; height:40px; font-size:19px; border-radius:12px; }
-  body.gba #ticker { display:none !important; }                     /* phones: drop the news ticker */
-  body.gba #thoughtTicker { bottom:calc(var(--sh) + 2px); }         /* keep only the resident-thought ticker, in the news ticker's old spot */
+  body.gba #thoughtTicker { bottom:calc(var(--sh) + 2px); }
   body.gba #agentFab { bottom:var(--sh); right:0; width:76px; } /* flush with the console top edge + right viewport edge, over the tickers */
   /* compact top panel: dense chip innards + a higher scale — same readable text in a
      much smaller box (one tight row instead of two airy ones), kept within the screen */
-  body.gba #hud { transform:scale(.7); transform-origin:top left; max-width:calc((100vw - 122px) / 0.7); } /* narrower: leaves the top-right corner to the credit pill */
+  body.gba #hud { transform:scale(.7); transform-origin:top left; max-width:calc((100vw - 16px) / 0.7); }
   body.gba #chip { padding:2px 4px; border-radius:12px; }
   body.gba #chip .seg { padding:1px 5px; gap:4px; }
   body.gba #chip .seg svg { width:17px; height:17px; }
@@ -699,8 +952,7 @@
   body.gba #chip .v b small { font-size:8px; }
   body.gba #chip .v span { font-size:7.5px; }
   body.gba #chip .sep { margin:1px 0; }
-  body.gba #chSnd { width:22px; height:22px; margin-left:2px; padding:3px; }
-  body.gba #credit { top:calc(10px + env(safe-area-inset-top, 0px)); right:8px; } /* top-right corner beside the narrowed chip (§26e swaps the text to "Made by David") */
+  body.gba #chSnd { width:28px; height:28px; padding:3px; }
   body.gba #thoughtTicker .th { color:#000; }        /* persona ticker reads black on phones */
   body.gba #thoughtTicker .th .who { color:#555; }
   /* RESET — same hardware dome/well language as UP/DOWN but rectangular; centered
@@ -764,16 +1016,6 @@
 </head>
 <body>
 <div id="ui">
-  <div class="grp" id="presets"><!-- live-entity ride-alongs (camera presets stay on keys 0-6) -->
-    <button data-e="air" title="Ride along with a live aircraft">✈️<span class="lbl"> Air</span></button>
-    <button data-e="subway" title="Ride along with a live train">🚇<span class="lbl"> Subways</span></button>
-    <button data-e="ferry" title="Ride along with a live NYC Ferry">⛴️<span class="lbl"> Ferries</span></button>
-    <button data-e="bus" title="Ride along with a live MTA bus">🚌<span class="lbl"> Buses</span></button>
-    <button data-e="bike" title="Visit a live Citi Bike station">🚲<span class="lbl"> Citi Bikes</span></button>
-    <button data-e="cam" title="Watch a live NYC traffic camera">📷<span class="lbl"> Traffic Cam</span></button>
-    <button data-e="birds" title="Ride with a radar migration flock">🐦<span class="lbl"> Birds</span></button>
-  </div>
-  <div class="sep"></div>
   <div class="grp"><!-- light mode stays on the L key; quality auto-tiers (hash q= overrides) -->
     <button id="photo" title="Auto-tour Manhattan (photo mode: P)">&#127916;</button>
   </div>
@@ -853,7 +1095,10 @@
 <div id="personaCard"><button class="x" title="close">✕</button><div class="phead"></div><div class="pbody"></div><div class="pfoot"></div><canvas id="pcAv"></canvas></div>
 <div id="dbg"></div>
 <div id="hud">
-<div id="chip"></div>
+<div id="chipRow">
+  <div id="chip"></div>
+  <button id="chSnd" type="button" title="mute the city radio" aria-label="Mute the city radio"><svg viewBox="0 0 24 24"><path d="M4 9.2v5.6h3.4L12 18.6V5.4L7.4 9.2z" fill="#2e6bc4"/><g id="chSndOn" fill="none" stroke="#2e6bc4" stroke-width="2" stroke-linecap="round"><path d="M15 9.5a3.6 3.6 0 0 1 0 5"/><path d="M17.6 7a7.2 7.2 0 0 1 0 10"/></g><g id="chSndOff" style="display:none" fill="none" stroke="#b3413a" stroke-width="2.2" stroke-linecap="round"><path d="M15.5 9.5l5 5"/><path d="M20.5 9.5l-5 5"/></g></svg></button>
+</div>
 <div id="scrub">
   <span id="tlBadge" class="live"><i></i>LIVE</span>
   <div id="tlWrap">
@@ -863,32 +1108,67 @@
   <button id="timeReset" title="Back to now">now</button>
 </div>
 <div id="wxAlerts"></div>
+<div id="aqLegend"></div>
 </div>
-<div id="vitals"></div>
 <div id="brand"><img src="nycsim-logo.png" alt="nycsim.com">
-  <a id="fbBtn" href="mailto:david.lietjauw@gmail.com?subject=Feedback%20for%20NYC%20SIMS">Feedback</a>
+  <div id="brandActions">
+    <a id="credit" href="https://www.linkedin.com/in/davidfromkansas/" target="_blank" rel="noopener noreferrer">Made by David</a>
+    <a id="fbBtn" href="mailto:david.lietjauw@gmail.com?subject=Feedback%20for%20NYC%20SIMS">Feedback</a>
+  </div>
 </div>
-<a id="credit" href="https://www.linkedin.com/in/davidfromkansas/" target="_blank" rel="noopener noreferrer">Made by David Lietjauw</a>
-<div id="ticker"><div class="tkin"></div></div>
 <div id="thoughtTicker"><div class="tkin"></div></div>
-<div id="lookStick" title="look joystick — push to rotate the view"><!-- desktop twin of the mobile GBA stick -->
-  <div id="lookStickK"></div>
+<div id="homeModal"><div class="hm"><!-- §26f sign-in / address / manage — steps rendered into #hmBody -->
+  <button class="x" id="hmX" aria-label="close">✕</button>
+  <div class="hhead" id="hmTitle">Make NYC Sim yours</div>
+  <div id="hmBody"></div>
+  <div id="hmAuto"></div>
+  <div class="hstat" id="hmStat"></div>
+</div></div>
+<div id="homePanel"><!-- §26f resident dashboard -->
+  <button class="gear" id="hpGear" title="manage home">⚙</button>
+  <button class="x" id="hpX" aria-label="close">✕</button>
+  <div class="phead" id="hpHead">Transport Hub</div>
+  <div id="hpTabs" role="tablist" aria-label="nearby services">
+    <button type="button" class="on" data-tab="subways" role="tab" aria-selected="true">🚇 Subway</button>
+    <button type="button" data-tab="buses" role="tab" aria-selected="false">🚌 Buses</button>
+    <button type="button" data-tab="bikes" role="tab" aria-selected="false">🚲 Bikes</button>
+    <button type="button" data-tab="ferries" role="tab" aria-selected="false">⛴ Ferry</button>
+  </div>
+  <div id="hpBody" role="tabpanel"></div>
+  <div class="pfoot" id="hpFoot"></div>
 </div>
-<div id="elevRail" title="height — drag the knob up/down"><!-- one-axis analog: climb/descend -->
-  <span class="er plus">+</span>
-  <span class="er minus">−</span>
-  <div id="elevRailK"></div>
+<div id="homeChip" class="fybl"><b>🏠 Home</b></div><!-- beacon label; .fybl needs explicit display -->
+<div id="aqDock">
+<section id="aqSensors" aria-label="New York City Air Quality Hub">
+  <div class="aqsHead"><div class="aqsTitle"><span>AIR QUALITY HUB</span><span class="aqsLive"><i></i><span id="aqSensorMode">LIVE</span></span></div><div class="aqsSub"><span id="aqSensorStatus">CONNECTING TO AIR QUALITY SOURCES</span><span class="aqsSignal" aria-hidden="true"><i></i><i></i><i></i></span></div></div>
+  <div id="aqAirNow" class="aqm" aria-live="polite"></div>
+  <div id="aqHubTabs" class="aqHubTabs" role="tablist" aria-label="Air Quality Hub views"><button type="button" class="on" data-aq-tab="neighborhoods" role="tab" aria-selected="true">NEIGHBORHOODS</button><button type="button" data-aq-tab="sensors" role="tab" aria-selected="false">SENSOR NETWORK</button></div>
+  <div id="aqBoroughTabs" class="aqBoroughTabs" role="tablist" aria-label="Boroughs"></div>
+  <div id="aqNeighborhoodList" class="aqScroll" role="tabpanel" aria-label="Estimated neighborhood air quality"></div>
+  <div id="aqSensorList" class="aqScroll" role="tabpanel" aria-label="Air-quality sensors" hidden></div>
+  <div class="aqsFoot"><span id="aqSensorSource">AIRNOW + NYCCAS</span><span id="aqSensorClock">SCANNING…</span></div>
+</section>
 </div>
-<div id="movePad"><!-- movement D-pad: the mobile GBA cross on desktop (forward/back/left/right) -->
-  <button class="mp up"    data-act="zi" title="move forward"></button>
-  <button class="mp left"  data-act="pl" title="move left"></button>
-  <span   class="mp-hub"></span>
-  <button class="mp right" data-act="pr" title="move right"></button>
-  <button class="mp down"  data-act="zo" title="move backward"></button>
+<button id="homeBtn" type="button" aria-label="Open your home" title="Open your home"><img src="home.png" alt=""></button><!-- §26f: shown only when /api/home says enabled -->
+<button id="aqBtn" type="button" aria-label="Show air-quality visualization" title="Show air-quality visualization" aria-pressed="false"><img src="aq_logo.png" alt=""></button>
+<div id="cameraPanel" aria-label="camera controls">
+  <div id="orbitDial" aria-label="camera orbit, elevation, and zoom controls">
+    <button class="od up" data-act="eu" aria-label="raise camera" title="raise camera"></button>
+    <button class="od left" data-act="ol" aria-label="orbit left" title="orbit left"></button>
+    <button class="od right" data-act="or" aria-label="orbit right" title="orbit right"></button>
+    <button class="od down" data-act="ed" aria-label="lower camera" title="lower camera"></button>
+    <div class="odCenter">
+      <button data-act="zi" aria-label="zoom in" title="zoom in">+</button>
+      <button data-act="zo" aria-label="zoom out" title="zoom out">−</button>
+    </div>
+  </div>
+  <div id="pitchDial" role="slider" tabindex="0" aria-label="camera pitch" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+    <span class="ydDir top">▲</span><div id="pitchDialK"></div><span class="ydDir bottom">▼</span>
+  </div>
+  <div id="vitals"></div>
 </div>
-<button id="agentFab" title="City Concierge — ask about live NYC, or say where to fly">
-  <img src="concierge-portrait.png" alt="City Concierge">
-  <img src="concierge-talk.png" class="talk" alt="Talk to me!">
+<button id="agentFab" title="City Concierge — ask about live NYC, or say where to fly" aria-label="Talk to David, the City Concierge">
+  <img src="pigeon_back.png" alt="">
 </button>
 <div id="agentPanel">
   <div id="agentHead"><b>City Concierge ✦</b><span id="agentLayerChip" title="clear this layer"></span><button id="agentInfoBtn" title="what can I ask?">ⓘ</button><button id="agentCloseBtn" title="close">✕</button></div>
@@ -900,7 +1180,9 @@
 
 <script>/* module errors surface as unhandled rejections under top-level await */
 addEventListener('unhandledrejection', e => { window.__moduleError = String(e.reason && e.reason.stack || e.reason); console.error('[module]', window.__moduleError); });
-addEventListener('error', e => { window.__moduleError = e.message + ' @ ' + e.filename + ':' + e.lineno; });</script>
+addEventListener('error', e => { window.__moduleError = e.message + ' @ ' + e.filename + ':' + e.lineno; });
+window.__homeBoot = fetch('/api/home').then(r => r.json()).catch(() => null);
+</script>
 <script type="importmap">
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.166.0/build/three.module.js",
@@ -1821,6 +2103,8 @@ let [SG_DATA, BLK_DATA, BLDG, QN_CLAIMS, QN_EAST_RAW, BK_SOUTH_RAW] = await Prom
   fetch('qn-east-land.json').then(r => r.ok ? r.json() : null).catch(() => null), // eastern Queens land bitmask (CD6/CD7 + Glendale: off-plate real fabric)
   fetch('bk-south-land.json').then(r => r.ok ? r.json() : null).catch(() => null) // south Brooklyn land bitmask (Coney peninsula + Jamaica Bay basins, from building coverage)
 ]);
+const HOME_FOOTPRINTS = { n: BLDG.n, x: Float32Array.from(BLDG.x), z: Float32Array.from(BLDG.z),
+  w: Float32Array.from(BLDG.w), d: Float32Array.from(BLDG.d), r: Int16Array.from(BLDG.r) };
 await bootStep(0.47, 'unpacking the city…'); // §26e boot bar: data down, generation begins (yield → repaint)
 // Eastern Queens land mask (Flushing/College Point/Whitestone/Rego Park/Forest Hills/
 // Glendale): a packed occupancy bitmask from the baked building coverage — coast-accurate
@@ -2281,11 +2565,18 @@ const camera = new THREE.PerspectiveCamera(50, innerWidth / RENDER_H, 2, 90000);
 camera.position.set(-9200, 4700, -3900); // classic hero: from the southwest (the mirror below makes it read map-correct)
 
 const controls = new OrbitControls(camera, renderer.domElement);
+const ORBIT_ONLY = matchMedia('(min-width:601px) and (pointer:fine)').matches;
+const LOCKED_POLAR = 0.92;
 controls.target.set(300, 0, 10500);
 controls.enableDamping = true; controls.dampingFactor = 0.07;
 controls.rotateSpeed = 0.55; controls.zoomToCursor = true;
 controls.minDistance = 25; controls.maxDistance = 28000;
-controls.maxPolarAngle = Math.PI * 0.93; // nearly straight up — cloud-gazing allowed; ground clamp keeps us above the asphalt
+controls.maxPolarAngle = ORBIT_ONLY ? LOCKED_POLAR : Math.PI * 0.93;
+if (ORBIT_ONLY) {
+  controls.minPolarAngle = LOCKED_POLAR; controls.enableRotate = false; controls.enablePan = false; controls.enableZoom = false;
+  document.body.classList.add('orbit-only');
+  document.getElementById('hint').innerHTML = 'dial arrows orbit/elevate &middot; pitch fader tilts view &middot; +/− zoom &middot; WASD/arrows move &middot; keys 0&ndash;6 views &middot; L light &middot; P photo';
+}
 controls.update();
 
 // ---- compass-correct presentation. The world was authored +x=east/+z=north; a
@@ -4764,10 +5055,11 @@ harlemBridge(21100, 20900, 34, 28, 16, [0.45, 0.52, 0.48]); // Henry Hudson (Spu
   scene.add(np);
 }
 
-/* PERF.md C1: everything above consumed the parsed building/block bakes; nothing at
-   runtime reads them (G_EDGES/G_NODES stay — they ARE the runtime substrate; block/
-   building counts live on in G_COUNTS). Releasing here lets GC reclaim ~10⁶ small
-   arrays from the 26 MB JSON parse before the live modules spin up. */
+/* PERF.md C1: everything above consumed the parsed building/block bakes; only the
+   compact typed HOME_FOOTPRINTS index remains for one-time saved-address beam sizing
+   (G_EDGES/G_NODES stay — they ARE the runtime substrate; block/building counts live
+   on in G_COUNTS). Releasing here lets GC reclaim ~10⁶ small arrays from the 26 MB
+   JSON parse before the live modules spin up. */
 SG_DATA = BLK_DATA = BLDG = G_BLOCKS = null;
 
 await bootStep(0.84, 'hailing cabs…'); // §26e boot bar (yield → repaint)
@@ -5565,213 +5857,136 @@ function flyTo(name) {
   };
 }
 window.__cam = (px, py, pz, tx, ty, tz) => { camTween = null; camera.position.set(px, py, pz); controls.target.set(tx, ty, tz); controls.update(); }; // dev: jump camera from console
+window.__camState = () => ({ position: camera.position.toArray(), target: controls.target.toArray(), autoPan: autoPan.active() });
 renderer.domElement.addEventListener('pointerdown', () => { camTween = null; });
 renderer.domElement.addEventListener('wheel', () => { camTween = null; }, { passive: true });
 
-// camera pad (#movePad D-pad, GBA-style) + height rail (#elevRail): move / elevation; click =
-// one nudge, hold = continuous. Any press cancels a fly-tween, like grabbing the view.
+// desktop orbit/elevation dial: controlled-pitch camera, click = nudge, hold = continuous.
 {
-  const _doff = new THREE.Vector3();
-  let dialAct = null, dialT = 0, dialRaf = 0, dialFadeT = 0;
-  const DIAL_RATE = 0.7; // ONE shared speed (moderately fast): rad/s for turns, ×distance/s
-  // for slides, /s exponential for zoom — all sweep the same angular screen speed
-  function dialStep(dt) {
-    camTween = null;
-    const t = controls.target;
-    _doff.copy(camera.position).sub(t);
-    if (dialAct === 'zi' || dialAct === 'zo') {
-      // ▲/▼ arrows (legacy act names from their zoom days): walk forward/back along
-      // the look direction's ground projection — camera + target together, height locked
-      const n = Math.hypot(_doff.x, _doff.z) || 1;
-      const s = (dialAct === 'zi' ? 1 : -1) * Math.max(_doff.length() * DIAL_RATE, 25) * dt;
-      const fx = -_doff.x / n * s, fz = -_doff.z / n * s; // -_doff = camera → target
-      camera.position.x += fx; camera.position.z += fz;
-      t.x += fx; t.z += fz;
-    } else if (dialAct === 'rl' || dialAct === 'rr') {
-      // yaw IN PLACE: swing the TARGET around the camera — rotate the viewer where
-      // they stand, never slide them. (Orbiting a distant target read as translation.)
-      // mirrored presentation (scaleX(-1)): same screen turn sense as before.
-      const a = (dialAct === 'rl' ? 1 : -1) * DIAL_RATE * dt;
-      const c = Math.cos(a), s = Math.sin(a);
-      const vx = -_doff.x, vz = -_doff.z; // camera → target
-      t.x = camera.position.x + vx * c - vz * s;
-      t.z = camera.position.z + vx * s + vz * c;
-    } else if (dialAct === 'eu' || dialAct === 'ed') {
-      // +/− center buttons: vertical elevation — camera + target rise/descend
-      // together at the shared rate, view direction held (zoom stays on the wheel)
-      const v = (dialAct === 'eu' ? 1 : -1) * Math.max(_doff.length() * DIAL_RATE, 25) * dt;
-      const ny = clamp(camera.position.y + v, 6, 26000);
-      t.y += ny - camera.position.y;
-      camera.position.y = ny;
-    } else if (dialAct === 'pl' || dialAct === 'pr') {
-      // lateral slide: camera + target along screen-right (mirror-corrected)
-      const n = Math.hypot(_doff.x, _doff.z) || 1;
-      const s = (dialAct === 'pr' ? 1 : -1) * Math.max(_doff.length() * DIAL_RATE, 25) * dt;
-      const rx = -_doff.z / n * s, rz = _doff.x / n * s;
-      camera.position.x += rx; camera.position.z += rz;
-      t.x += rx; t.z += rz;
-    } else if (dialAct === 'ro' || dialAct === 'ru') {
-      // pitch IN PLACE: tilt the look direction over (toward the ground) / under (up
-      // at the sky) around the camera itself. Below the horizon the target slides in
-      // along the sight-line to rest on the ground plane, so the frame-loop's
-      // t.y >= 0 clamp never warps the turn — you end up looking AT the ground point.
-      const vx = -_doff.x, vy = -_doff.y, vz = -_doff.z; // camera → target
-      let r = Math.hypot(vx, vy, vz) || 1;
-      const theta = Math.atan2(vx, vz);
-      let phi = Math.acos(clamp(vy / r, -1, 1)); // 0 = looking straight up
-      phi = clamp(phi + (dialAct === 'ro' ? 1 : -1) * DIAL_RATE * dt, 0.06, 3.08);
-      const cy = Math.cos(phi);
-      if (cy < -0.001) r = Math.min(r, (camera.position.y - 1.9) / -cy);      // rest on the ground plane
-      else if (cy > 0.001) r = Math.min(r, Math.max((6480 - camera.position.y) / cy, 30)); // stay under the t.y cloud cap
-      r = Math.max(r, 30);
-      t.set(camera.position.x + Math.sin(phi) * Math.sin(theta) * r,
-            camera.position.y + cy * r,
-            camera.position.z + Math.sin(phi) * Math.cos(theta) * r);
+  const active = new Map(), _off = new THREE.Vector3();
+  let dialT = 0, dialRaf = 0, dialFadeT = 0, pitchInput = 0;
+  const RATE = 0.7;
+  function dialStep(dt, oneAct) {
+    camTween = null; autoPan.stop();
+    const acts = oneAct ? [oneAct] : active.values();
+    let orbit = 0, elevate = 0, zoom = 0, forward = 0, lateral = 0;
+    for (const act of acts) {
+      if (act === 'ol') orbit += 1;
+      else if (act === 'or') orbit -= 1;
+      else if (act === 'eu') elevate += 1;
+      else if (act === 'ed') elevate -= 1;
+      else if (act === 'zi') zoom -= 1;
+      else if (act === 'zo') zoom += 1;
+      else if (act === 'mf') forward += 1;
+      else if (act === 'mb') forward -= 1;
+      else if (act === 'ml') lateral -= 1;
+      else if (act === 'mr') lateral += 1;
+    }
+    const pitch = pitchInput;
+    _off.copy(camera.position).sub(controls.target);
+    if (orbit) {
+      const a = orbit * RATE * dt, c = Math.cos(a), s = Math.sin(a);
+      const x = _off.x * c - _off.z * s, z = _off.x * s + _off.z * c;
+      camera.position.x = controls.target.x + x; camera.position.z = controls.target.z + z;
+    }
+    if (pitch) {
+      _off.copy(camera.position).sub(controls.target);
+      const dist = _off.length() || 1, flat = Math.hypot(_off.x, _off.z) || 1;
+      const polar = clamp(Math.atan2(flat, _off.y) + pitch * RATE * dt, 0.22, 1.52);
+      const nextFlat = Math.sin(polar) * dist, nextY = Math.cos(polar) * dist;
+      controls.target.set(camera.position.x - _off.x / flat * nextFlat,
+        camera.position.y - nextY, camera.position.z - _off.z / flat * nextFlat);
+      controls.minPolarAngle = polar; controls.maxPolarAngle = polar;
+    }
+    if (elevate) {
+      const want = elevate * Math.max(_off.length() * RATE, 25) * dt;
+      const dy = clamp(want, Math.max(6 - camera.position.y, -controls.target.y),
+        Math.min(26000 - camera.position.y, 6500 - controls.target.y));
+      camera.position.y += dy; controls.target.y += dy;
+    }
+    if (zoom) {
+      _off.copy(camera.position).sub(controls.target);
+      const dist = _off.length() || 1;
+      const next = clamp(dist + zoom * Math.max(dist * RATE, 260) * dt, controls.minDistance, controls.maxDistance);
+      camera.position.copy(controls.target).addScaledVector(_off, next / dist);
+    }
+    if (forward || lateral) {
+      _off.copy(camera.position).sub(controls.target);
+      const n = Math.hypot(_off.x, _off.z) || 1;
+      const pace = Math.max(_off.length() * RATE, 25) * dt;
+      const dx = (-_off.x / n * forward - _off.z / n * lateral) * pace;
+      const dz = (-_off.z / n * forward + _off.x / n * lateral) * pace;
+      camera.position.x += dx; camera.position.z += dz;
+      controls.target.x += dx; controls.target.z += dz;
     }
     controls.update();
   }
-  function dialLoop(T) {
-    if (!dialAct) return;
-    dialStep(Math.min((T - dialT) / 1000, 0.05));
-    dialT = T;
+  function dialLoop(now) {
+    if (!active.size) { dialRaf = 0; return; }
+    dialStep(Math.min((now - dialT) / 1000, 0.05)); dialT = now;
     dialRaf = requestAnimationFrame(dialLoop);
   }
-  for (const b of document.querySelectorAll('#movePad .mp')) {
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      try { b.setPointerCapture(e.pointerId); } catch (_) {}
-      autoPan.stop(); // pad press = the user taking the camera
-      document.body.classList.add('dialing'); // touch devices: wake the faded controls
-      b.classList.add('pressed'); // GBA-key light-up while held
-      clearTimeout(dialFadeT);
-      dialAct = b.dataset.act; dialT = performance.now();
-      dialStep(0.07); // the click nudge; holding keeps going from here
-      cancelAnimationFrame(dialRaf);
-      dialRaf = requestAnimationFrame(dialLoop);
-    });
-    const dialEnd = () => {
-      dialAct = null; cancelAnimationFrame(dialRaf);
-      b.classList.remove('pressed');
-      clearTimeout(dialFadeT);
-      dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500); // touch: controls fade back after use
-    };
-    b.addEventListener('pointerup', dialEnd);
-    b.addEventListener('pointercancel', dialEnd);
+  function begin(source, act, el) {
+    document.body.classList.add('dialing'); clearTimeout(dialFadeT);
+    if (el) el.classList.add('pressed'); active.set(source, act); dialStep(0.07, act);
+    if (!dialRaf) { dialT = performance.now(); dialRaf = requestAnimationFrame(dialLoop); }
   }
-  // ---- desktop look joystick (#lookStick): the mobile GBA stick brought to desktop.
-  //      Analog yaw/pitch IN PLACE using the same math the old rotation dial's buttons
-  //      used (rl/rr yaw = swing the target around the camera; ro/ru pitch = tilt with
-  //      the ground-rest clamp), scaled by how far the knob is pushed. ----
-  {
-    const stick = document.getElementById('lookStick'), knob = document.getElementById('lookStickK');
-    const lk = { x: 0, y: 0 };
-    let sid = null, sRaf = 0, sT = 0;
-    const setKnob = () => { knob.style.transform = 'translate(calc(-50% + ' + (lk.x * 26) + 'px), calc(-50% + ' + (lk.y * 26) + 'px))'; };
-    function stickStep(dt) {
-      camTween = null;
-      if (fly.st.on) { // WASD/arrow flight active: feed the fly integrator directly (the
-        // GBA stick's route) so keys + stick work TOGETHER — same signs as mouse-look
-        fly.st.yaw += DIAL_RATE * dt * lk.x;                                        // push right → turn right
-        fly.st.pitch = clamp(fly.st.pitch - DIAL_RATE * dt * lk.y, -1.5, 1.5);      // push up → look up
-        return;
-      }
-      const t = controls.target;
-      _doff.copy(camera.position).sub(t);
-      const vx = -_doff.x, vy = -_doff.y, vz = -_doff.z; // camera → target
-      let r = Math.hypot(vx, vy, vz) || 1;
-      let theta = Math.atan2(vx, vz) + DIAL_RATE * dt * lk.x;                 // push right → turn right (the dial's rr sense)
-      let phi = Math.acos(clamp(vy / r, -1, 1));                             // 0 = looking straight up
-      phi = clamp(phi + DIAL_RATE * dt * lk.y, 0.06, 3.08);                  // push up (screen −y) → look up
-      const cy = Math.cos(phi);
-      if (cy < -0.001) r = Math.min(r, (camera.position.y - 1.9) / -cy);      // rest on the ground plane
-      else if (cy > 0.001) r = Math.min(r, Math.max((6480 - camera.position.y) / cy, 30)); // stay under the t.y cloud cap
-      r = Math.max(r, 30);
-      t.set(camera.position.x + Math.sin(phi) * Math.sin(theta) * r,
-            camera.position.y + cy * r,
-            camera.position.z + Math.sin(phi) * Math.cos(theta) * r);
-      controls.update();
-    }
-    function stickLoop(T) {
-      if (sid === null) { sRaf = 0; return; }
-      stickStep(Math.min((T - sT) / 1000, 0.05));
-      sT = T;
-      sRaf = requestAnimationFrame(stickLoop);
-    }
-    const track = (e) => {
-      const rc = stick.getBoundingClientRect();
-      let dx = (e.clientX - (rc.left + rc.width / 2)) / (rc.width / 2);
-      let dy = (e.clientY - (rc.top + rc.height / 2)) / (rc.height / 2);
-      const m = Math.hypot(dx, dy);
-      if (m > 1) { dx /= m; dy /= m; }
-      lk.x = dx; lk.y = dy;
-      setKnob();
-    };
-    stick.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); try { stick.setPointerCapture(e.pointerId); } catch (_) {}
-      autoPan.stop(); // stick grab = the user taking the camera
-      document.body.classList.add('dialing'); clearTimeout(dialFadeT);
-      sid = e.pointerId; stick.classList.add('pressed');
-      track(e);
-      sT = performance.now();
-      cancelAnimationFrame(sRaf);
-      sRaf = requestAnimationFrame(stickLoop);
-    });
-    stick.addEventListener('pointermove', (e) => { if (e.pointerId === sid) track(e); });
-    for (const t of ['pointerup', 'pointercancel'])
-      stick.addEventListener(t, (e) => {
-        if (e.pointerId !== sid) return;
-        sid = null; lk.x = lk.y = 0; setKnob(); stick.classList.remove('pressed');
-        clearTimeout(dialFadeT);
-        dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500);
-      });
+  function end(source, el) {
+    active.delete(source); if (el) el.classList.remove('pressed');
+    clearTimeout(dialFadeT); dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500);
   }
-  // ---- height rail (#elevRail): one-axis analog — drag the knob up/down to climb/descend
-  //      at a rate scaled by displacement (the old +/− buttons' eu/ed math, made analog).
-  //      Springs back to center on release, same as the look stick. ----
-  {
-    const rail = document.getElementById('elevRail'), knob = document.getElementById('elevRailK');
-    let eid = null, eRaf = 0, eT = 0, ev = 0; // ev: −1 (knob at top, climb) … +1 (bottom, descend), screen sense
-    const KNOB_TRAVEL = 38; // px of knob ride each way inside the 112px well
-    const setKnob = () => { knob.style.transform = 'translate(-50%, calc(-50% + ' + (ev * KNOB_TRAVEL) + 'px))'; };
-    function railStep(dt) {
-      camTween = null;
-      const v = -ev * Math.max(camera.position.y * DIAL_RATE, 25) * dt; // push up (screen −y) → rise
-      const ny = clamp(camera.position.y + v, 6, 26000);
-      if (fly.st.on) { camera.position.y = ny; return; } // WASD flight: fly.tick re-aims the target each frame
-      controls.target.y += ny - camera.position.y;
-      camera.position.y = ny;
-      controls.update();
-    }
-    function railLoop(T) {
-      if (eid === null) { eRaf = 0; return; }
-      railStep(Math.min((T - eT) / 1000, 0.05));
-      eT = T;
-      eRaf = requestAnimationFrame(railLoop);
-    }
-    const track = (e) => {
-      const rc = rail.getBoundingClientRect();
-      ev = clamp((e.clientY - (rc.top + rc.height / 2)) / (rc.height / 2 - 14), -1, 1);
-      setKnob();
-    };
-    rail.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); try { rail.setPointerCapture(e.pointerId); } catch (_) {}
-      autoPan.stop(); // rail grab = the user taking the camera
-      document.body.classList.add('dialing'); clearTimeout(dialFadeT);
-      eid = e.pointerId; rail.classList.add('pressed');
-      track(e);
-      eT = performance.now();
-      cancelAnimationFrame(eRaf);
-      eRaf = requestAnimationFrame(railLoop);
+  for (const b of document.querySelectorAll('#orbitDial [data-act]')) {
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {}
+      begin('pointer:' + e.pointerId, b.dataset.act, b);
     });
-    rail.addEventListener('pointermove', (e) => { if (e.pointerId === eid) track(e); });
-    for (const t of ['pointerup', 'pointercancel'])
-      rail.addEventListener(t, (e) => {
-        if (e.pointerId !== eid) return;
-        eid = null; ev = 0; setKnob(); rail.classList.remove('pressed');
-        clearTimeout(dialFadeT);
-        dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500);
-      });
+    b.addEventListener('pointerup', e => end('pointer:' + e.pointerId, b));
+    b.addEventListener('pointercancel', e => end('pointer:' + e.pointerId, b));
   }
+  const pitchDial = document.getElementById('pitchDial'), pitchKnob = document.getElementById('pitchDialK');
+  function setPitch(clientY) {
+    const r = pitchDial.getBoundingClientRect();
+    pitchInput = clamp((r.top + r.height / 2 - clientY) / (r.height * 0.28), -1, 1);
+    pitchKnob.style.top = `calc(50% + ${(-pitchInput * 34).toFixed(1)}px)`;
+    pitchDial.setAttribute('aria-valuenow', String(Math.round(pitchInput * 100)));
+  }
+  pitchDial.addEventListener('pointerdown', e => {
+    e.preventDefault(); try { pitchDial.setPointerCapture(e.pointerId); } catch (_) {}
+    document.body.classList.add('dialing'); clearTimeout(dialFadeT); pitchDial.classList.add('pressed');
+    active.set('pitch:' + e.pointerId, 'pitch'); setPitch(e.clientY);
+    if (!dialRaf) { dialT = performance.now(); dialRaf = requestAnimationFrame(dialLoop); }
+  });
+  pitchDial.addEventListener('pointermove', e => { if (active.has('pitch:' + e.pointerId)) setPitch(e.clientY); });
+  function endPitch(e) {
+    active.delete('pitch:' + e.pointerId); pitchInput = 0; pitchKnob.style.top = '50%';
+    pitchDial.setAttribute('aria-valuenow', '0'); pitchDial.classList.remove('pressed');
+    clearTimeout(dialFadeT); dialFadeT = setTimeout(() => document.body.classList.remove('dialing'), 2500);
+  }
+  pitchDial.addEventListener('pointerup', endPitch);
+  pitchDial.addEventListener('pointercancel', endPitch);
+  pitchDial.addEventListener('keydown', e => {
+    if (!ORBIT_ONLY || !['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return;
+    e.preventDefault(); e.stopPropagation();
+    pitchInput = e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? 1 : -1;
+    dialStep(0.1); pitchInput = 0;
+  });
+  const KEY_ACT = { w:'mf', arrowup:'mf', s:'mb', arrowdown:'mb', a:'ml', arrowleft:'ml', d:'mr', arrowright:'mr' };
+  addEventListener('keydown', e => {
+    if (!ORBIT_ONLY || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target && e.target.tagName)) return;
+    const key = e.key.toLowerCase(), act = KEY_ACT[key]; if (!act) return;
+    const source = 'key:' + key;
+    e.preventDefault(); if (!active.has(source)) begin(source, act, null);
+  });
+  addEventListener('keyup', e => {
+    if (!ORBIT_ONLY) return;
+    const key = e.key.toLowerCase(), source = 'key:' + key;
+    if (KEY_ACT[key] && active.has(source)) end(source, null);
+  });
+  addEventListener('blur', () => {
+    active.clear(); pitchInput = 0; pitchKnob.style.top = '50%'; cancelAnimationFrame(dialRaf); dialRaf = 0;
+    document.querySelectorAll('#orbitDial .pressed').forEach(el => el.classList.remove('pressed'));
+    pitchDial.classList.remove('pressed'); pitchDial.setAttribute('aria-valuenow', '0');
+  });
 }
 
 // quality
@@ -5815,21 +6030,24 @@ const ui = {
 // preset keys, persona/chip clicks, concierge flights).
 const autoPan = (() => {
   let on = false, az = 2.4;
-  const C = { x: -150, z: 8200 }; // mid-island anchor (Midtown-ish)
-  const mz = matchMedia('(max-width: 700px)').matches ? 1.587 : 1; // phones pull the tour back ~59%
+  const C = { x: -150, z: 8200 }; // mid-island anchor (Midtown-ish); saved Home can replace it
+  let home = false;
+  const mz = matchMedia('(max-width: 700px)').matches ? 1.587 : 1; // phones pull the citywide tour back ~59%
   function start() {
     camTween = null;
     az = Math.atan2(camera.position.x - C.x, camera.position.z - C.z) || 2.4; // pick up from the current bearing
     on = true;
   }
+  function aroundHome(x, z) { C.x = x; C.z = z; home = true; start(); }
   function stop() { on = false; }
   const _apE = new THREE.Euler(0, 0, 0, 'YXZ');
   function tick(dt) {
     if (!on) return;
     if (camTween) { stop(); return; } // someone else took the camera (entity flights, presets, clicks)
     az += dt * 0.028;                              // ~3.7 min per lap
-    const r = (2300 + Math.sin(az * 0.7) * 350) * mz; // 50% closer than the old tour (×1.15 on phones)
-    const h = (850 + Math.sin(az * 1.3) * 160) * mz;
+    const r = home ? 430 + Math.sin(az * 0.7) * 55 : (2300 + Math.sin(az * 0.7) * 350) * mz;
+    const h = home ? 220 + Math.sin(az * 1.3) * 35 : (850 + Math.sin(az * 1.3) * 160) * mz;
+    const aimY = home ? 18 : 320;
     camera.position.set(C.x + Math.sin(az) * r, h, C.z + Math.cos(az) * r);
     if (fly.st.on) {
       // touch devices live permanently in fly mode (enter(false) at load) — st.on is
@@ -5837,15 +6055,15 @@ const autoPan = (() => {
       // aim it and sync yaw/pitch so fly.tick renders the same orientation next frame
       // and a user grab picks up seamlessly. Real input stops the tour via the
       // canvas/joystick/dial pointer hooks instead.
-      camera.lookAt(C.x, 320, C.z);
+      camera.lookAt(C.x, aimY, C.z);
       _apE.setFromQuaternion(camera.quaternion, 'YXZ');
       fly.st.yaw = _apE.y; fly.st.pitch = _apE.x;
       fly.st.vel.set(0, 0, 0);
     } else {
-      controls.target.set(C.x, 320, C.z);          // aim above the rooftops: sky + skyline vantage
+      controls.target.set(C.x, aimY, C.z);
     }
   }
-  return { start, stop, tick, active: () => on };
+  return { start, aroundHome, stop, tick, active: () => on };
 })();
 renderer.domElement.addEventListener('pointerdown', autoPan.stop);
 renderer.domElement.addEventListener('wheel', autoPan.stop, { passive: true });
@@ -5860,11 +6078,11 @@ function resumeTour() {
   renderer.domElement.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: -9 }));
   autoPan.start();
 }
-// live-entity buttons: each click jumps to a REAL plane/train/ferry/bus/station/flock
+// City Vitals navigation jumps to a REAL plane/train/ferry/bus/station/flock
 // and rides along via that module's own tuned _fly (glide + focus chip + follow).
 // A RANDOM qualifying entity each click (nearest would re-pick what you already ride).
 // Modules are defined later in the file; references resolve at click time.
-{
+const goToLiveEntity = (() => {
   const rand = (items, ok) => {
     const pool = [];
     for (const it of items) if (!ok || ok(it)) pool.push(it);
@@ -5905,14 +6123,11 @@ function resumeTour() {
     },
     birds: () => birds._fly(),
   };
-  document.querySelectorAll('#presets button').forEach(b =>
-    b.addEventListener('click', () => {
-      // release any active ride-along first (button clicks never reach the canvas, so
-      // a prior follow would keep steering camTween and fight the new pick)
-      renderer.domElement.dispatchEvent(new WheelEvent('wheel', { deltaY: 0 }));
-      const f = PICK[b.dataset.e]; if (f) f();
-    }));
-}
+  return (kind) => {
+    renderer.domElement.dispatchEvent(new WheelEvent('wheel', { deltaY: 0 }));
+    const f = PICK[kind]; if (f) f();
+  };
+})();
 function setMode(name) {
   modeName = name;
   document.body.classList.toggle('manual', name !== 'live');
@@ -6016,6 +6231,7 @@ const fly = (() => {
   // ---- desktop keys (WASD/arrows enter fly mode; Esc exits via pointer lock or directly) ----
   const KEYMAP = { w: 'f', arrowup: 'f', s: 'b', arrowdown: 'b', a: 'l', arrowleft: 'l', d: 'r', arrowright: 'r', e: 'u', c: 'd' };
   addEventListener('keydown', (e) => {
+    if (ORBIT_ONLY) return;
     const t = e.target && e.target.tagName;
     if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA') return;
     const k = KEYMAP[e.key.toLowerCase()];
@@ -6027,7 +6243,7 @@ const fly = (() => {
     enter(!st.lock); // movement keys grab mouse-look only when the view isn't locked
     st.keys.add(k);
   });
-  addEventListener('keyup', (e) => { const k = KEYMAP[e.key.toLowerCase()]; if (k) st.keys.delete(k); });
+  addEventListener('keyup', (e) => { if (ORBIT_ONLY) return; const k = KEYMAP[e.key.toLowerCase()]; if (k) st.keys.delete(k); });
   addEventListener('blur', () => st.keys.clear());
   // ---- mouse-look: trusted mousemove while pointer-locked (unmirrored) ----
   addEventListener('mousemove', (e) => {
@@ -6130,8 +6346,8 @@ await bootStep(0.93, 'waking the city…'); // §26e boot bar: scene built, live
    Advance: canvas in the top 2/3 (RENDER_H), console shell in the bottom
    1/3. Here we (1) toggle body.gba as the phone rotates across the
    breakpoint, and (2) wire the console controls: a D-pad (left) for
-   horizontal-plane movement and an analog look stick (right — the same
-   stick desktop now has as #lookStick) for yaw/pitch + elevation. Both drive the §26c fly
+   horizontal-plane movement and an analog look stick (right) for yaw/pitch +
+   elevation. Both drive the §26c fly
    camera so drag-to-look on the screen keeps working. Wiring always
    attaches (testable on desktop by adding body.gba); elements hide off gba.
    ============================================================ */
@@ -6140,7 +6356,6 @@ await bootStep(0.93, 'waking the city…'); // §26e boot bar: scene built, live
   const GBA_HINT = 'D-pad moves · stick rotates · +/− lifts · drag to look';
   const gbaChrome = () => { // phone-only text tweaks (idempotent)
     const fh = document.getElementById('flyhint'); if (fh) fh.textContent = GBA_HINT;
-    const cr = document.getElementById('credit'); if (cr) cr.textContent = 'Made by David'; // short pill fits the top-right corner
   };
   function applyGbaMode() {
     const on = gbaActive();
@@ -6220,7 +6435,10 @@ await bootStep(0.93, 'waking the city…'); // §26e boot bar: scene built, live
       for (const t of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(t, () => b.classList.remove('pressed'));
       b.addEventListener('click', act);
     };
-    wire('gbaReset', () => location.reload());
+    // §26f: HOME replaced RESET (user decision 2026-07-14). Until /api/home confirms the
+    // feature is configured (homeui sets __home.ready + swaps the label), fall back to
+    // the legacy reload-reset so unconfigured deployments behave exactly as before.
+    wire('gbaReset', () => (window.__home && window.__home.ready) ? window.__home.act() : location.reload());
     wire('gbaFeedback', () => { location.href = 'mailto:david.lietjauw@gmail.com?subject=Feedback%20for%20NYC%20SIMS'; });
   }
 
@@ -6488,7 +6706,7 @@ const liveBridge = (() => {
   const EP = { subway: '/api/subway', buses: '/api/buses', ferries: '/api/ferries', flights: '/api/flights',
     citibike: '/api/citibike', traffic: '/api/traffic', trafficEvents: '/api/traffic-events',
     birds: '/api/birds', weather: '/api/weather',
-    nyc311: '/api/nyc311', nwsalerts: '/api/nwsalerts', headlines: '/api/headlines' };
+    nyc311: '/api/nyc311', airQuality: '/api/air-quality', nwsalerts: '/api/nwsalerts', headlines: '/api/headlines' };
   async function direct(feed) {
     const r = await fetch(EP[feed]);
     if (!r.ok) throw new Error(feed + ' http ' + r.status);
@@ -6612,10 +6830,10 @@ const live = (() => {
     if (active) { forcePaint = true; maybePaint(computeTarget()); lastSolarT = -10; }
     updateChip();
   }
-  // Weather now comes from the local backend (/api/weather): server.js polls NWS
-  // station observations (ground truth; Open-Meteo's model under-called real rain),
-  // merges the 3-station cluster, maps METAR → the Open-Meteo-shaped `current` object,
-  // caches 5 min, and falls back to Open-Meteo server-side. One same-origin call here.
+  // Weather comes from the local backend (/api/weather): Google Weather is primary,
+  // with the NWS three-station observation cluster then Open-Meteo as server fallbacks.
+  // Every provider maps to the same Open-Meteo-shaped `current` object, cached 5 min,
+  // so the browser makes one same-origin call and never receives the Google API key.
   function fetchWeather() {
     return liveBridge.get('weather') // PERF.md D: worker-parsed snapshot, same shape
       .then(j => {
@@ -6691,9 +6909,6 @@ const live = (() => {
     '<div class="seg"><span class="wxi" id="chWxi">⛅</span><div class="v"><b id="chCond">—</b></div></div><div class="sep"></div>' +
     '<div class="seg"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2e6bc4" stroke-width="2"/><path d="M12 5.5l2.6 6.5-2.6 6.5-2.6-6.5z" fill="#2e6bc4"/><circle cx="12" cy="12" r="1.2" fill="#fff"/><text x="12" y="4.5" text-anchor="middle" font-size="5" fill="#2e6bc4">N</text></svg>' +
       '<div class="v"><b id="chWind">—</b><span id="chWindL">Wind</span></div></div>' +
-    '<button id="chSnd" title="mute the city radio"><svg viewBox="0 0 24 24"><path d="M4 9.2v5.6h3.4L12 18.6V5.4L7.4 9.2z" fill="#2e6bc4"/>' +
-      '<g id="chSndOn" fill="none" stroke="#2e6bc4" stroke-width="2" stroke-linecap="round"><path d="M15 9.5a3.6 3.6 0 0 1 0 5"/><path d="M17.6 7a7.2 7.2 0 0 1 0 10"/></g>' +
-      '<g id="chSndOff" style="display:none" fill="none" stroke="#b3413a" stroke-width="2.2" stroke-linecap="round"><path d="M15.5 9.5l5 5"/><path d="M20.5 9.5l-5 5"/></g></svg></button>' +
     '<div class="xtra" id="chXtra"></div>';
   const chT = document.getElementById('chTime'), chD = document.getElementById('chDate'),
     chTp = document.getElementById('chTemp'), chWx = document.getElementById('chWxi'),
@@ -6717,6 +6932,7 @@ const live = (() => {
     document.getElementById('chSndOn').style.display = ambOn ? '' : 'none';
     document.getElementById('chSndOff').style.display = ambOn ? 'none' : '';
     sndBtn.title = ambOn ? 'mute the city radio' : 'unmute the city radio';
+    sndBtn.setAttribute('aria-label', ambOn ? 'Mute the city radio' : 'Unmute the city radio');
   });
   const ambKick = () => {
     if (ambOn && AMB.paused) AMB.play().catch(() => {});
@@ -6857,13 +7073,14 @@ const timeline = (() => {
     birds.hist(frame.birds || { aloft: 0 }); // pre-birds snapshots replay a quiet sky
     rtraffic.hist(frame.traffic || [], frame.trafficEvents || []);
     nyc311.hist(frame.nyc311 || []); // pre-311 snapshots replay an empty layer
+    airQuality.hist(frame.airQuality || []);
     setBadge('past', LBL_FMT.format(new Date(midday(day))));
   }
   function exit() {
     if (!HIST.active) return;
     HIST.active = false; HIST.day = '';
     flights.hist(null); ferries.hist(null); buses.hist(null); subway.hist(null); citibike.hist(null);
-    birds.hist(null); rtraffic.hist(null); nyc311.hist(null);
+    birds.hist(null); rtraffic.hist(null); nyc311.hist(null); airQuality.hist(null);
     if (HIST.liveWx) live.applyWeather(HIST.liveWx);
   }
   async function apply(off) {
@@ -7450,6 +7667,7 @@ const subway = (() => {
   const arcByStop = new Map();    // gtfs_stop_id → { trunkId: arcPos }
   const corridors = {};           // trunkId → { pts: Float32Array [x,z,...], cum: Float32Array, len }
   const trips = new Map();        // trip_id → record
+  const arrivalTrips = new Map();
   let active = [];                // capped, render-ordered trip list (rebuilt at poll)
   let FAKE = false, ready = false, staticInFlight = false, polling = false;
   let nextStatic = 1, staticDelay = 10, nextPoll = 0, pollRetried = false, lastPollT = -1;
@@ -7539,27 +7757,30 @@ const subway = (() => {
     const nowS = HIST.active ? HIST.epochS : Date.now() / 1000; // history freezes the transit clock
     for (const rec of recs) {
       const routeRaw = rec.route, route = ROUTE_ALIAS[routeRaw] || routeRaw;
+      const dm = rec.tid.match(/\.\.?([NS])/), dir = dm && dm[1] === 'N' ? 'Uptown' : 'Downtown';
+      const allStops = rec.stus.map(([sidRaw, arr, dep]) => ({ id: sidRaw.replace(/[NS]$/, ''), arr, dep: Math.max(dep, arr) }));
+      arrivalTrips.set(rec.tid, { tid: rec.tid, route, rawRoute: routeRaw, dir, stops: allStops, seen: pollN });
       const tk = ROUTE_TRUNK[routeRaw] || ROUTE_TRUNK[route];
       if (!tk || !corridors[tk]) continue;
       // known-arc stop list along this trip
       const stops = [];
       let destSid = null;
-      for (const [sidRaw, arr, dep] of rec.stus) {
-        const sid = sidRaw.replace(/[NS]$/, '');
+      for (const stop of allStops) {
+        const sid = stop.id, arr = stop.arr, dep = stop.dep;
         destSid = sid;
         const m = arcByStop.get(sid);
-        if (m && m[tk] !== undefined) stops.push({ arc: m[tk], arr, dep: Math.max(dep, arr), name: stationName.get(sid) || sid });
+        if (m && m[tk] !== undefined) stops.push({ id: sid, arc: m[tk], arr, dep, name: stationName.get(sid) || sid });
       }
       if (!stops.length) continue;
       if (stops[stops.length - 1].arr < nowS - 90) continue; // trip already done in-bounds
       let tr = trips.get(rec.tid);
       if (!tr) {
-        tr = { tid: rec.tid, route, tk, dir: /\.\.?([NS])/.test(rec.tid) && RegExp.$1 === 'N' ? 'Uptown' : 'Downtown',
+        tr = { tid: rec.tid, route, rawRoute: routeRaw, tk, dir,
                atlas: Math.max(0, ATLAS.indexOf(route)), stops, dest: '', dispArc: -1, fade: 0,
                seedv: (iHash(trips.size + 1, rec.tid.length) % 1000) / 1000,
                dwell: false, seen: pollN, seg: 0, next: '', fakeP: -1 };
         trips.set(rec.tid, tr);
-      } else { tr.stops = stops; tr.seen = pollN; tr.seg = 0; }
+      } else { tr.stops = stops; tr.rawRoute = routeRaw; tr.seen = pollN; tr.seg = 0; }
       tr.dest = stationName.get(destSid) || (stops.length ? stops[stops.length - 1].name : '');
       tr.dwellFeed = vehStatus.get(rec.tid) === 1; // STOPPED_AT
     }
@@ -7574,6 +7795,7 @@ const subway = (() => {
         const vs = j.vehStatus || {};
         ingestTrips(j.trips, { get: tid => vs[tid] }, pollN); // Map-shim over the plain object
         for (const [tid, tr] of trips) if (pollN - tr.seen >= 2) trips.delete(tid); // absent 2 polls
+        for (const [tid, tr] of arrivalTrips) if (pollN - tr.seen >= 2) arrivalTrips.delete(tid);
         rebuildActive();
         lastPollT = T; pollRetried = false;
         polling = false; nextPoll = T + 20;
@@ -7864,7 +8086,7 @@ const subway = (() => {
   // ---- synthetic mode: no network at all
   function setFake(list) {
     FAKE = true; ready = true;
-    trips.clear();
+    trips.clear(); arrivalTrips.clear();
     let k = 0;
     for (const ft of list) {
       const a = geoToScene(ft.from[0], ft.from[1]), b2 = geoToScene(ft.to[0], ft.to[1]);
@@ -7886,7 +8108,7 @@ const subway = (() => {
   // clock (nowS) is frozen at HIST.epochS while scrubbed, so trains hold mid-track
   // exactly where the schedule had them at the recorded moment. null = back to live.
   function hist(payload) {
-    trips.clear();
+    trips.clear(); arrivalTrips.clear();
     if (payload && Array.isArray(payload.trips)) {
       pollN++;
       const vs = payload.vehStatus || {};
@@ -7899,7 +8121,13 @@ const subway = (() => {
     beacons: () => pillars.count,
     lastPollAge: () => lastPollT < 0 ? -1 : T - lastPollT,
     byRoute: () => { const m = {}; for (const tr of trips.values()) m[tr.route] = (m[tr.route] || 0) + 1; return m; },
-    trips, corridors, _fly: flyToBeacon, geoRaw: geoToSceneRaw
+    trips, arrivalTrips, corridors, _fly: flyToBeacon, geoRaw: geoToSceneRaw,
+    routeLabel: route => ROUTE_ALIAS[route] || route,
+    routeShape: route => /^(6X|7X|FX)$/.test(route) ? 'diamond' : 'circle',
+    routeColor: route => {
+      const label = ROUTE_ALIAS[route] || route;
+      return label === 'SIR' ? '#0062CF' : label === 'T' ? '#00ADD0' : (TRUNK_HEX[ROUTE_TRUNK[label]] || '#808183');
+    }
   };
 })();
 
@@ -7976,7 +8204,7 @@ const ferries = (() => {
         if (spd > 0.3) v.yaw = Math.atan2(vx, vz);
       }
       v.label = a.label; v.route = a.route; v.headsign = a.headsign;
-      v.next = a.next; v.eta = a.nextEtaMin; v.docked = a.docked; v.spd = spd;
+      v.next = a.next; v.eta = a.nextEtaMin; v.calls = Array.isArray(a.calls) ? a.calls : []; v.docked = a.docked; v.spd = spd;
     }
   }
   function poll() {
@@ -8109,7 +8337,8 @@ const ferries = (() => {
     fyMesh.instanceMatrix.needsUpdate = true; fyFollow = null;
     if (!rows) { fyPoll = 0; fyDelay = 15; return; }
     ingest(rows.map(r => ({ id: r[0], label: r[1], lat: r[2], lon: r[3],
-      heading: r[4] < 0 ? null : r[4], speedMs: r[5], route: r[6], headsign: r[7], docked: !!r[8] })), T, 0);
+      heading: r[4] < 0 ? null : r[4], speedMs: r[5], route: r[6], headsign: r[7], docked: !!r[8],
+      calls: (r[9] || []).map(c => ({ stopId: c[0], name: c[1], at: c[2] })) })), T, 0);
     for (const v of fyList) { v.vx = 0; v.vz = 0; v.tgt.copy(v.pos); }
   }
   return { update, hist, list: fyList, vessels, _fly: flyToVessel };
@@ -8277,12 +8506,14 @@ const buses = (() => {
   for (let i = 0; i < BN; i++) busMesh.setMatrixAt(i, _bZero);
   scene.add(busMesh);
   const fleet = new Map(); // id → record
+  const arrivalFleet = new Map();
   const bList = [];
   const bSlots = []; for (let i = BN - 1; i >= 0; i--) bSlots.push(i);
   let bPoll = 4, bDelay = 15, bPolling = false, bStale = 120, bLastFetched = 0, bEmpty = 0;
   function ingest(list, tNow, ageS) {
     for (const a of list) {
       if (a.lat == null || a.lon == null || !a.id) continue;
+      arrivalFleet.set(a.id, { id: a.id, route: a.route, dest: a.dest || '', calls: Array.isArray(a.calls) ? a.calls : [], seen: tNow });
       const g = subway.geoRaw(a.lat, a.lon); // buses live on streets AND bridges — no water clamp
       const spd = a.speedMs || 0;
       let vx = 0, vz = 0, yaw = null, travelAng = null;
@@ -8317,7 +8548,7 @@ const buses = (() => {
         v.vx = vx; v.vz = vz; v.seen = tNow;
         if (yaw !== null) v.yaw = yaw;
       }
-      v.route = a.route; v.spd = spd; v.dest = a.dest || '';
+      v.route = a.route; v.spd = spd; v.dest = a.dest || ''; v.calls = Array.isArray(a.calls) ? a.calls : [];
       v.edgeId = m ? m.ei : -1; v.edgeT = m ? m.t : 0;
       v.street = m ? G_EDGES[m.ei].nm : '';
     }
@@ -8395,6 +8626,7 @@ const buses = (() => {
   let bChipT = 0;
   function update(t, dt) {
     if (!bPolling && t >= bPoll && !HIST.active) poll();
+    if (!HIST.active) for (const [id, v] of arrivalFleet) if (t - v.seen > bStale) arrivalFleet.delete(id);
     if (!bList.length) return; // fully dormant without data
     let dirty = false;
     for (let i = bList.length - 1; i >= 0; i--) {
@@ -8451,6 +8683,7 @@ const buses = (() => {
   // history replay: recorded fleet as a frozen tableau — same map-matching ingest
   // (edgeId/edgeT/street join keys included), then motion zeroed so nothing drifts
   function hist(rows) {
+    arrivalFleet.clear();
     for (let i = bList.length - 1; i >= 0; i--) {
       const v = bList[i];
       bSlots.push(v.slot); busMesh.setMatrixAt(v.slot, _bZero);
@@ -8459,10 +8692,11 @@ const buses = (() => {
     busMesh.instanceMatrix.needsUpdate = true; bFollow = null;
     if (!rows) { bPoll = 0; bDelay = 15; return; }
     ingest(rows.map(r => ({ id: r[0], route: r[1], lat: r[2], lon: r[3],
-      bearing: r[4] < 0 ? null : r[4], speedMs: r[5], dest: r[6] })), T, 0);
+      bearing: r[4] < 0 ? null : r[4], speedMs: r[5], dest: r[6],
+      calls: (r[7] || []).map(c => ({ stopId: c[0], at: c[1] })) })), T, 0);
     for (const v of bList) { v.vx = 0; v.vz = 0; v.tgt.copy(v.pos); }
   }
-  return { update, hist, fleet, list: bList, _fly: flyToBus };
+  return { update, hist, fleet, list: bList, arrivals: arrivalFleet, _fly: flyToBus };
 })();
 window.__buses = buses; // dev/testing hook
 
@@ -11082,6 +11316,772 @@ window.__perfRoute = () => new Promise((res) => {
   };
   step();
 });
+const featureMode = (() => {
+  let current = 'home'; const modules = {};
+  const homeButton = document.getElementById('homeBtn'), airButton = document.getElementById('aqBtn');
+  function apply(reselect = false) {
+    homeButton.setAttribute('aria-pressed', String(current === 'home')); airButton.setAttribute('aria-pressed', String(current === 'air'));
+    if (modules.home) modules.home.setActive(current === 'home', reselect && current === 'home');
+    if (modules.air) modules.air.setActive(current === 'air', reselect && current === 'air');
+  }
+  function select(name) { if (name !== 'home' && name !== 'air') return; current = current === name ? null : name; apply(); }
+  function register(name, api) { modules[name] = api; apply(); }
+  homeButton.addEventListener('click', () => modules.home && modules.home.act ? modules.home.act() : select('home')); airButton.addEventListener('click', () => select('air'));
+  return { select, register, current:() => current };
+})();
+window.__featureMode = featureMode;
+const airQuality = (() => {
+  const MAX = 32, btn = document.getElementById('aqBtn'), legend = document.getElementById('aqLegend');
+  const panel = document.getElementById('aqSensors'), panelList = document.getElementById('aqSensorList'), airNowEl = document.getElementById('aqAirNow');
+  const neighborhoodList = document.getElementById('aqNeighborhoodList'), hubTabs = document.getElementById('aqHubTabs'), boroughTabs = document.getElementById('aqBoroughTabs');
+  const panelStatus = document.getElementById('aqSensorStatus'), panelMode = document.getElementById('aqSensorMode'), panelClock = document.getElementById('aqSensorClock'), panelSource = document.getElementById('aqSensorSource');
+  const list = [], liveRows = [], grid = [], neighborhoods = [], BOROUGHS = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island'];
+  let visible = false, poll = 7, delay = 60, busy = false, feedStale = false, sourceFetchedAt = 0, selectedSource = 'portal', sourceHref = 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/', airNow = null, hubTab = 'neighborhoods', borough = 'Manhattan', neighborhoodLoading = null, chipT = 0, panelT = 0;
+  let fieldMesh = null, fieldAlpha = null, fieldValue = null, fieldLoading = null, fieldYear = 0, fieldSpacing = 600;
+  const geo = new THREE.CylinderGeometry(24, 24, 1, 8); geo.translate(0, 0.5, 0);
+  const mat = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.9, emissive: 0x111111, emissiveIntensity: 0.35 });
+  const mesh = new THREE.InstancedMesh(geo, mat, MAX);
+  mesh.count = 0; mesh.frustumCulled = false; mesh.renderOrder = 5;
+  scene.add(mesh);
+  const _m = new THREE.Matrix4(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _q = new THREE.Quaternion(), _c = new THREE.Color();
+  const CIV = [0x00441b, 0x0072b2, 0xf0e442, 0xd55e00, 0xffb3d9].map(v => new THREE.Color(v));
+  const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+  function category(pm) {
+    return pm <= 9 ? 'LOW' : pm <= 35.4 ? 'MODERATE' : pm <= 55.4 ? 'ELEVATED' : pm <= 125.4 ? 'HIGH' : 'VERY HIGH';
+  }
+  function color(pm, stale) {
+    const i = pm <= 9 ? 0 : pm <= 35.4 ? 1 : pm <= 55.4 ? 2 : pm <= 125.4 ? 3 : 4;
+    _c.copy(CIV[i]);
+    if (stale) _c.lerp(new THREE.Color(0x87919d), 0.55);
+    return _c;
+  }
+  function refMs() { return HIST.active ? HIST.epochS * 1000 : Date.now(); }
+  function ageText(tMin) {
+    const min = Math.max(0, Math.floor(refMs() / 60000 - (tMin + 60)));
+    return min < 1 ? 'just now' : min < 60 ? min + ' min ago' : Math.floor(min / 60) + ' h ago';
+  }
+  function intervalText(tMin) {
+    const fmt = ms => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return fmt(tMin * 60000) + '–' + fmt((tMin + 59) * 60000);
+  }
+  function sensorState(o) {
+    if (HIST.active) return ['recorded', 'RECORDED'];
+    const age = refMs() / 60000 - (o.tMin + 60);
+    return age <= 150 ? ['live', 'CURRENT'] : age <= 360 ? ['delayed', 'DATA DELAYED'] : ['overdue', 'UPDATE OVERDUE'];
+  }
+  function aqiInfo(aqi) {
+    return aqi <= 50 ? ['GOOD', '#71d36f'] : aqi <= 100 ? ['MODERATE', '#f4d24d'] : aqi <= 150 ? ['UNHEALTHY FOR SENSITIVE GROUPS', '#f39a45'] : aqi <= 200 ? ['UNHEALTHY', '#e95454'] : aqi <= 300 ? ['VERY UNHEALTHY', '#9853a6'] : ['HAZARDOUS', '#7e2639'];
+  }
+  function pmAqi(value) {
+    const c = Math.floor(Math.max(0, value) * 10) / 10, breaks = [[0,9,0,50],[9.1,35.4,51,100],[35.5,55.4,101,150],[55.5,125.4,151,200],[125.5,225.4,201,300],[225.5,325.4,301,500]];
+    const b = breaks.find(x => c >= x[0] && c <= x[1]);
+    return b ? Math.round((b[3] - b[2]) / (b[1] - b[0]) * (c - b[0]) + b[2]) : c > 325.4 ? 500 : null;
+  }
+  function aqiProgress(aqi) {
+    const value = clamp(Number(aqi) || 0, 0, 500), percent = value / 500 * 100;
+    return '<div class="aqmProgress" role="progressbar" aria-label="Air Quality Index" aria-valuemin="0" aria-valuemax="500" aria-valuenow="' + Math.round(value) + '"><div class="aqmProgressTrack"><i class="aqmProgressFill" style="width:' + percent.toFixed(1) + '%"></i></div><div class="aqmProgressTicks" aria-hidden="true"><span>GOOD</span><span>MODERATE</span><span>UNHEALTHY</span><span>VERY UNHEALTHY</span><span>HAZARDOUS</span></div></div>';
+  }
+  function renderAirNow() {
+    if (HIST.active) { airNowEl.innerHTML = '<div class="aqmTop"><div><div class="aqmEyebrow">OFFICIAL AIRNOW · NYC REGION</div><div class="aqmMeta">LIVE NOWCAST IS NOT SHOWN DURING TIMELINE REPLAY</div></div><div class="aqmScore">—<small>AQI</small></div></div>'; return; }
+    const pollutants = airNow && airNow.current && Array.isArray(airNow.current.pollutants) ? airNow.current.pollutants : [];
+    const official = pollutants.find(item => /2\.5|particle/i.test(item.pollutant) && Number.isFinite(+item.aqi));
+    const estimatedAqi = list.reduce((max, item) => Number.isFinite(item.aqi) ? Math.max(max, item.aqi) : max, -Infinity);
+    const aqi = official ? +official.aqi : Number.isFinite(estimatedAqi) ? Math.round(estimatedAqi) : null;
+    if (aqi == null) { airNowEl.innerHTML = '<div class="aqmTop"><div><div class="aqmEyebrow">NYC REGION · AQI</div><div class="aqmMeta">WAITING FOR AIRNOW OR NYCCAS NOWCAST DATA</div></div><div class="aqmScore">—<small>AWAITING AQI</small></div></div>'; return; }
+    const info = aqiInfo(aqi), href = official ? 'https://www.airnow.gov/?city=New%20York&state=NY&country=USA' : 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/';
+    const label = official ? 'OFFICIAL AIRNOW · NYC REGION' : 'NYCCAS NOWCAST · HIGHEST ACTIVE MONITOR';
+    const qualifier = official ? '' : '<div class="aqmMeta">ESTIMATED AQI · AIRNOW TEMPORARILY UNAVAILABLE</div>';
+    airNowEl.innerHTML = '<a href="' + href + '" target="_blank" rel="noopener noreferrer"><div class="aqmTop"><div class="aqmContent"><div class="aqmHeading"><div class="aqmEyebrow">' + label + '</div><div class="aqmScore">' + aqi + '<small>' + info[0] + '</small></div></div><div class="aqmReadout">' + aqiProgress(aqi) + '</div>' + qualifier + '</div></div></a>';
+  }
+  function ringCentroid(ring) {
+    let area = 0, x = 0, y = 0;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const a = ring[j], b = ring[i], cross = a[0] * b[1] - b[0] * a[1]; area += cross; x += (a[0] + b[0]) * cross; y += (a[1] + b[1]) * cross; }
+    return Math.abs(area) > 1e-12 ? [x / (3 * area), y / (3 * area)] : ring.reduce((s, p) => [s[0] + p[0] / ring.length, s[1] + p[1] / ring.length], [0, 0]);
+  }
+  function loadNeighborhoods() {
+    if (neighborhoods.length || neighborhoodLoading) return neighborhoodLoading;
+    neighborhoodLoading = fetch('boundaries.json').then(r => { if (!r.ok) throw new Error('boundaries http ' + r.status); return r.json(); }).then(data => {
+      for (const n of data.neighborhoods || []) { if (n.kind !== 'nbhd' || !BOROUGHS.includes(n.boro)) continue; const ring = (n.rings || []).slice().sort((a,b) => b.length - a.length)[0]; if (!ring) continue; const c = ringCentroid(ring), g = subway.geoRaw(c[1], c[0]); neighborhoods.push({ name:n.name, borough:n.boro, lon:c[0], lat:c[1], x:g.x, z:g.z }); }
+      neighborhoods.sort((a,b) => a.name.localeCompare(b.name)); renderBoroughTabs(); renderNeighborhoods();
+    }).catch(() => { neighborhoodList.innerHTML = '<div class="aqIntro">NEIGHBORHOOD BOUNDARIES ARE TEMPORARILY UNAVAILABLE.</div>'; }).finally(() => { neighborhoodLoading = null; });
+    return neighborhoodLoading;
+  }
+  function estimateNeighborhood(n) {
+    const stations = list.filter(o => Number.isFinite(o.nowcastPm) && !o.stale).map(o => ({ o, d:Math.hypot(n.x-o.x,n.z-o.z) })).sort((a,b) => a.d-b.d).slice(0,4);
+    if (!stations.length) return null;
+    let sum = 0, weights = 0; for (const s of stations) { const w = 1 / Math.max(s.d, 400) ** 2; sum += s.o.nowcastPm * w; weights += w; }
+    const concentration = sum / weights, aqi = pmAqi(concentration), nearest = stations[0].d / 1000, confidence = nearest <= 2 ? 'HIGHER' : nearest <= 5 ? 'MEDIUM' : 'LOW';
+    return { concentration, aqi, nearest, confidence, sensors:stations.length };
+  }
+  function renderBoroughTabs() {
+    boroughTabs.innerHTML = BOROUGHS.map(name => '<button type="button" class="' + (name === borough ? 'on' : '') + '" data-borough="' + esc(name) + '" role="tab" aria-selected="' + (name === borough) + '">' + esc(name.toUpperCase()) + '</button>').join('');
+  }
+  function renderNeighborhoods() {
+    if (HIST.active) { neighborhoodList.innerHTML = '<div class="aqIntro">NEIGHBORHOOD AQI ESTIMATES ARE LIVE-ONLY. OPEN SENSOR NETWORK FOR RECORDED MEASUREMENTS.</div>'; return; }
+    if (!neighborhoods.length) { neighborhoodList.innerHTML = '<div class="aqIntro">LOADING OFFICIAL 2020 NEIGHBORHOODS…</div>'; loadNeighborhoods(); return; }
+    const rows = neighborhoods.filter(n => n.borough === borough);
+    neighborhoodList.innerHTML = '<div class="aqIntro">NYC SIM EST. AQI · PM2.5 INTERPOLATED FROM UP TO 4 CURRENT NYCCAS MONITORS. NOT AN OFFICIAL AIRNOW NEIGHBORHOOD AQI.</div>' + rows.map((n,i) => {
+      const e = estimateNeighborhood(n); if (!e) return '<div class="aqNbhd"><i style="--aq:#8394a7"></i><span><b class="aqNbhdName">' + esc(n.name) + '</b><small class="aqNbhdMeta">INSUFFICIENT CURRENT SENSOR DATA</small></span><span class="aqNbhdValue">—<small>EST. AQI</small></span></div>';
+      const info = aqiInfo(e.aqi); n.estimate = e;
+      return '<button type="button" class="aqNbhd" data-neighborhood="' + i + '" style="--aq:' + info[1] + '" aria-label="View estimated air quality for ' + esc(n.name) + '"><i></i><span><b class="aqNbhdName">' + esc(n.name) + '</b><small class="aqNbhdMeta">ESTIMATED · ' + info[0] + ' · ' + e.confidence + ' CONFIDENCE · NEAREST ' + e.nearest.toFixed(1) + ' KM</small></span><span class="aqNbhdValue">' + e.aqi + '<small>EST. AQI</small></span></button>';
+    }).join('');
+  }
+  function openNeighborhood(n) {
+    if (!n || !n.estimate) return; const e = n.estimate, info = aqiInfo(e.aqi);
+    const html = '<b>' + esc(n.name) + ' · estimated AQI ' + e.aqi + ' · ' + info[0] + '</b><br><span class="sub">NYC SIM estimate from ' + e.sensors + ' current NYCCAS monitors · nearest ' + e.nearest.toFixed(1) + ' km · ' + e.confidence.toLowerCase() + ' confidence · not official AirNow neighborhood data</span>';
+    setFocus('estimated neighborhood air quality', n.name, { borough:n.borough, estimated_aqi:e.aqi, estimated_pm25_ug_m3:+e.concentration.toFixed(1), confidence:e.confidence.toLowerCase(), nearest_monitor_km:+e.nearest.toFixed(1), estimated:true, source:'NYC SIM interpolation of NYCCAS' });
+    focusui.enter(() => [n.x, 48, n.z], html); camTween = { p0:camera.position.clone(), t0:controls.target.clone(), p1:new THREE.Vector3(n.x+240,330,n.z-390), t1:new THREE.Vector3(n.x,20,n.z), t:0, dur:1.8 };
+  }
+  function renderHubView() {
+    const neighborhoodsOn = hubTab === 'neighborhoods';
+    neighborhoodList.hidden = !neighborhoodsOn; neighborhoodList.style.display = neighborhoodsOn ? 'block' : 'none';
+    panelList.hidden = neighborhoodsOn; panelList.style.display = neighborhoodsOn ? 'none' : 'block';
+    boroughTabs.hidden = !neighborhoodsOn; boroughTabs.style.display = neighborhoodsOn ? 'grid' : 'none';
+    for (const button of hubTabs.querySelectorAll('button')) { const on = button.dataset.aqTab === hubTab; button.classList.toggle('on', on); button.setAttribute('aria-selected', String(on)); }
+    if (neighborhoodsOn) renderNeighborhoods(); else renderSensorPanel();
+  }
+  function fullSensorName(name) {
+    const exact = { BQE:'Brooklyn-Queens Expressway', FDR:'FDR Drive', 'SI Expwy':'Staten Island Expressway' };
+    return exact[name] || name.replace(/\bExpwy\b|\bExpy\b/g, 'Expressway').replace(/\bSt\b/g, 'Street').replace(/\bAve\b/g, 'Avenue').replace(/\bRd\b/g, 'Road').replace(/\bBrg\b/g, 'Bridge');
+  }
+  function sensorDetail(o) {
+    const aqi = o.aqi == null ? 'Unavailable' : Math.round(o.aqi);
+    return '<b>NYCCAS Air Quality Monitor -- ' + esc(fullSensorName(o.name)) + '</b><br><span class="sub">PM2.5 = ' + o.pm.toFixed(1) + ' µg/m³ -- ' + category(o.pm) + '<br>Estimated AQI = ' + aqi + '</span>';
+  }
+  function sensorLabelY(o) {
+    const dx = controls.target.x - camera.position.x, dz = controls.target.z - camera.position.z, d2 = dx * dx + dz * dz;
+    if (d2 < 1) return clamp(camera.position.y, 42, 5150);
+    const along = ((o.x - camera.position.x) * dx + (o.z - camera.position.z) * dz) / d2;
+    return clamp(camera.position.y + (controls.target.y - camera.position.y) * along, 42, 5150);
+  }
+  function openSensor(o) {
+    if (!o) return;
+    const html = sensorDetail(o), data = { site: o.name, average_24h_pm25_ug_m3: o.hasAverage ? o.pm : null, average_24h_observation_count: o.hasAverage ? o.avgCount : null, latest_hourly_pm25_ug_m3: o.latestPm, observed_epoch_min: o.tMin, delta_1h: o.delta, nowcast_aqi: o.aqi, peak_12h_pm25_ug_m3: o.peakPm, peak_12h_epoch_min: o.peakMin, estimated: false, source: 'NYCCAS' };
+    setFocus('air-quality monitor (NYCCAS)', fullSensorName(o.name), data);
+    focusui.enter(() => [o.x, sensorLabelY(o), o.z], html);
+    camTween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(o.x + 170, camera.position.y, o.z - 310), t1: new THREE.Vector3(o.x, 20, o.z), t: 0, dur: 1.8, _hi: true };
+  }
+  function renderSensorPanel() {
+    panel.classList.toggle('recorded', HIST.active);
+    if (!list.length) { panelList.innerHTML = '<div class="aqsEmpty">WAITING FOR ACTIVE SENSOR DATA…</div>'; renderPanelTimes(); return; }
+    panelList.innerHTML = list.slice().sort((a, b) => a.name.localeCompare(b.name)).map((o, i) => {
+      const st = sensorState(o), trend = o.delta == null ? 'NO TREND' : (o.delta > 0 ? '▲ +' : o.delta < 0 ? '▼ ' : '— ') + o.delta.toFixed(1) + ' / HR';
+      const metric = o.hasAverage ? '24H AVG · ' + o.avgCount + ' HOURS · LATEST ' + o.latestPm.toFixed(1) : 'RECORDED HOURLY';
+      const estimatedAqi = o.aqi == null ? '' : ' · ESTIMATED AQI ' + Math.round(o.aqi);
+      return '<button type="button" class="aqsRow ' + st[0] + '" data-sensor="' + esc(o.id) + '" style="--pulse:-' + (i % 6 * .23).toFixed(2) + 's" aria-label="View ' + esc(o.name) + ' air-quality sensor"><i class="aqsDot"></i><span><span class="aqsName">' + esc(o.name) + '</span><span class="aqsMeta"><b class="aqsState">' + st[1] + '</b>' + metric + ' · ENDED <span class="aqsAge" data-sensor="' + esc(o.id) + '">' + ageText(o.tMin) + '</span>' + estimatedAqi + ' · 12H PEAK ' + o.peakPm.toFixed(1) + '</span></span><span class="aqsReading"><b>' + o.pm.toFixed(1) + '</b><small>µg/m³ · ' + category(o.pm) + '</small></span></button>';
+    }).join('');
+    panel.classList.remove('sync'); requestAnimationFrame(() => panel.classList.add('sync'));
+    renderPanelTimes();
+  }
+  function renderPanelTimes() {
+    let live = 0;
+    for (const el of panelList.querySelectorAll('.aqsAge')) {
+      const o = list.find(x => x.id === el.dataset.sensor); if (!o) continue;
+      el.textContent = ageText(o.tMin); const st = sensorState(o), row = el.closest('.aqsRow');
+      row.classList.remove('live', 'delayed', 'overdue', 'recorded'); row.classList.add(st[0]); row.querySelector('.aqsState').textContent = st[1]; if (st[0] === 'live') live++;
+    }
+    const delayed = !HIST.active && (feedStale || live === 0);
+    panel.classList.toggle('feedDelayed', delayed);
+    panelMode.textContent = HIST.active ? 'RECORDED' : delayed ? 'DELAYED' : 'LIVE';
+    panelStatus.textContent = HIST.active ? list.length + ' SENSORS IN THIS SNAPSHOT' : feedStale ? 'SOURCE REFRESH DELAYED · LAST RECEIVED DATA' : live + ' OF ' + list.length + ' INTERVALS ENDED RECENTLY';
+    const checked = sourceFetchedAt ? new Date(sourceFetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+    panelSource.textContent = HIST.active ? 'RECORDED SNAPSHOT' : hubTab === 'neighborhoods' ? 'NYC SIM ESTIMATES · NYCCAS' : 'NYCCAS · ' + selectedSource.toUpperCase();
+    panelClock.textContent = HIST.active ? 'TIMELINE SNAPSHOT' : busy ? 'CHECKING SOURCE…' : (checked ? 'CHECKED ' + checked + ' · ' : '') + 'NEXT ' + Math.max(0, Math.ceil(poll - T)) + 's';
+  }
+  panelList.addEventListener('click', e => { const row = e.target.closest('[data-sensor]'); if (row) openSensor(list.find(o => o.id === row.dataset.sensor)); });
+  hubTabs.addEventListener('click', e => { const button = e.target.closest('[data-aq-tab]'); if (!button) return; hubTab = button.dataset.aqTab; renderHubView(); neighborhoodList.scrollTop = 0; panelList.scrollTop = 0; });
+  boroughTabs.addEventListener('click', e => { const button = e.target.closest('[data-borough]'); if (!button) return; borough = button.dataset.borough; renderBoroughTabs(); renderNeighborhoods(); neighborhoodList.scrollTop = 0; });
+  neighborhoodList.addEventListener('click', e => { const row = e.target.closest('[data-neighborhood]'); if (!row) return; const items = neighborhoods.filter(n => n.borough === borough); openNeighborhood(items[+row.dataset.neighborhood]); });
+  renderBoroughTabs();
+  function rebuild(rows) {
+    list.length = 0;
+    for (const r of rows || []) {
+      if (list.length >= MAX || !Array.isArray(r)) break;
+      const g = subway.geoRaw(+r[2], +r[3]);
+      if ((!onLand(g.x, g.z) && !landOK(g.x, g.z)) || !isFinite(g.x) || !isFinite(g.z)) { console.warn('[air-quality] monitor outside land mask:', r[1]); continue; }
+      const tMin = +r[5], latestPm = +r[4], stale = refMs() / 60000 - (tMin + 60) > 150;
+      if (!isFinite(tMin) || !isFinite(latestPm)) continue;
+      const peakPm = isFinite(+r[8]) ? +r[8] : latestPm, peakMin = isFinite(+r[9]) ? +r[9] : tMin;
+      const hasAverage = r[10] != null && isFinite(+r[10]), pm = hasAverage ? +r[10] : latestPm, avgCount = isFinite(+r[11]) ? +r[11] : 1;
+      list.push({ id: String(r[0]), name: String(r[1]), x: g.x, z: g.z, pm, latestPm, tMin,
+        delta: r[6] == null ? null : +r[6], aqi: r[7] == null ? null : +r[7], peakPm, peakMin, avgCount, hasAverage, nowcastPm:r[12] == null ? null : +r[12], stale });
+    }
+    mesh.count = list.length;
+    for (let i = 0; i < list.length; i++) {
+      const o = list[i];
+      _m.compose(_v.set(o.x, 3, o.z), _q.identity(), _s.set(1, 5150, 1));
+      mesh.setMatrixAt(i, _m); mesh.setColorAt(i, color(o.pm, o.stale));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    updateField();
+    refreshUi();
+    renderSensorPanel(); renderNeighborhoods();
+  }
+  function loadField() {
+    if (fieldMesh || fieldLoading) return fieldLoading;
+    fieldLoading = fetch('air-quality-grid.bin').then(r => { if (!r.ok) throw new Error('air grid http ' + r.status); return r.arrayBuffer(); }).then(buf => {
+      const d = new DataView(buf);
+      if (buf.byteLength < 12 || String.fromCharCode(...new Uint8Array(buf, 0, 4)) !== 'AQG1') throw new Error('air grid shape');
+      fieldYear = d.getUint16(4, true); fieldSpacing = d.getUint16(6, true);
+      const n = d.getUint32(8, true);
+      for (let i = 0; i < n && 12 + i * 12 + 12 <= buf.byteLength; i++) {
+        const lat = d.getFloat32(12 + i * 12, true), lon = d.getFloat32(16 + i * 12, true), base = d.getFloat32(20 + i * 12, true);
+        const g = subway.geoRaw(lat, lon);
+        if (isFinite(base) && (onLand(g.x, g.z) || landOK(g.x, g.z))) grid.push({ x: g.x, z: g.z, base, value: base, conf: 0 });
+      }
+      const fg = new THREE.CylinderGeometry(fieldSpacing * 0.3525, fieldSpacing * 0.3525, 1, 6, 1, false); fg.translate(0, 0.5, 0);
+      fieldAlpha = new Float32Array(grid.length); fieldValue = new Float32Array(grid.length);
+      fg.setAttribute('aAlpha', new THREE.InstancedBufferAttribute(fieldAlpha, 1));
+      fg.setAttribute('aValue', new THREE.InstancedBufferAttribute(fieldValue, 1));
+      const fm = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, vertexColors: true,
+        vertexShader: `attribute float aAlpha; attribute float aValue; varying vec3 vC; varying float vA; varying float vY; varying float vValue; varying float vSide; varying float vTop;
+          void main(){ vC=instanceColor; vA=aAlpha; vY=position.y; vValue=aValue; vSide=1.0-smoothstep(0.35,0.8,abs(normal.y)); vTop=smoothstep(0.75,0.95,normal.y); gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.0); }`,
+        fragmentShader: `varying vec3 vC; varying float vA; varying float vY; varying float vValue; varying float vSide; varying float vTop;
+          void main(){ float bands=vValue<=9.0?1.0:vValue<=35.4?2.0:vValue<=55.4?3.0:vValue<=125.4?4.0:5.0; float stripe=step(0.78,fract(vY*bands))*vSide; vec3 col=mix(vC,vec3(1.0),vTop*0.24); col=mix(col,vec3(1.0),stripe*0.92); gl_FragColor=vec4(col,min(1.0,(0.28+0.67*vA)*1.3)); }` });
+      fieldMesh = new THREE.InstancedMesh(fg, fm, grid.length); fieldMesh.frustumCulled = false; fieldMesh.renderOrder = 2;
+      scene.add(fieldMesh); updateField(); refreshUi();
+    }).catch(e => console.warn('[air-quality] baseline unavailable:', e.message || e)).finally(() => { fieldLoading = null; });
+    return fieldLoading;
+  }
+  function updateField() {
+    if (!fieldMesh || !grid.length || !list.length) return;
+    const residuals = [];
+    for (const o of list) {
+      let nearest = null, nd = Infinity;
+      for (const g of grid) { const d = (g.x - o.x) ** 2 + (g.z - o.z) ** 2; if (d < nd) { nd = d; nearest = g; } }
+      if (nearest) residuals.push({ x: o.x, z: o.z, v: o.pm - nearest.base, stale: o.stale });
+    }
+    const medianValues = residuals.map(r => r.v).sort((a, b) => a - b);
+    const median = medianValues.length ? medianValues[Math.floor(medianValues.length / 2)] : 0;
+    const gray = new THREE.Color(0x87919d);
+    for (let i = 0; i < grid.length; i++) {
+      const g = grid[i], near = residuals.map(r => ({ r, d: Math.hypot(g.x - r.x, g.z - r.z) })).filter(x => x.d <= 5000).sort((a, b) => a.d - b.d).slice(0, 5);
+      let sum = 0, weights = 0;
+      for (const x of near) { const w = (x.r.stale ? 0.4 : 1) / Math.max(x.d, 250) ** 2; sum += x.r.v * w; weights += w; }
+      g.value = Math.max(0, g.base + (weights ? sum / weights : median));
+      const nearest = near.length ? near[0].d : 5000;
+      g.conf = weights ? clamp((1 - nearest / 5000) * (0.55 + Math.min(near.length, 4) * 0.1125), 0.12, 1) : 0.12;
+      const fc = color(g.value, false).clone().lerp(gray, (1 - g.conf) * 0.4);
+      const layers = g.value <= 9 ? 1 : g.value <= 35.4 ? 2 : g.value <= 55.4 ? 3 : g.value <= 125.4 ? 4 : 5, height = layers * 56;
+      fieldMesh.setColorAt(i, fc); fieldAlpha[i] = g.conf; fieldValue[i] = g.value;
+      _m.compose(_v.set(g.x, 24, g.z), _q.identity(), _s.set(1, height, 1));
+      fieldMesh.setMatrixAt(i, _m);
+    }
+    fieldMesh.instanceMatrix.needsUpdate = true;
+    if (fieldMesh.instanceColor) fieldMesh.instanceColor.needsUpdate = true;
+    fieldMesh.geometry.attributes.aAlpha.needsUpdate = true; fieldMesh.geometry.attributes.aValue.needsUpdate = true;
+  }
+  function refreshUi() {
+    if (visible && list.length) loadField();
+    mesh.visible = visible && list.length > 0;
+    if (fieldMesh) fieldMesh.visible = visible && list.length > 0;
+    btn.disabled = false;
+    btn.setAttribute('aria-pressed', String(visible));
+    const buttonLabel = visible ? 'Air Quality selected' : 'Select Air Quality';
+    btn.setAttribute('aria-label', buttonLabel); btn.title = buttonLabel;
+    legend.style.display = visible ? 'block' : 'none';
+    panel.style.display = visible ? 'flex' : 'none';
+    renderAirNow(); renderHubView();
+    if (!visible) for (const ch of chips) { ch.o = null; ch.el.style.display = 'none'; }
+    const recordedHourly = HIST.active && list.some(o => !o.hasAverage);
+    legend.innerHTML = '<div class="aqh"><span>' + (recordedHourly ? 'RECORDED HOURLY' : '24-HOUR AVG') + ' PM2.5 · µg/m³</span><span>' + (HIST.active ? 'RECORDED' : 'ROLLING') + '</span></div>' +
+      '<div class="aqscale"><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i></span><b>LOW</b><small>0–9.0</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i></span><b>MODERATE</b><small>9.1–35.4</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i><i></i></span><b>ELEVATED</b><small>35.5–55.4</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>HIGH</b><small>55.5–125.4</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b>VERY HIGH</b><small>125.5+</small></span></div>' +
+      '<div class="aqmeta">Taller hex stacks = more PM2.5; beacons measured, surface estimated · <a href="' + esc(HIST.active ? 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/' : sourceHref) + '" target="_blank" rel="noopener noreferrer">NYC Health + Queens College</a></div>';
+  }
+  function doPoll() {
+    busy = true;
+    liveBridge.get('airQuality').then(j => {
+      if (!Array.isArray(j.rows)) throw 0;
+      feedStale = !!j.stale; sourceFetchedAt = +j.fetchedAt || 0; selectedSource = ['portal', 'archive', 'mixed'].includes(j.selectedSource) ? j.selectedSource : 'portal'; airNow = j.airNow || null;
+      const sourceRows = j.sources && typeof j.sources === 'object' ? Object.values(j.sources).filter(s => s && s.ok && typeof s.url === 'string') : [];
+      const newestSource = sourceRows.sort((a, b) => (+b.newestObservedAt || 0) - (+a.newestObservedAt || 0))[0];
+      sourceHref = selectedSource === 'mixed' ? 'https://github.com/nychealth/nyccas-data' : newestSource ? newestSource.url : 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/';
+      liveRows.length = 0; liveRows.push(...j.rows);
+      if (!HIST.active) rebuild(liveRows);
+      delay = 60;
+    }).catch(() => { delay = Math.min(delay * 2, 600); })
+      .finally(() => { busy = false; poll = T + delay; refreshUi(); });
+  }
+  const chips = [];
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElement('div'); el.className = 'fybl airq'; document.body.appendChild(el);
+    const ch = { el, o: null, html: '' };
+    el.addEventListener('click', () => openSensor(ch.o));
+    chips.push(ch);
+  }
+  const near = [];
+  function assignChips() {
+    near.length = 0;
+    if (visible) for (const o of list) {
+      const y = sensorLabelY(o), d = _v.set(o.x, y, o.z).distanceTo(camera.position);
+      if (d >= 5000) continue;
+      _v.set(o.x, y, o.z).project(camera);
+      if (_v.z > 1 || Math.abs(_v.x) > 1 || Math.abs(_v.y) > 1) continue;
+      o._d = d;
+      o.html = sensorDetail(o);
+      near.push(o);
+    }
+    near.sort((a, b) => a._d - b._d);
+    for (let i = 0; i < chips.length; i++) {
+      const ch = chips[i], o = near[i] || null; ch.o = o;
+      if (!o) { ch.el.style.display = 'none'; ch.html = ''; continue; }
+      if (ch.html !== o.html) { ch.html = o.html; ch.el.innerHTML = o.html; }
+      ch.el.style.display = 'block';
+    }
+  }
+  function update(t) {
+    if (!busy && t >= poll && !HIST.active) doPoll();
+    if (!visible || !list.length) return;
+    if (t > panelT) { panelT = t + 1; renderPanelTimes(); }
+    if (t > chipT) { chipT = t + 0.7; assignChips(); }
+    for (const ch of chips) if (ch.o) {
+      _v.set(ch.o.x, sensorLabelY(ch.o), ch.o.z).project(camera);
+      ch.el.style.transform = 'translate(' + ((0.5 - _v.x * 0.5) * innerWidth).toFixed(1) + 'px,' + ((0.5 - _v.y * 0.5) * RENDER_H).toFixed(1) + 'px) translate(-50%,-130%)';
+    }
+  }
+  function hist(rows) {
+    if (rows === null) { rebuild(liveRows); poll = 0; return; }
+    rebuild(rows || []);
+  }
+  function setVisible(on, moveCamera = false) {
+    visible = !!on; refreshUi();
+    if (visible && moveCamera) { autoPan.stop(); const p1 = camera.position.clone(); p1.y += 2822.4; camTween = { p0:camera.position.clone(), t0:controls.target.clone(), p1, t1:controls.target.clone(), t:0, dur:2.4, _hi:true }; }
+  }
+  function setActive(on, reselect) { setVisible(on, on && (reselect || !visible)); }
+  function dev(rows) { rebuild(rows); }
+  const api = { update, hist, setVisible, setActive, rows:list, _dev:dev };
+  featureMode.register('air', api); refreshUi();
+  return api;
+})();
+window.__airQuality = airQuality;
+
+/* ============================================================
+   26f. HOME — sign in with Google, set your address once, and the city
+   opens at your block every visit (plan-home.md Phase 1). Server:
+   /api/home (lib/home-core.js). The street address is geocoded
+   server-side and DISCARDED — only coordinates (encrypted at rest) and
+   the neighborhood label come back. Unconfigured or signed-out →
+   zero behavior change (the GBA button stays RESET via §26e's
+   __home.ready indirection; the desktop pill stays hidden).
+   ============================================================ */
+const homeui = (() => {
+  const S = { on: false, clientId: null, signedIn: false, name: null, home: null,
+              hx: 0, hz: 0, cand: null, gsiInit: false, stations: null, transitStops: null, stopLoad: null,
+              schedules: { bus: {}, ferry: {} }, scheduleLoad: null, scheduleAt: 0,
+              homeTab: 'subways', panelT: -99, pinnedStations: new Set(), pinnedBusStops: new Set(), pinnedBikeStations: new Set() };
+  try { S.pinnedStations = new Set(JSON.parse(localStorage.getItem('transportHubPinnedStations') || '[]')); } catch { }
+  try { S.pinnedBusStops = new Set(JSON.parse(localStorage.getItem('transportHubPinnedBusStops') || '[]')); } catch { }
+  try { S.pinnedBikeStations = new Set(JSON.parse(localStorage.getItem('transportHubPinnedBikeStations') || '[]')); } catch { }
+  const $ = (id) => document.getElementById(id);
+  const modal = $('homeModal'), panel = $('homePanel'), chip = $('homeChip'), auto = $('hmAuto');
+  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  const post = (body) => fetch('/api/home', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({ error: 'network hiccup — try again' }));
+  const stat = (m) => { $('hmStat').textContent = m || ''; };
+
+  // ---- beacon: footprint-sized pulsing light column that reads through the massing
+  // (depthTest:false, cams-marker trick). +1 call, only when set.
+  let beacon = null, beaconBeam = null;
+  function homeBeamDiameter(x, z) {
+    let best = -1, bestGap = 80, bestArea = Infinity;
+    for (let i = 0; i < HOME_FOOTPRINTS.n; i++) {
+      const dx = x - HOME_FOOTPRINTS.x[i], dz = z - HOME_FOOTPRINTS.z[i];
+      if (Math.abs(dx) > 180 || Math.abs(dz) > 180) continue;
+      const a = HOME_FOOTPRINTS.r[i] / 1000, c = Math.cos(a), s = Math.sin(a);
+      const lx = dx * c + dz * s, lz = -dx * s + dz * c;
+      const hw = HOME_FOOTPRINTS.w[i] * 0.5, hd = HOME_FOOTPRINTS.d[i] * 0.5;
+      const gap = Math.hypot(Math.max(Math.abs(lx) - hw, 0), Math.max(Math.abs(lz) - hd, 0));
+      const area = HOME_FOOTPRINTS.w[i] * HOME_FOOTPRINTS.d[i];
+      if (gap < bestGap - 0.01 || (gap <= 0.01 && bestGap <= 0.01 && area < bestArea)) { best = i; bestGap = gap; bestArea = area; }
+    }
+    return best < 0 ? 10 : Math.max(10, Math.hypot(HOME_FOOTPRINTS.w[best], HOME_FOOTPRINTS.d[best]));
+  }
+  function placeBeacon() {
+    const w = subway.geoRaw(S.home.lat, S.home.lon); // Iron Rule 1: the calibrated bridge, never geoToWorld
+    S.hx = w.x; S.hz = w.z;
+    const beamDiameter = homeBeamDiameter(S.hx, S.hz);
+    if (!landOK(S.hx, S.hz)) console.warn('[home] beacon landOK=false — calibration guard tripped', S.hx | 0, S.hz | 0);
+    if (beacon) {
+      beacon.position.set(S.hx, 0, S.hz); beaconBeam.scale.set(beamDiameter * 0.5, 1, beamDiameter * 0.5);
+      beacon.userData.beamDiameter = beamDiameter; beacon.visible = !!S.active; return;
+    }
+    beaconBeam = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 2400, 16, 1, true).translate(0, 1200, 0),
+      new THREE.MeshBasicMaterial({ color: 0xf4c87a, transparent: true, opacity: 0.16,
+        blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+    beaconBeam.scale.set(beamDiameter * 0.5, 1, beamDiameter * 0.5);
+    beaconBeam.renderOrder = 8; // over the massing so home is findable from tour altitude
+    beacon = new THREE.Group(); beacon.add(beaconBeam);
+    beacon.position.set(S.hx, 0, S.hz); beacon.userData.beamDiameter = beamDiameter;
+    scene.add(beacon); beacon.visible = !!S.active;
+  }
+
+  function flyHome(openAfter) {
+    const orbitX = S.hx, orbitZ = S.hz;
+    camTween = { p0: camera.position.clone(), t0: controls.target.clone(),
+      p1: new THREE.Vector3(orbitX + 170, 230, orbitZ - 300), t1: new THREE.Vector3(orbitX, 12, orbitZ), t: 0, dur: 2.6,
+      onDone: () => autoPan.aroundHome(orbitX, orbitZ) };
+    setFocus('home', 'Home — ' + (S.home.neighborhood || S.home.borough || 'NYC'),
+      { neighborhood: S.home.neighborhood, borough: S.home.borough });
+    if (openAfter !== false) openPanel();
+  }
+
+  // ---- resident dashboard: nearest-X over feeds ALREADY polling — zero new upstream load
+  const d2 = (x, z) => Math.hypot(x - S.hx, z - S.hz);
+  function ensureStations() { // one 24h-cached fetch; rows → scene coords via the calibrated bridge
+    if (S.stations) return Promise.resolve(S.stations);
+    return fetch('/api/subway/stations').then(r => r.json()).then(j => {
+      S.stations = (j.rows || []).map(r => {
+        const lat = +r.gtfs_latitude, lon = +r.gtfs_longitude;
+        if (!isFinite(lat) || !isFinite(lon)) return null;
+        const w = subway.geoRaw(lat, lon);
+        return { id: r.gtfs_stop_id, complexId: r.complex_id || r.station_id || r.gtfs_stop_id,
+          name: r.stop_name, x: w.x, z: w.z };
+      }).filter(Boolean);
+      return S.stations;
+    }).catch(() => null);
+  }
+  function ensureTransitStops() {
+    if (S.transitStops) return Promise.resolve(S.transitStops);
+    if (S.stopLoad) return S.stopLoad;
+    S.stopLoad = fetch('/api/transit-stops').then(r => r.json()).then(j => {
+      const mapStops = rows => (rows || []).map(r => {
+        const lat = +r.lat, lon = +r.lon;
+        if (!isFinite(lat) || !isFinite(lon)) return null;
+        const w = subway.geoRaw(lat, lon);
+        return { id: r.id, stopId: String(r.stopId || r.id || '').replace(/^MTA_/, ''), name: r.name, x: w.x, z: w.z };
+      }).filter(Boolean);
+      S.transitStops = { bus: mapStops(j.busStops), ferry: mapStops(j.ferryStops) };
+      loadTransitSchedules();
+      return S.transitStops;
+    }).catch(() => null).finally(() => { S.stopLoad = null; });
+    return S.stopLoad;
+  }
+  function loadTransitSchedules() {
+    if (!S.transitStops || HIST.active || S.scheduleLoad || Date.now() - S.scheduleAt < 300000) return S.scheduleLoad;
+    const busesNear = S.transitStops.bus.map(s => ({ s, d: d2(s.x, s.z) })).filter(o => o.d <= 804.672).sort((a, b) => a.d - b.d);
+    let ferry = null, ferryD = Infinity;
+    for (const s of S.transitStops.ferry) { const d = d2(s.x, s.z); if (d < ferryD) { ferry = s; ferryD = d; } }
+    const req = (mode, ids) => ids.length ? fetch('/api/transit-schedule/' + mode + '/' + encodeURIComponent(ids.join(',')))
+      .then(r => r.json()).then(j => j.arrivals || {}).catch(() => ({})) : Promise.resolve({});
+    S.scheduleLoad = Promise.all([req('bus', busesNear.map(o => o.s.stopId)), req('ferry', ferry ? [ferry.stopId] : [])])
+      .then(([bus, ferryRows]) => { S.schedules = { bus, ferry: ferryRows }; S.scheduleAt = Date.now(); if (panel.style.display === 'flex') renderPanel(); })
+      .finally(() => { S.scheduleLoad = null; });
+    return S.scheduleLoad;
+  }
+  function routeBullet(route) {
+    const label = subway.routeLabel(route), color = subway.routeColor(route);
+    const text = color.toLowerCase() === '#fccc0a' ? '#000' : '#fff';
+    const shape = subway.routeShape(route);
+    return '<span class="rt' + (label.length > 1 ? ' long' : '') + (shape === 'diamond' ? ' diamond' : '') +
+      '" style="--rt:' + color + ';--rtc:' + text + '"><span>' + esc(label) + '</span></span>';
+  }
+  function renderPanel() {
+    const rows = { subways: [], buses: [], bikes: [], ferries: [] };
+    const nowS = HIST.active ? HIST.epochS : Date.now() / 1000; // replay freezes the clock — ETAs stay honest vs epochS
+    if (S.stations) { // every subway complex within 1 km + next arrivals from all connected platforms
+      const grouped = new Map();
+      for (const s of S.stations) {
+        const d = d2(s.x, s.z); if (d > 1000) continue;
+        let g = grouped.get(s.complexId);
+        if (!g) { g = { key: String(s.complexId), d, ids: new Set(), names: new Set() }; grouped.set(s.complexId, g); }
+        g.d = Math.min(g.d, d); g.ids.add(s.id); g.names.add(s.name);
+      }
+      const near = [...grouped.values()].sort((a, b) =>
+        (Number(S.pinnedStations.has(b.key)) - Number(S.pinnedStations.has(a.key))) || a.d - b.d);
+      for (const g of near) {
+        const arr = [];
+        for (const tr of subway.arrivalTrips.values()) {
+          for (const st of tr.stops) if (g.ids.has(st.id) && st.arr > nowS - 20) {
+            arr.push({ m: Math.max(0, Math.round((st.arr - nowS) / 60)), r: tr.rawRoute || tr.route, dir: tr.dir }); break;
+          }
+        }
+        arr.sort((a, b) => a.m - b.m);
+        const directionRow = (dir, cls) => {
+          const eta = arr.filter(a => a.dir === dir).slice(0, 3).map(a => '<span class="arrival">' + routeBullet(a.r) + '<span class="eta">' +
+            (a.m === 0 ? 'now' : a.m + ' min') + '</span></span>').join('<span class="etaDot">·</span>');
+          return eta ? '<div class="dirRow"><span class="dir ' + cls + '">' + dir + '</span><div class="etaList">' + eta + '</div></div>' : '';
+        };
+        const arrivals = directionRow('Uptown', 'up') + directionRow('Downtown', 'down');
+        const stationName = [...g.names].join(' / ').replace(/\s+Station$/i, '') + ' Station';
+        const pinned = S.pinnedStations.has(g.key);
+        rows.subways.push('<div class="hrow subway' + (pinned ? ' pinned' : '') + '"><button class="stationPin' + (pinned ? ' on' : '') +
+          '" data-station-pin="' + encodeURIComponent(g.key) + '" aria-label="' + (pinned ? 'Unpin' : 'Pin') + ' ' + esc(stationName) +
+          '" aria-pressed="' + pinned + '" title="' + (pinned ? 'Unpin station' : 'Pin station to top') + '">📌</button><div class="stationHead"><b>' +
+          esc(stationName) + '</b><span class="sub stationDistance">' + (g.d / 1609.344).toFixed(2) + ' miles away</span></div>' + arrivals + '</div>');
+      }
+    }
+    const bikeNear = citibike.stations.map(st => ({ st, d: d2(st.x, st.z) }))
+      .filter(o => o.d <= 500 && o.st.on && (o.st.ebikes || 0) >= 1).sort((a, b) =>
+        (Number(S.pinnedBikeStations.has(b.st.id)) - Number(S.pinnedBikeStations.has(a.st.id))) || a.d - b.d);
+    for (const { st, d } of bikeNear) {
+      const pinned = S.pinnedBikeStations.has(st.id);
+      rows.bikes.push('<div class="hrow bike' + (pinned ? ' pinned' : '') + '"><button class="stationPin' + (pinned ? ' on' : '') +
+        '" data-bike-pin="' + encodeURIComponent(st.id) + '" aria-label="' + (pinned ? 'Unpin' : 'Pin') + ' ' + esc(st.name) +
+        '" aria-pressed="' + pinned + '" title="' + (pinned ? 'Unpin bike station' : 'Pin bike station to top') + '">📌</button><b>' + esc(st.name) +
+        '</b><span class="sub stationDistance">' + Math.round(d) + ' m away</span><div class="bikeCounts">' + st.ebikes + ' electric bikes free · ' +
+        (st.bikes || 0) + ' classic · ' + (st.docks || 0) + ' docks free</div></div>');
+    }
+    if (S.transitStops) {
+      const busNear = S.transitStops.bus.map(s => ({ s, d: d2(s.x, s.z) })).filter(o => o.d <= 804.672).sort((a, b) =>
+        (Number(S.pinnedBusStops.has(b.s.id)) - Number(S.pinnedBusStops.has(a.s.id))) || a.d - b.d);
+      const busNowMs = nowS * 1000, busByStop = new Map();
+      for (const bus of buses.arrivals.values()) for (const call of bus.calls || []) if (call.at > busNowMs - 20000) {
+        let list = busByStop.get(call.stopId); if (!list) { list = []; busByStop.set(call.stopId, list); }
+        list.push({ route: bus.route || 'Bus', dest: bus.dest || '', at: call.at });
+      }
+      for (const { s, d } of busNear) {
+        let upcoming = busByStop.get(s.stopId) || [];
+        upcoming.sort((a, b) => a.at - b.at);
+        if (!upcoming.length && !HIST.active) upcoming = S.schedules.bus[s.stopId] || [];
+        const arrivals = upcoming.slice(0, 3).map(a => {
+          const mins = Math.max(0, Math.round((a.at - busNowMs) / 60000));
+          return '<div class="busArrival"><span class="busRoute">' + esc(a.route) + '</span><span class="eta">' +
+            (mins === 0 ? 'now' : mins + ' min') + '</span><span class="busDest">' + (a.dest ? 'to ' + esc(a.dest) : '') +
+            (a.scheduled ? ' · scheduled' : '') + '</span></div>';
+        }).join('');
+        const pinned = S.pinnedBusStops.has(s.id);
+        rows.buses.push('<div class="hrow bus' + (pinned ? ' pinned' : '') + '"><button class="stationPin' + (pinned ? ' on' : '') +
+          '" data-bus-pin="' + encodeURIComponent(s.id) + '" aria-label="' + (pinned ? 'Unpin' : 'Pin') + ' ' + esc(s.name) +
+          '" aria-pressed="' + pinned + '" title="' + (pinned ? 'Unpin bus stop' : 'Pin bus stop to top') + '">📌</button><b>' + esc(s.name) +
+          '</b><span class="sub stationDistance">' + Math.round(d) + ' m away</span>' + arrivals + '</div>');
+      }
+      let fs = null, fd = 1e9;
+      for (const s of S.transitStops.ferry) { const d = d2(s.x, s.z); if (d < fd) { fd = d; fs = s; } }
+      if (fs) {
+        const ferryNowMs = nowS * 1000, upcoming = [];
+        for (const vessel of ferries.list) for (const call of vessel.calls || []) if (String(call.stopId) === String(fs.id) && call.at > ferryNowMs - 20000) {
+          upcoming.push({ route: vessel.route || 'NYC Ferry', dest: vessel.headsign || '', at: call.at }); break;
+        }
+        upcoming.sort((a, b) => a.at - b.at);
+        if (!upcoming.length && !HIST.active) upcoming.push(...(S.schedules.ferry[fs.stopId] || []));
+        const arrivals = upcoming.slice(0, 3).map(a => {
+          const mins = Math.max(0, Math.round((a.at - ferryNowMs) / 60000));
+          return '<div class="ferryArrival"><span class="ferryRoute">' + esc(a.route) + '</span><span class="eta">' +
+            (mins === 0 ? 'now' : mins + ' min') + '</span><span class="ferryDest">' + (a.dest ? 'to ' + esc(a.dest) : '') +
+            (a.scheduled ? ' · scheduled' : '') + '</span></div>';
+        }).join('');
+        rows.ferries.push('<div class="hrow"><span class="ic">⛴️</span><b>' + esc(fs.name) + '</b><span class="sub stationDistance">' +
+          Math.round(fd) + ' m away</span>' + arrivals + '</div>');
+      }
+    }
+    $('hpHead').textContent = 'Transport Hub';
+    const empty = { subways: 'No subway stations within 1 km.', buses: 'No bus stops within 0.5 miles.',
+      bikes: 'No Citi Bike stations within 500 m have an electric bike right now.', ferries: 'Ferry terminals are still loading.' };
+    $('hpBody').innerHTML = rows[S.homeTab].join('') || '<span class="sub">' + empty[S.homeTab] + '</span>';
+    $('hpFoot').textContent = HIST.active ? 'replaying ' + HIST.day + ' — not live' :
+      [S.home.neighborhood, S.home.borough].filter(Boolean).join(' · ');
+  }
+  function openPanel() {
+    if (!S.active || !S.home) return;
+    panel.style.display = 'flex'; S.panelT = -99;
+    Promise.all([ensureStations(), ensureTransitStops()]).then(() => { if (panel.style.display === 'flex') renderPanel(); });
+    renderPanel();
+  }
+
+  // ---- sign-in modal (steps rendered into #hmBody) ----
+  function closeModal() { modal.style.display = 'none'; stat(''); auto.innerHTML = ''; auto.style.display = 'none'; }
+  function openModal(step) {
+    modal.style.display = 'block'; stat('');
+    const B = $('hmBody'), T2 = $('hmTitle');
+    if (step === 'auth') {
+      T2.textContent = 'Make NYC Sim yours';
+      B.innerHTML = '<div class="hsub">Sign in, tell the city where home is, and every visit opens at your block — ' +
+        'with your trains, bikes and ferries at a glance.</div><div id="gsiBtn"></div>' +
+        '<div class="hsub">Your address is turned into a map point and discarded — never stored. ' +
+        'Your email stays private (only used if we reach out about feedback).</div>';
+      loadGsi();
+    } else if (step === 'addr') {
+      T2.textContent = S.home ? 'Change your home' : 'Where’s home?';
+      B.innerHTML = '<input id="hmAddr" type="text" autocomplete="street-address" placeholder="e.g. 350 5th Ave, Manhattan">' +
+        '<div class="hsub">Turned into a map point, then discarded — the address itself is never stored.</div>' +
+        '<button class="hbtn" id="hmSet">Find it</button>';
+      auto.innerHTML = ''; auto.style.display = 'none';
+      const inp = $('hmAddr');
+      let autoReq = 0;
+      const runAuto = async (q) => {
+        if (!q || q.length < 3) { auto.innerHTML = ''; auto.style.display = 'none'; return; }
+        const my = ++autoReq;
+        const j = await post({ action: 'autocomplete', input: q });
+        if (my !== autoReq) return; // stale keystroke
+        if (j.error || !j.predictions || !j.predictions.length) { auto.innerHTML = ''; auto.style.display = 'none'; return; }
+        auto.innerHTML = j.predictions.map((p, i) => '<div class="hauto" data-idx="' + i + '" title="' + esc(p.text) + '">' + esc(p.text) + '</div>').join('');
+        auto.style.display = 'block';
+        for (const el of auto.children) {
+          el.addEventListener('click', () => {
+            const p = j.predictions[+el.dataset.idx];
+            inp.value = p.text; auto.innerHTML = ''; auto.style.display = 'none'; stat('');
+            $('hmSet').click();
+          });
+        }
+      };
+      inp.addEventListener('input', debounce((e) => { e.stopPropagation(); runAuto(e.target.value.trim()); }, 200));
+      inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') { auto.innerHTML = ''; auto.style.display = 'none'; } else if (e.key === 'Enter') { auto.innerHTML = ''; auto.style.display = 'none'; $('hmSet').click(); } });
+      $('hmSet').addEventListener('click', async () => {
+        const v = inp.value.trim(); if (v.length < 4) return stat('type a street address');
+        stat('looking it up…'); auto.innerHTML = ''; auto.style.display = 'none';
+        const j = await post({ action: 'set', address: v });
+        if (j.error) return stat(j.error);
+        S.cand = j.candidate;
+        camTween = { p0: camera.position.clone(), t0: controls.target.clone(), // pre-fly so the user can eyeball the block
+          p1: new THREE.Vector3(subway.geoRaw(S.cand.lat, S.cand.lon).x + 170, 230, subway.geoRaw(S.cand.lat, S.cand.lon).z - 300),
+          t1: new THREE.Vector3(subway.geoRaw(S.cand.lat, S.cand.lon).x, 12, subway.geoRaw(S.cand.lat, S.cand.lon).z), t: 0, dur: 2.2 };
+        openModal('confirm');
+      });
+      setTimeout(() => inp.focus(), 50);
+    } else if (step === 'confirm') {
+      T2.textContent = 'Is this your building?';
+      B.innerHTML = '<div><b>' + esc(S.cand.address) + '</b><br><span class="hsub">' +
+        esc([S.cand.neighborhood, S.cand.borough].filter(Boolean).join(' · ')) + ' — the camera is flying there now.</span></div>' +
+        '<button class="hbtn" id="hmYes">Yes, that’s home</button><button class="hbtn dim" id="hmBack">Try again</button>';
+      $('hmYes').addEventListener('click', async () => {
+        stat('saving…');
+        const j = await post({ action: 'confirm', lat: S.cand.lat, lon: S.cand.lon });
+        if (j.error) return stat(j.error);
+        S.home = j.home; placeBeacon(); closeModal(); flyHome();
+      });
+      $('hmBack').addEventListener('click', () => openModal('addr'));
+    } else if (step === 'hub') {
+      T2.textContent = 'Welcome back' + (S.name ? ', ' + S.name : '');
+      B.innerHTML = '<div class="hsub">Home: ' + esc([S.home && S.home.neighborhood, S.home && S.home.borough].filter(Boolean).join(' · ') || 'not set yet') + '</div>' +
+        (S.home ? '<button class="hbtn" id="hmFly">Fly home</button>' : '') +
+        '<button class="hbtn" id="hmChg">' + (S.home ? 'Change address' : 'Set your address') + '</button>' +
+        '<button class="hbtn dim" id="hmOut">Sign out</button>' +
+        '<button class="hbtn warn" id="hmDel">Delete my data</button>';
+      if (S.home) $('hmFly').addEventListener('click', () => { closeModal(); selectHome(); });
+      $('hmChg').addEventListener('click', () => openModal('addr'));
+      $('hmOut').addEventListener('click', async () => { await post({ action: 'logout' }); location.reload(); });
+      $('hmDel').addEventListener('click', async () => {
+        if (!confirm('Delete your saved home and account data from NYC Sim?')) return;
+        await post({ action: 'delete' }); location.reload();
+      });
+    }
+  }
+  function loadGsi() { // GIS is a CDN include like Three.js; loaded lazily, only when the modal needs it
+    const render = () => {
+      if (!S.gsiInit) {
+        window.google.accounts.id.initialize({ client_id: S.clientId, callback: onCred, ux_mode: 'popup' });
+        S.gsiInit = true;
+      }
+      const el = $('gsiBtn');
+      if (el) window.google.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', shape: 'pill' });
+    };
+    if (window.google && window.google.accounts) return render();
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = render; s.onerror = () => stat('Google sign-in failed to load — check your connection');
+    document.head.appendChild(s);
+  }
+  async function onCred(resp) {
+    stat('signing in…');
+    const j = await post({ action: 'login', credential: resp.credential });
+    if (j.error) return stat(j.error);
+    S.signedIn = true; S.name = j.name; S.home = j.home;
+    if (S.home) { placeBeacon(); openModal('hub'); } else openModal('addr');
+  }
+
+  // ---- the one button action (desktop pill + GBA HOME share it) ----
+  let homeSelectN = 0;
+  async function selectHome() {
+    const my = ++homeSelectN;
+    try {
+      const j = await fetch('/api/home?fresh=1&t=' + Date.now(), { cache: 'no-store' }).then(async r => {
+        const body = await r.json(); if (!r.ok || body.error) throw new Error(body.error || 'refresh failed'); return body;
+      });
+      if (my !== homeSelectN) return;
+      S.signedIn = !!j.signedIn; S.name = j.name || S.name;
+      if (!S.signedIn) { S.home = null; return openModal('auth'); }
+      if (!j.home) { S.home = null; return openModal('addr'); }
+      S.home = j.home; placeBeacon(); S.schedules = { bus: {}, ferry: {} }; S.scheduleAt = 0;
+      loadTransitSchedules(); flyHome();
+    } catch { if (my === homeSelectN) { openModal(S.signedIn ? 'hub' : 'auth'); stat('Could not refresh your saved home — try again.'); } }
+  }
+  function activateHome(moveCamera) {
+    S.active = true;
+    const canMove = moveCamera && !/cam=|tgt=|scrub=|snap/.test(location.hash);
+    if (beacon) beacon.visible = !!S.home;
+    if (S.home) { openPanel(); if (canMove) flyHome(); }
+    else { panel.style.display = 'none'; if (canMove) autoPan.start(); }
+  }
+  function setActive(on, reselect) {
+    const wasActive = !!S.active; S.active = !!on;
+    $('homeBtn').setAttribute('aria-label', S.active ? 'Home selected' : 'Select Home'); $('homeBtn').title = S.active ? 'Home selected' : 'Select Home';
+    if (!S.active) { panel.style.display = 'none'; closeModal(); chip.style.display = 'none'; if (beacon) beacon.visible = false; return; }
+    activateHome(reselect || !wasActive);
+  }
+  function act() {
+    if (featureMode.current() !== 'home') featureMode.select('home');
+    selectHome();
+  }
+  $('hmX').addEventListener('click', () => { closeModal(); resumeTour(); });
+  modal.addEventListener('pointerdown', (e) => { if (e.target === modal) { closeModal(); resumeTour(); } });
+  $('hpX').addEventListener('click', () => { panel.style.display = 'none'; });
+  $('hpGear').addEventListener('click', () => openModal(S.signedIn ? 'hub' : 'auth'));
+  $('hpBody').addEventListener('click', e => {
+    const stationPin = e.target.closest('[data-station-pin]'), busPin = e.target.closest('[data-bus-pin]'),
+      bikePin = e.target.closest('[data-bike-pin]');
+    if (!stationPin && !busPin && !bikePin) return;
+    if (stationPin) {
+      const key = decodeURIComponent(stationPin.dataset.stationPin);
+      if (S.pinnedStations.has(key)) S.pinnedStations.delete(key); else S.pinnedStations.add(key);
+      try { localStorage.setItem('transportHubPinnedStations', JSON.stringify([...S.pinnedStations])); } catch { }
+    } else if (busPin) {
+      const key = decodeURIComponent(busPin.dataset.busPin);
+      if (S.pinnedBusStops.has(key)) S.pinnedBusStops.delete(key); else S.pinnedBusStops.add(key);
+      try { localStorage.setItem('transportHubPinnedBusStops', JSON.stringify([...S.pinnedBusStops])); } catch { }
+    } else {
+      const key = decodeURIComponent(bikePin.dataset.bikePin);
+      if (S.pinnedBikeStations.has(key)) S.pinnedBikeStations.delete(key); else S.pinnedBikeStations.add(key);
+      try { localStorage.setItem('transportHubPinnedBikeStations', JSON.stringify([...S.pinnedBikeStations])); } catch { }
+    }
+    renderPanel(); $('hpBody').scrollTop = 0;
+  });
+  for (const tab of $('hpTabs').querySelectorAll('button')) tab.addEventListener('click', () => {
+    S.homeTab = tab.dataset.tab;
+    for (const b of $('hpTabs').querySelectorAll('button')) {
+      const on = b === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
+    }
+    $('hpBody').scrollTop = 0; renderPanel();
+  });
+  chip.addEventListener('click', () => selectHome());
+
+  // ---- boot: one same-origin fetch decides everything (cookie rides along) ----
+  const api = { ready: false, act, tick, setActive, state: S,
+    _dev: (lat, lon, nb, bo) => { S.home = { lat, lon, neighborhood: nb || 'Test', borough: bo || 'Manhattan' }; placeBeacon(); if (S.active) flyHome(); } };
+  featureMode.register('home', api);
+  Promise.resolve(window.__homeBoot).then(j => {
+    if (!j || !j.enabled) return;
+    S.on = true; S.clientId = j.clientId; S.signedIn = !!j.signedIn; S.name = j.name || null; S.home = j.home || null;
+    api.ready = true;
+    const gb = $('gbaReset'); // §26e wired the indirection; here HOME takes the key
+    gb.dataset.l = 'HOME'; gb.setAttribute('aria-label', S.signedIn ? 'fly home' : 'sign in and set your home');
+    if (S.home) {
+      placeBeacon(); beacon.visible = !!S.active;
+      if (S.active) { openPanel(); if (!/cam=|tgt=|scrub=|snap/.test(location.hash)) autoPan.aroundHome(S.hx, S.hz); }
+    }
+  }).catch(() => { /* offline → app behaves as unconfigured */ });
+
+  // ---- per-frame: chip glue (mirror-corrected), panel refresh ----
+  const _hv = new THREE.Vector3();
+  function tick() {
+    if (!S.active || !S.home || !beacon) { chip.style.display = 'none'; return; }
+    const pulse = 1 + Math.sin(T * 2.4) * 0.1, beamRadius = beacon.userData.beamDiameter * 0.5;
+    beaconBeam.scale.set(beamRadius * pulse, 1, beamRadius * pulse);
+    beaconBeam.material.opacity = 0.13 + (Math.sin(T * 2.4) + 1) * 0.045;
+    _hv.set(S.hx, 34, S.hz).project(camera);
+    if (_hv.z > 1 || Math.abs(_hv.x) > 1.05 || Math.abs(_hv.y) > 1.05) chip.style.display = 'none';
+    else {
+      chip.style.display = 'block'; // .fybl base CSS is display:none (Iron Rule 6)
+      chip.style.transform = 'translate(' + ((0.5 - _hv.x * 0.5) * innerWidth - 26).toFixed(1) + 'px,' + // mirror: screen x = (0.5 − ndc.x/2)·w
+        ((0.5 - _hv.y * 0.5) * innerHeight - 34).toFixed(1) + 'px)';
+    }
+    if (panel.style.display === 'flex' && T - S.panelT > 6) { S.panelT = T; loadTransitSchedules(); renderPanel(); } // cheap local recompute
+  }
+  return api;
+})();
+window.__home = homeui; // §26e GBA indirection + dev/testing hook
+
 function frame() {
   if (window.__gbaBoot) window.__gbaBoot.done(); // §26e: first real frame → fade the boot screen (one-shot; done() nulls the hook)
   requestAnimationFrame(frame);
@@ -11100,7 +12100,7 @@ function frame() {
     // fly.tick's syncFromCamera() absorbs the new yaw/pitch each frame, so free-fly
     // resumes aimed at the subject with no snap. Desktop (fly off) is untouched.
     if (fly.st.on) camera.lookAt(controls.target);
-    if (camTween.t >= 1) camTween = null;
+    if (camTween.t >= 1) { const onDone = camTween.onDone; camTween = null; if (onDone) onDone(); }
   }
   fly.tick(dt);
   autoPan.tick(dt); // intro Manhattan orbit (self-cancels on any user camera action)
@@ -11135,11 +12135,13 @@ function frame() {
   birds.update(T, dt);
   rtraffic.update(T, dt);
   nyc311.update(T, dt);
+  airQuality.update(T, dt);
   cells.tick(T, dt, _focus, camY);
   steam.tick(_focus, camY);
   flags.tick(dt, _focus, camY);
   concierge.tick(); // agent-layer label chips track their pins
   focusui.tick();    // the pinned focus dialogue tracks its entity
+  homeui.tick();     // §26f home beacon chip + boot-to-home flight + panel refresh
   linknyc.tick();    // kiosk focus ring follows focusmode's lifetime
   thoughts.tick();   // §25t Sims-style thought bubbles over residents
   personas.followTick(); // §25h follow-cam rides along with the clicked resident
@@ -11171,32 +12173,37 @@ function frame() {
   const ECG_PTS = [0, 40, 80, 120, 160, 200, 240].map(o =>
     [[0,9],[16,9],[19,6.5],[21,9],[23,9],[25,12],[27,2],[29,14.5],[31,9],[34,9],[36,6.5],[38,9],[40,9]]
       .map(([x, y]) => (x + o) + ',' + y).join(' ')).join(' ');
+  const barRows = [
+    ['vSubway', '🚇', 'Trains', 'subway'], ['vBuses', '🚌', 'Buses', 'bus'],
+    ['vFerries', '⛴️', 'Ferries', 'ferry'], ['vBikes', '🚲', 'Bikes', 'bike']
+  ];
+  const metricRows = [
+    ['vResidents', '🧍 Residents'], ['vEvents', '🚧 Road closures'],
+    ['vAir', '✈️ Aircraft tracked', 'air'], ['vCams', '📷 Traffic cams', 'cam'],
+    ['vSpeed', '🚦 Avg road speed'], ['vBirds', '🐦 Birds aloft', 'birds']
+  ];
+  const barRow = ([id, icon, lab, entity]) => '<button type="button" class="vrow" id="r_' + id + '" data-e="' + entity + '" title="Go to ' + lab + '"><span class="vico">' + icon + '</span><span class="vlab">' + lab + '</span>' +
+    '<span class="vval"><span class="vbar"><i id="' + id + '_bar"></i></span><b id="' + id + '">—</b></span></button>';
+  const metricRow = ([id, lab, entity]) => entity
+    ? '<button type="button" class="vrow" id="r_' + id + '" data-e="' + entity + '" title="Go to ' + lab.replace(/^[^ ]+ /, '') + '"><span>' + lab + '</span><b id="' + id + '">—</b></button>'
+    : '<div class="vrow" id="r_' + id + '"><span>' + lab + '</span><b id="' + id + '">—</b></div>';
   el.innerHTML = '<div class="vh"><span>City Vitals</span>' +
     '<svg class="ecg" viewBox="0 0 240 18" preserveAspectRatio="none"><g>' +
     '<animateTransform attributeName="transform" type="translate" from="0 0" to="-40 0" dur="1.15s" repeatCount="indefinite"/>' +
-    '<polyline points="' + ECG_PTS + '"/></g></svg></div>' + [
-    ['vResidents', '🧍 Residents'],
-    ['vEvents', '🚧 Road closures'],
-    ['vSubway', '🚇 Trains rolling', 1],   // 1 = ratio row: radial ring, fill/track = numerator/denominator
-    ['vBuses', '🚌 Buses moving', 1],
-    ['vFerries', '⛴️ Ferries underway', 1],
-    ['vAir', '✈️ Aircraft tracked'],
-    ['vBikes', '🚲 Bikes available', 1],
-    ['vCams', '📷 Traffic cams'],
-    ['vSpeed', '🚦 Avg road speed'],
-    ['vBirds', '🐦 Birds aloft (radar est.)']
-  ].map(([id, lab, ring]) => '<div class="vrow" id="r_' + id + '"><span>' + lab + '</span>' +
-    (ring ? '<span class="vval"><svg class="vring" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/>' +
-      '<circle class="fg" cx="10" cy="10" r="8" id="' + id + '_ring"/></svg><b id="' + id + '">—</b></span>'
-      : '<b id="' + id + '">—</b>') + '</div>').join('');
+    '<polyline points="' + ECG_PTS + '"/></g></svg></div>' +
+    '<div class="vgrid"><div class="vbars"><div class="vsect">Live mobility</div>' + barRows.map(barRow).join('') +
+    '</div><div class="vmetrics"><div class="vsect">City metrics</div>' + metricRows.map(metricRow).join('') + '</div></div>';
+  el.addEventListener('click', e => {
+    const row = e.target.closest('button[data-e]');
+    if (row) goToLiveEntity(row.dataset.e);
+  });
   const put = (id, txt, show = true) => {
     document.getElementById(id).textContent = txt;
     document.getElementById('r_' + id).style.display = show ? '' : 'none';
   };
-  const RING_C = 2 * Math.PI * 8; // r=8 in the 20×20 viewBox
-  const setRing = (id, num, den) => {
+  const setBar = (id, num, den) => {
     const f = den > 0 ? Math.min(1, Math.max(0, num / den)) : 0;
-    document.getElementById(id + '_ring').style.strokeDasharray = (f * RING_C).toFixed(2) + ' ' + RING_C.toFixed(2);
+    document.getElementById(id + '_bar').style.width = (f * 100).toFixed(1) + '%';
   };
   function updateVitals() {
     let rep = 0; for (const p of personas.list) rep += p.rep || 0;
@@ -11207,13 +12214,13 @@ function frame() {
     put('vEvents', fmt(cl) + (inc ? ' (+' + fmt(inc) + ' incident' + (inc > 1 ? 's' : '') + ')' : ''));
     let dwell = 0; for (const tr of subway.trips.values()) if (tr.dwellFeed) dwell++;
     put('vSubway', fmt(subway.trips.size - dwell) + ' / ' + fmt(subway.trips.size) + ' trains');
-    setRing('vSubway', subway.trips.size - dwell, subway.trips.size);
+    setBar('vSubway', subway.trips.size - dwell, subway.trips.size);
     let bm = 0; for (const b of buses.list) if (b.spd > 0.4) bm++;
     put('vBuses', fmt(bm) + ' / ' + fmt(buses.list.length) + ' buses');
-    setRing('vBuses', bm, buses.list.length);
+    setBar('vBuses', bm, buses.list.length);
     let fu = 0; for (const f of ferries.list) if (!f.docked) fu++;
     put('vFerries', fmt(fu) + ' / ' + fmt(ferries.list.length) + ' ferries');
-    setRing('vFerries', fu, ferries.list.length);
+    setBar('vFerries', fu, ferries.list.length);
     let heli = 0; for (const p of flights.list) if (p.kind === 'heli') heli++;
     put('vAir', fmt(flights.list.length) + ' aircraft' + (heli ? ' (' + heli + ' 🚁)' : ''));
     // available = every docked bike (classic + ebike); total = dock capacity, since the
@@ -11221,20 +12228,11 @@ function frame() {
     let bikes = 0, cap = 0;
     for (const s of citibike.stations) { if (!s.on) continue; bikes += (s.bikes || 0) + (s.ebikes || 0); cap += s.cap || 0; }
     put('vBikes', fmt(bikes) + ' / ' + fmt(cap) + ' bikes');
-    setRing('vBikes', bikes, cap);
+    setBar('vBikes', bikes, cap);
     put('vCams', fmt(cams.list.length) + ' cams');
     let spdS = 0, spdN = 0; for (const L of rtraffic.links) if (L.speed != null) { spdS += L.speed; spdN++; }
     put('vSpeed', Math.round(spdS / spdN) + ' mph', spdN > 0);
     put('vBirds', '≈' + fmt(BIRDS.aloft) + ' birds', BIRDS.aloft > 0);
-    positionCredit();
-  }
-  // keep the credit badge hugging the bottom of City Vitals on desktop — the panel's
-  // height changes as conditional rows (avg speed, birds aloft) appear/disappear, so a
-  // fixed CSS top would get covered. Mobile keeps its CSS top-right position.
-  const credit = document.getElementById('credit');
-  function positionCredit() {
-    if (matchMedia('(max-width: 700px)').matches) { credit.style.top = ''; return; }
-    credit.style.top = Math.round(el.getBoundingClientRect().bottom + 10) + 'px';
   }
   updateVitals();
   setInterval(updateVitals, 2000);
@@ -11262,40 +12260,11 @@ function frame() {
   setInterval(renderWx, 5000); // follow HIST in/out without waiting for the next poll
   window.__wxalerts = (fake) => { wxAlerts = fake || []; renderWx(); }; // dev/testing hook
 }
-// ---- headline ticker (#ticker): amNY + THE CITY, slow marquee, click → article in a new tab
-{
-  const tk = document.getElementById('ticker'), tin = tk.querySelector('.tkin');
-  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  let sig = '';
-  function build(items) {
-    const seq = items.map(it =>
-      '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' +
-      '<span class="src">' + esc(it.src) + '</span>' + esc(it.t) + '</a><i class="sep">✦</i>').join('');
-    tin.innerHTML = seq + seq; // doubled content: the −50% keyframe wraps seamlessly
-    tk.style.display = 'block'; // BEFORE measuring — scrollWidth is 0 inside display:none
-    // constant PIXEL speed (the −50% loop travels half the strip) — see the thought
-    // ticker's note; short strips no longer crawl, phones scroll faster than desktop
-    const spd = matchMedia('(max-width: 700px)').matches ? 95 : 55; // px/s
-    tin.style.animationDuration = Math.max(8, Math.round(tin.scrollWidth / 2 / spd)) + 's';
-  }
-  function pollNews() {
-    liveBridge.get('headlines')
-      .then(j => {
-        const items = Array.isArray(j.items) ? j.items : [];
-        if (!items.length) return; // never blank an already-running ticker
-        const s = items.map(i => i.url).join('|');
-        if (s !== sig) { sig = s; build(items); } // unchanged list → don't restart the scroll
-      })
-      .catch(() => { /* keep scrolling last-good headlines */ });
-  }
-  pollNews();
-  setInterval(pollNews, 600000);
-}
 // first visit: start the Manhattan auto-tour — but never hijack a deep link that
 // pins the camera or the timeline (hash-driven screenshots/tests stay deterministic)
 if (!/cam=|tgt=|scrub=|snap/.test(location.hash)) autoPan.start();
 // ---- resident-thought ticker (#thoughtTicker): a marquee of what the crowd is
-// thinking, stacked right above the headlines. Thoughts come from the SAME §25t
+// thinking at the bottom of the viewport. Thoughts come from the SAME §25t
 // generator the bubbles use (census identity + live-reactive; the Phase 2 baked
 // LLM sheet slots in automatically when it ships). Click a thought → meet that
 // resident: personas.open() glides the camera in, follows them, and opens the
@@ -11340,10 +12309,9 @@ if (!/cam=|tgt=|scrub=|snap/.test(location.hash)) autoPan.start();
     const it = items[+el.dataset.k % Math.max(items.length, 1)];
     if (it && personas.list[it.i]) personas.open(personas.list[it.i]);
   });
-  function vis() { // live-mode only + stack state (drop flush if headlines are hidden)
+  function vis() {
     const on = items.length && !HIST.active;
     tk.style.display = on ? 'block' : 'none';
-    tk.classList.toggle('solo', document.getElementById('ticker').style.display !== 'block');
     document.body.classList.toggle('thticker', !!on);
   }
   const boot = setInterval(() => { if (items.length < 12) { build(); vis(); } else clearInterval(boot); }, 2500); // keep resampling until the crowd is actually loaded — a 1-thought strip used to lock in for 3 min
