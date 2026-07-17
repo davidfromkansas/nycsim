@@ -11,8 +11,7 @@ real city flowing through it live.
   G), NYC Ferry GPS, MTA buses, Citi Bike docks, 800+ traffic cameras you can watch,
   bird migration radar (BirdCast), 311 calls, street speeds, Google Weather with
   NWS/Open-Meteo fallbacks — rain in the city is rain in the sim.
-- **Time travel**: a nightly recorder snapshots everything; the timeline slider
-  replays the last 7 days.
+- **Time travel**: a nightly recorder snapshots the city for seven-day daily replay and packs 30 days of exact hourly Air Quality intervals with official daily AirNow regional AQI.
 - **City Concierge**: an LLM agent with spatial tools — ask it anything about what
   you're looking at and it flies the camera, draws map layers, and cites live feeds.
 

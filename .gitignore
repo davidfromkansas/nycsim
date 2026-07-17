@@ -5,6 +5,7 @@ ai-gateway-key.json
 google-maps-key.json
 session-secret.json
 google-oauth-client.json
+airnow-api-key.json
 .env*.local
 
 .vercel

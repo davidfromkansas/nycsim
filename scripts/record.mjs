@@ -20,10 +20,12 @@
 import { mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import airQualityHistory from '../lib/air-quality-history.js';
 
 const BASE = process.env.RECORD_BASE || 'https://manhattan-island-davidlietjauw-7177s-projects.vercel.app';
 const ROOT = process.env.RECORD_ROOT || 'data';
 const RETENTION_DAYS = 7;
+const AQ_RETENTION_DAYS = 30;
 const DAILY = process.argv.includes('--daily');
 
 const get = async (p) => {
@@ -92,24 +94,33 @@ await writeFile(file, JSON.stringify(frame));
 console.log('wrote', file,
   `(${frame.buses.length} buses, ${frame.bikes.length} docks, ${frame.ferries.length} ferries, ${frame.flights.length} aircraft, ${frame.airQuality.length} air monitors${DAILY ? ', + subway' : ''})`);
 
+if (DAILY) {
+  const aqDay = airQualityHistory.dayAt(now.getTime() - 72 * 3600_000);
+  const pack = await airQualityHistory.loadDay(aqDay);
+  const aqFile = path.join(ROOT, 'air-quality', aqDay + '.json');
+  await mkdir(path.dirname(aqFile), { recursive: true });
+  await writeFile(aqFile, JSON.stringify(pack));
+  console.log('wrote', aqFile, `(${pack.frames.length} hourly AQ frames)`);
+}
+
 // ---- prune frames beyond retention (daily keyframes use the same window) ----
-const cutoff = Date.now() - RETENTION_DAYS * 86400_000;
-async function prune(dir, isDayDir) {
+async function prune(dir, isDayDir, retentionDays = RETENTION_DAYS) {
   if (!existsSync(dir)) return;
   for (const e of await readdir(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) { await prune(p, true); const rest = await readdir(p); if (!rest.length) await rm(p, { recursive: true }); }
+    if (e.isDirectory()) { await prune(p, true, retentionDays); const rest = await readdir(p); if (!rest.length) await rm(p, { recursive: true }); }
     else if (e.name.endsWith('.json')) {
       const m = p.match(/(\d{4})[-/](\d{2})[-/](\d{2})/);
-      if (m && Date.UTC(+m[1], +m[2] - 1, +m[3]) < cutoff - 86400_000) { await rm(p); console.log('pruned', p); }
+      if (m && Date.UTC(+m[1], +m[2] - 1, +m[3]) < Date.now() - retentionDays * 86400_000 - 86400_000) { await rm(p); console.log('pruned', p); }
     }
   }
 }
 await prune(path.join(ROOT, 'frames'));
 await prune(path.join(ROOT, 'daily'));
+await prune(path.join(ROOT, 'air-quality'), false, AQ_RETENTION_DAYS);
 
 // ---- manifest: what the slider (and the agent) can ask for ----
-const manifest = { v: 1, updated: now.toISOString(), retentionDays: RETENTION_DAYS, frames: [], daily: [] };
+const manifest = { v: 2, updated: now.toISOString(), retentionDays: RETENTION_DAYS, airQualityRetentionDays: AQ_RETENTION_DAYS, frames: [], daily: [], airQuality: [] };
 async function walk(dir, into) {
   if (!existsSync(dir)) return;
   for (const e of await readdir(dir, { withFileTypes: true })) {
@@ -120,6 +131,7 @@ async function walk(dir, into) {
 }
 await walk(path.join(ROOT, 'frames'), manifest.frames);
 await walk(path.join(ROOT, 'daily'), manifest.daily);
-manifest.frames.sort(); manifest.daily.sort();
+await walk(path.join(ROOT, 'air-quality'), manifest.airQuality);
+manifest.frames.sort(); manifest.daily.sort(); manifest.airQuality.sort();
 await writeFile(path.join(ROOT, 'manifest.json'), JSON.stringify(manifest));
-console.log('manifest:', manifest.frames.length, 'frames,', manifest.daily.length, 'daily snapshots');
+console.log('manifest:', manifest.frames.length, 'frames,', manifest.daily.length, 'daily snapshots,', manifest.airQuality.length, 'Air Quality days');

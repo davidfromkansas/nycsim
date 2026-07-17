@@ -14,7 +14,7 @@ Island Railway — with LIVE data layers: flights, subway, NYC Ferry, MTA buses,
 Citi Bike, traffic cameras, birds (radar), 311, traffic speeds, weather — all
 map-matched onto the street graph. 12,703 clickable census-sampled voxel residents
 (PUMS personas) with thought bubbles; a City Concierge LLM agent with spatial tools;
-a nightly recorder + timeline slider that replays the last 7 days. Public site:
+a nightly recorder + timeline slider that replays seven daily city snapshots and 30 days of packed hourly Air Quality intervals. Public site:
 **nycsim.com** branding, GBA-style controls on phones.
 
 ## Current state & where to start (updated 2026-07-14)
@@ -34,8 +34,8 @@ a nightly recorder + timeline slider that replays the last 7 days. Public site:
   `git clone git@github.com:davidfromkansas/manhattan-island.git`
 - **Prod**: https://manhattan-island-davidlietjauw-7177s-projects.vercel.app
   (Vercel auto-deploys every push to `main` — a push IS a deploy; don't push broken code)
-- **`data` branch**: orphan branch holding recorded daily snapshots
-  (`data/daily/YYYY-MM-DD.json` + `manifest.json`). Written by the nightly cron.
+- **`data` branch**: orphan branch holding recorded daily city snapshots and packed Air Quality days
+  (`data/daily/YYYY-MM-DD.json`, `data/air-quality/YYYY-MM-DD.json`, and `manifest.json`). Written by the nightly cron.
   Never merge it into main; never commit data to main (each main commit = a deploy).
 
 ## Layout (zero build step, zero npm deps)
@@ -85,7 +85,8 @@ node server.js            # http://localhost:4173 — that's it, no install
 - Secrets live in git-ignored root files (ask the user if you don't have them):
   `opensky-credentials.json` (flights), `mta-bus-key.json` (buses),
   `google-maps-key.json` or `GOOGLE_MAPS_API_KEY` (enable Places API (New) + Weather API),
-  `gh-data-token.json` (history playback reads the private data branch),
+  `airnow-api-key.json` or `AIRNOW_API_KEY` (official historical reporting-area AQI),
+  `gh-data-token.json` or `GH_DATA_TOKEN` (history playback and recording use the private data branch),
   `ai-gateway-key.json` or `.env.local` via `vercel env pull` (concierge agent LLM;
   on Vercel deployments the OIDC token is automatic — enable AI Gateway on the project).
   `BLOB_READ_WRITE_TOKEN` (Concierge usage logging → private `agent-logs` Blob store;
@@ -171,8 +172,8 @@ weather 5m NWS, cams list 10m). To add an endpoint: write `fetchThing()` returni
 payload, register `makeCachedRoute('/api/thing', ttl, fetchThing, emptyShape)` — both
 local server and Vercel pick it up automatically.
 
-History: `/api/history` (manifest) + `/api/history/:day` proxy the `data` branch.
-Timeline module in index.html replays snapshots through each module's `hist()`.
+History: `/api/history` (manifest), `/api/history/:day` (daily city), and `/api/history/air-quality/:day` (packed hourly NYCCAS + official daily AirNow) proxy the `data` branch. City snapshots retain seven days; Air Quality retains 30.
+Timeline module in index.html replays snapshots through each module's `hist()`; while Air Quality is selected, AQ snaps to exact hourly frames and all other layers use the labeled nearest daily city snapshot.
 
 ## Changelog (CHANGELOG.md)
 

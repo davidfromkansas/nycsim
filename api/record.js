@@ -3,9 +3,12 @@
    subway) and commits it to the repo's `data` branch via the GitHub API.
    Needs env: GH_DATA_TOKEN (fine-grained PAT, Contents read/write on this repo).
    Optional: CRON_SECRET (Vercel sends it as a Bearer token if configured). */
+const { dayAt, loadDay: loadAirQualityDay } = require('../lib/air-quality-history');
+
 const REPO = 'davidfromkansas/manhattan-island';
 const BRANCH = 'data';
 const RETENTION_DAYS = 7;
+const AQ_RETENTION_DAYS = 30;
 
 const gh = async (method, path, body) => {
   const r = await fetch('https://api.github.com' + path, {
@@ -44,6 +47,8 @@ module.exports = async (req, res) => {
     const r5 = (v) => Math.round(v * 1e5) / 1e5;
     const now = new Date();
     const day = now.toISOString().slice(0, 10);
+    const airQualityDay = dayAt(now.getTime() - 72 * 3600_000);
+    const packedAirQuality = await loadAirQualityDay(airQualityDay).catch(() => null);
     const frame = {
       v: 1, t: now.toISOString(), kind: 'daily',
       weather: weather?.current ?? null,
@@ -89,24 +94,37 @@ module.exports = async (req, res) => {
       ...(existing.status === 200 ? { sha: existing.json.sha } : {})
     });
 
-    // prune beyond retention + refresh the manifest
-    const dir = await gh('GET', `/repos/${REPO}/contents/data/daily?ref=${BRANCH}`);
-    const files = Array.isArray(dir.json) ? dir.json : [];
-    const cutoff = Date.now() - (RETENTION_DAYS + 1) * 86400_000;
-    const kept = [];
-    for (const f of files) {
-      const m = f.name.match(/^(\d{4})-(\d{2})-(\d{2})\.json$/);
-      if (!m) continue;
-      if (Date.UTC(+m[1], +m[2] - 1, +m[3]) < cutoff)
-        await gh('DELETE', `/repos/${REPO}/contents/${f.path}`, { message: 'prune ' + f.name, branch: BRANCH, sha: f.sha });
-      else kept.push('daily/' + f.name);
+    if (packedAirQuality) {
+      const aqPath = 'data/air-quality/' + airQualityDay + '.json';
+      const existingAq = await gh('GET', `/repos/${REPO}/contents/${aqPath}?ref=${BRANCH}`);
+      await gh('PUT', `/repos/${REPO}/contents/${aqPath}`, {
+        message: 'air quality history ' + airQualityDay, branch: BRANCH,
+        content: Buffer.from(JSON.stringify(packedAirQuality)).toString('base64'),
+        ...(existingAq.status === 200 ? { sha: existingAq.json.sha } : {})
+      });
     }
-    kept.sort();
+
+    const pruneAndList = async (directory, prefix, retentionDays) => {
+      const dir = await gh('GET', `/repos/${REPO}/contents/data/${directory}?ref=${BRANCH}`);
+      const files = Array.isArray(dir.json) ? dir.json : [];
+      const cutoff = Date.now() - (retentionDays + 1) * 86400_000, kept = [];
+      for (const f of files) {
+        const match = f.name.match(/^(\d{4})-(\d{2})-(\d{2})\.json$/);
+        if (!match) continue;
+        if (Date.UTC(+match[1], +match[2] - 1, +match[3]) < cutoff)
+          await gh('DELETE', `/repos/${REPO}/contents/${f.path}`, { message: 'prune ' + f.name, branch: BRANCH, sha: f.sha });
+        else kept.push(prefix + f.name);
+      }
+      return kept.sort();
+    };
+    const kept = await pruneAndList('daily', 'daily/', RETENTION_DAYS);
+    const keptAirQuality = await pruneAndList('air-quality', 'air-quality/', AQ_RETENTION_DAYS);
     const manPath = 'data/manifest.json';
     const man = await gh('GET', `/repos/${REPO}/contents/${manPath}?ref=${BRANCH}`);
     await gh('PUT', `/repos/${REPO}/contents/${manPath}`, {
       message: 'manifest ' + day, branch: BRANCH,
-      content: Buffer.from(JSON.stringify({ v: 1, updated: now.toISOString(), retentionDays: RETENTION_DAYS, daily: kept, frames: [] })).toString('base64'),
+      content: Buffer.from(JSON.stringify({ v: 2, updated: now.toISOString(), retentionDays: RETENTION_DAYS,
+        airQualityRetentionDays: AQ_RETENTION_DAYS, daily: kept, airQuality: keptAirQuality, frames: [] })).toString('base64'),
       ...(man.status === 200 ? { sha: man.json.sha } : {})
     });
 
@@ -115,7 +133,8 @@ module.exports = async (req, res) => {
       buses: frame.buses.length, bikes: frame.bikes.length, ferries: frame.ferries.length,
       flights: frame.flights.length, subwayTrips: frame.subway ? frame.subway.trips.length : 0,
       traffic: frame.traffic.length, trafficEvents: frame.trafficEvents.length,
-      airQuality: frame.airQuality.length }, kept }));
+      airQuality: frame.airQuality.length, airQualityHourlyFrames: packedAirQuality ? packedAirQuality.frames.length : 0,
+      airQualityWritten: !!packedAirQuality, airNowHistorical: !!(packedAirQuality && packedAirQuality.airNow) }, kept, keptAirQuality }));
   } catch (e) {
     console.error('[record]', e.message || e);
     res.statusCode = 500;

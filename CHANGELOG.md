@@ -6,6 +6,18 @@ the rules on adding entries.
 
 ---
 
+## ⏪ Thirty-day Air Quality time travel
+
+**Shipped:** July 16, 2026
+
+**TL;DR:** Select Air Quality and scrub through 30 days of exact hourly NYCCAS PM2.5 intervals or day-ending summaries, with official historical NYC-region AirNow AQI.
+
+**What you'll see:** The Air Quality Hub now includes **DAILY / HOURLY** resolution and **24H AVG / HOURLY PM2.5** metric controls. Selecting Air Quality expands the shared timeline from seven to 30 days and marks recorded AQ days. Hourly mode snaps the thumb to exact hour-ending observations; daily mode selects the final complete interval of each New York day. The AQ panel shows the recorded interval in America/New_York time, while the timeline badge separately labels the nearest available daily city snapshot used by buses, trains, boats, planes, bikes, weather, and other city layers. Missing monitor readings are never carried forward: absent measurements disappear, averages without sufficient recorded history show no reading, and empty intervals say **NO RECORDED READING**. Historical neighborhood cards are rebuilt from that interval's monitors and clearly marked **RECONSTRUCTED · NONOFFICIAL**.
+
+**How it works:** The nightly recorder writes one compact `air-quality/YYYY-MM-DD.json` file containing all available UTC hour-ending NYCCAS frames, each with latest hourly PM2.5, rolling 24-hour average and count, change, 12-hour peak, and NYC SIM-derived EPA-style NowCast. A separate official AirNow historical reporting-area observation supplies the day's regional PM2.5 AQI. Packed AQ days retain for 30 days independently from seven-day city snapshots, and the public history API and City Concierge can read the same files. New York day boundaries are daylight-saving aware, so spring days can contain 23 intervals and fall days 25 without shifting timestamps.
+
+---
+
 ## 🐦 City Concierge can answer and map air-quality questions
 
 **Shipped:** July 16, 2026
@@ -14,7 +26,7 @@ the rules on adding entries.
 
 **What you'll see:** The Concierge can report the official AirNow NYC-region current AQI, forecast, and Action Day status; search and compare NYCCAS monitors by 24-hour average, latest hourly PM2.5, change, peak, age, or derived NowCast; estimate and compare neighborhood AQI with confidence labels; find nearby monitors; and place monitor or neighborhood results directly on the map. It identifies delayed data as measurement age rather than claiming a device is offline, and keeps official AirNow values, measured NYCCAS readings, NYC SIM-derived station NowCasts, and NYC SIM neighborhood estimates clearly distinguished.
 
-**How it works:** A read-only `get_air_quality` agent tool uses the same cached `/api/air-quality` response as the Air Quality Hub, so questions add no upstream traffic. Compact NYCCAS rows are decoded into labeled metrics with the Hub's freshness thresholds. Live neighborhood estimates use official 2020 NTA centroids and inverse-distance-squared interpolation from up to four current NYCCAS monitors, matching the Hub method. The existing layer tool maps results, while timeline queries decode recorded NYCCAS snapshots without inventing historical AirNow forecasts or neighborhood estimates.
+**How it works:** A read-only `get_air_quality` agent tool uses the same cached `/api/air-quality` response as the Air Quality Hub, so questions add no upstream traffic. Compact NYCCAS rows are decoded into labeled metrics with the Hub's freshness thresholds. Live neighborhood estimates use official 2020 NTA centroids and inverse-distance-squared interpolation from up to four current NYCCAS monitors, matching the Hub method. The existing layer tool maps results, while timeline queries decode packed exact-hour NYCCAS history and report the official daily AirNow NYC-region observation. Historical neighborhood values remain labeled reconstructed and nonofficial.
 
 ---
 

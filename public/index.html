@@ -522,6 +522,10 @@
   #aqSensors .aqHubTabs { position:relative; z-index:4; display:grid; grid-template-columns:1fr 1fr; gap:4px; flex:none; padding:7px 8px; background:rgba(4,20,43,.6); border-bottom:1px solid rgba(147,211,255,.16); }
   #aqSensors .aqHubTabs button,#aqSensors .aqBoroughTabs button { min-width:0; cursor:pointer; color:#7fa6c8; font:850 8px/1.2 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif; letter-spacing:.4px; border:1px solid rgba(133,195,233,.16); border-radius:8px; background:rgba(40,87,119,.14); padding:6px 5px; }
   #aqSensors .aqHubTabs button.on,#aqSensors .aqBoroughTabs button.on { color:#eff9ff; border-color:rgba(117,235,160,.52); background:rgba(51,126,126,.36); box-shadow:inset 0 -2px rgba(117,235,160,.72); }
+  #aqSensors .aqHistoryControls { position:relative; z-index:4; display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:6px 8px; border-bottom:1px solid rgba(147,211,255,.16); background:rgba(3,18,40,.42); }
+  #aqSensors .aqHistoryGroup { display:grid; grid-template-columns:1fr 1fr; gap:2px; padding:2px; border:1px solid rgba(133,195,233,.18); border-radius:8px; background:rgba(2,14,32,.45); }
+  #aqSensors .aqHistoryGroup button { min-width:0; padding:4px 3px; cursor:pointer; color:#7299bc; font:850 6.8px/1.1 'Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif; letter-spacing:.25px; border:0; border-radius:5px; background:transparent; }
+  #aqSensors .aqHistoryGroup button.on { color:#fff; background:rgba(53,130,155,.52); box-shadow:inset 0 -2px #75eba0; }
   #aqSensors .aqBoroughTabs { position:relative; z-index:4; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; flex:none; padding:6px 7px 3px; background:rgba(4,20,43,.36); }
   #aqSensors .aqBoroughTabs button { padding:5px 2px; font-size:6.6px; letter-spacing:0; overflow:hidden; text-overflow:ellipsis; }
   #aqSensors .aqScroll { position:relative; z-index:2; flex:none; min-height:0; overflow:visible; padding:6px; }
@@ -1142,6 +1146,7 @@
 <section id="aqSensors" aria-label="New York City Air Quality Hub">
   <div class="aqsHead"><div class="aqsTitle"><span>AIR QUALITY HUB</span><span class="aqsLive"><i></i><span id="aqSensorMode">LIVE</span></span></div><div class="aqsSub"><span id="aqSensorStatus">CONNECTING TO AIR QUALITY SOURCES</span><span class="aqsSignal" aria-hidden="true"><i></i><i></i><i></i></span></div></div>
   <div id="aqAirNow" class="aqm" aria-live="polite"></div>
+  <div id="aqHistoryControls" class="aqHistoryControls"><div class="aqHistoryGroup" role="group" aria-label="Air-quality history resolution"><button type="button" class="on" data-aq-resolution="daily">DAILY</button><button type="button" data-aq-resolution="hourly">HOURLY</button></div><div class="aqHistoryGroup" role="group" aria-label="Air-quality map metric"><button type="button" class="on" data-aq-metric="average">24H AVG</button><button type="button" data-aq-metric="hourly">HOURLY PM2.5</button></div></div>
   <div id="aqHubTabs" class="aqHubTabs" role="tablist" aria-label="Air Quality Hub views"><button type="button" class="on" data-aq-tab="neighborhoods" role="tab" aria-selected="true">NEIGHBORHOODS</button><button type="button" data-aq-tab="sensors" role="tab" aria-selected="false">SENSOR NETWORK</button></div>
   <div id="aqBoroughTabs" class="aqBoroughTabs" role="tablist" aria-label="Boroughs"></div>
   <div id="aqNeighborhoodList" class="aqScroll" role="tabpanel" aria-label="Estimated neighborhood air quality"></div>
@@ -7029,22 +7034,22 @@ const live = (() => {
 const timeline = (() => {
   const slider = document.getElementById('timeSlider'), reset = document.getElementById('timeReset');
   const badge = document.getElementById('tlBadge'), ticks = document.getElementById('tlTicks');
-  const MIN = +slider.min, MAX = +slider.max;
+  const MAX = +slider.max;
   const DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
   const LBL_FMT = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' });
   const midday = (day) => Date.parse(day + 'T12:00:00Z'); // stable per-day anchor for distances/labels
-  let manifest = null, manifestAt = 0, mLoading = null, applyGen = 0, debounceT = null;
+  let manifest = null, manifestAt = 0, mLoading = null, applyGen = 0, debounceT = null, airMode = false;
   const frames = new Map(); // day → parsed snapshot
   const dayOf = (offMin) => DAY_FMT.format(new Date(Date.now() + offMin * 60000));
-  const availDays = () => (manifest && manifest.daily || [])
-    .map(p => (p.match(/\d{4}-\d{2}-\d{2}/) || [''])[0]).filter(Boolean).sort();
+  const daysFrom = key => (manifest && manifest[key] || []).map(p => (p.match(/\d{4}-\d{2}-\d{2}/) || [''])[0]).filter(Boolean).sort();
+  const availDays = () => daysFrom('daily'), availAirDays = () => daysFrom('airQuality');
   function renderTicks() { // a dot on the track for every recorded day (gaps show as missing dots)
-    ticks.innerHTML = '';
-    for (const d of availDays()) {
+    ticks.innerHTML = ''; const min = +slider.min;
+    for (const d of (airMode ? availAirDays() : availDays())) {
       const off = (midday(d) - Date.now()) / 60000;
-      if (off < MIN || off > 0) continue;
+      if (off < min || off > 0) continue;
       const i = document.createElement('i');
-      i.style.left = ((off - MIN) / (MAX - MIN) * 100) + '%';
+      i.style.left = ((off - min) / (MAX - min) * 100) + '%';
       i.title = d;
       ticks.appendChild(i);
     }
@@ -7065,20 +7070,20 @@ const timeline = (() => {
       .catch(() => null);
   }
   function setBadge(cls, html) { badge.className = cls; badge.innerHTML = '<i></i>' + html; }
-  function enter(frame, day) {
-    HIST.active = true; HIST.day = day; HIST.epochS = Date.parse(frame.t) / 1000;
+  function enter(frame, cityDay, viewedDay = cityDay) {
+    HIST.active = true; HIST.day = viewedDay; HIST.cityDay = cityDay; HIST.epochS = Date.parse(frame.t) / 1000;
     if (frame.weather) live.applyWeather(frame.weather);
     flights.hist(frame.flights || []); ferries.hist(frame.ferries || []);
     buses.hist(frame.buses || []); subway.hist(frame.subway); citibike.hist(frame.bikes || []);
     birds.hist(frame.birds || { aloft: 0 }); // pre-birds snapshots replay a quiet sky
     rtraffic.hist(frame.traffic || [], frame.trafficEvents || []);
     nyc311.hist(frame.nyc311 || []); // pre-311 snapshots replay an empty layer
-    airQuality.hist(frame.airQuality || []);
-    setBadge('past', LBL_FMT.format(new Date(midday(day))));
+    if (!airMode) airQuality.hist(frame.airQuality || []);
+    setBadge('past', airMode ? 'AQ ' + LBL_FMT.format(new Date(midday(viewedDay))) + (cityDay === viewedDay ? '' : ' · CITY ' + LBL_FMT.format(new Date(midday(cityDay)))) : LBL_FMT.format(new Date(midday(cityDay))));
   }
   function exit() {
     if (!HIST.active) return;
-    HIST.active = false; HIST.day = '';
+    HIST.active = false; HIST.day = ''; HIST.cityDay = '';
     flights.hist(null); ferries.hist(null); buses.hist(null); subway.hist(null); citibike.hist(null);
     birds.hist(null); rtraffic.hist(null); nyc311.hist(null); airQuality.hist(null);
     if (HIST.liveWx) live.applyWeather(HIST.liveWx);
@@ -7091,27 +7096,37 @@ const timeline = (() => {
       setBadge('live', 'LIVE');
       return;
     }
-    const day = dayOf(off);
-    if (day === dayOf(0)) { // intraday: today's snapshot doesn't exist yet — live city, sun preview only
+    const targetMs = Date.now() + off * 60000, day = DAY_FMT.format(new Date(targetMs - 1));
+    if (day === dayOf(0) && !airMode) { // intraday: today's city snapshot doesn't exist yet
       exit();
       setBadge('sun', 'sun −' + (-off / 60).toFixed(1) + 'h');
       return;
     }
     await ensureManifest();
     if (gen !== applyGen) return;
-    // daily-photograph model: snap to the nearest recorded day
     let pick = null, bd = Infinity;
     for (const d of availDays()) {
       const dd = Math.abs(midday(d) - midday(day));
       if (dd < bd) { bd = dd; pick = d; }
     }
-    if (!pick || bd > 3.5 * 86400000) { exit(); setBadge('none', 'no recording'); return; }
-    if (HIST.active && HIST.day === pick) { setBadge('past', LBL_FMT.format(new Date(midday(pick)))); return; }
+    if (!pick || (!airMode && bd > 3.5 * 86400000)) { exit(); setBadge('none', 'no recording'); return; }
     setBadge('none', 'loading…');
-    const frame = await loadDay(pick);
+    let frame = HIST.active && HIST.cityDay === pick ? null : await loadDay(pick);
     if (gen !== applyGen) return;
-    if (!frame) { exit(); setBadge('none', 'no recording'); return; }
-    enter(frame, pick);
+    if (frame) enter(frame, pick, day);
+    else if (!HIST.active) { exit(); setBadge('none', 'no recording'); return; }
+    else {
+      HIST.day = day;
+      const citySuffix = HIST.cityDay === day ? '' : ' · CITY ' + LBL_FMT.format(new Date(midday(HIST.cityDay)));
+      setBadge('past', 'AQ ' + LBL_FMT.format(new Date(midday(day))) + citySuffix);
+    }
+    if (airMode) {
+      const selectedMs = await airQuality.replay(day, targetMs);
+      if (gen !== applyGen) return;
+      if (selectedMs != null) { slider.value = Math.max(+slider.min, Math.min(0, Math.round((selectedMs - Date.now()) / 60000))); live.setScrub(+slider.value); }
+      else setBadge('none', 'no AQ recording');
+    }
+    if (gen !== applyGen) return;
   }
   slider.addEventListener('input', () => {
     const v = +slider.value;
@@ -7120,8 +7135,13 @@ const timeline = (() => {
     debounceT = setTimeout(() => apply(v), 160); // …the city snaps once the thumb settles
   });
   reset.addEventListener('click', () => { slider.value = 0; apply(0); });
+  function setAirMode(on) {
+    airMode = !!on; slider.min = airMode ? '-43200' : '-10080'; slider.title = airMode ? 'Scrub air quality through the last 30 days' : 'Scrub the city through the last 7 days';
+    if (+slider.value < +slider.min) slider.value = slider.min;
+    renderTicks();
+  }
   ensureManifest(); // ticks appear on load (one tiny manifest fetch)
-  return { set: (v) => { slider.value = v; apply(v); }, apply, exit };
+  return { set: (v) => { slider.value = v; apply(v); }, apply, exit, setAirMode, refresh: () => apply(+slider.value), manifest: () => manifest };
 })();
 window.__timeline = timeline; // dev/testing hook
 setMode('live');
@@ -11333,10 +11353,12 @@ window.__featureMode = featureMode;
 const airQuality = (() => {
   const MAX = 32, btn = document.getElementById('aqBtn'), legend = document.getElementById('aqLegend');
   const panel = document.getElementById('aqSensors'), panelList = document.getElementById('aqSensorList'), airNowEl = document.getElementById('aqAirNow');
-  const neighborhoodList = document.getElementById('aqNeighborhoodList'), hubTabs = document.getElementById('aqHubTabs'), boroughTabs = document.getElementById('aqBoroughTabs');
+  const neighborhoodList = document.getElementById('aqNeighborhoodList'), hubTabs = document.getElementById('aqHubTabs'), boroughTabs = document.getElementById('aqBoroughTabs'), historyControls = document.getElementById('aqHistoryControls');
   const panelStatus = document.getElementById('aqSensorStatus'), panelMode = document.getElementById('aqSensorMode'), panelClock = document.getElementById('aqSensorClock'), panelSource = document.getElementById('aqSensorSource');
   const list = [], liveRows = [], grid = [], neighborhoods = [], BOROUGHS = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island'];
-  let visible = false, poll = 7, delay = 60, busy = false, feedStale = false, sourceFetchedAt = 0, selectedSource = 'portal', sourceHref = 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/', airNow = null, hubTab = 'neighborhoods', borough = 'Manhattan', neighborhoodLoading = null, chipT = 0, panelT = 0;
+  let visible = false, poll = 7, delay = 60, busy = false, feedStale = false, sourceFetchedAt = 0, selectedSource = 'portal', sourceHref = 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/', airNow = null, historicalAirNow = null, hubTab = 'neighborhoods', borough = 'Manhattan', neighborhoodLoading = null, chipT = 0, panelT = 0;
+  let resolution = 'daily', metric = 'average', replayDay = '', replayTargetMs = 0, replayEndMin = 0, replayLoading = null;
+  const replayPacks = new Map();
   let fieldMesh = null, fieldAlpha = null, fieldValue = null, fieldLoading = null, fieldYear = 0, fieldSpacing = 600;
   const geo = new THREE.CylinderGeometry(24, 24, 1, 8); geo.translate(0, 0.5, 0);
   const mat = new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.9, emissive: 0x111111, emissiveIntensity: 0.35 });
@@ -11361,8 +11383,8 @@ const airQuality = (() => {
     return min < 1 ? 'just now' : min < 60 ? min + ' min ago' : Math.floor(min / 60) + ' h ago';
   }
   function intervalText(tMin) {
-    const fmt = ms => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    return fmt(tMin * 60000) + '–' + fmt((tMin + 59) * 60000);
+    const fmt = ms => new Date(ms).toLocaleTimeString([], { timeZone:'America/New_York', hour:'numeric', minute:'2-digit', timeZoneName:'short' });
+    return fmt(tMin * 60000) + '–' + fmt((tMin + 60) * 60000);
   }
   function sensorState(o) {
     if (HIST.active) return ['recorded', 'RECORDED'];
@@ -11382,7 +11404,12 @@ const airQuality = (() => {
     return '<div class="aqmProgress" role="progressbar" aria-label="Air Quality Index" aria-valuemin="0" aria-valuemax="500" aria-valuenow="' + Math.round(value) + '"><div class="aqmProgressTrack"><i class="aqmProgressFill" style="width:' + percent.toFixed(1) + '%"></i></div><div class="aqmProgressTicks" aria-hidden="true"><span>GOOD</span><span>MODERATE</span><span>UNHEALTHY</span><span>VERY UNHEALTHY</span><span>HAZARDOUS</span></div></div>';
   }
   function renderAirNow() {
-    if (HIST.active) { airNowEl.innerHTML = '<div class="aqmTop"><div><div class="aqmEyebrow">OFFICIAL AIRNOW · NYC REGION</div><div class="aqmMeta">LIVE NOWCAST IS NOT SHOWN DURING TIMELINE REPLAY</div></div><div class="aqmScore">—<small>AQI</small></div></div>'; return; }
+    if (HIST.active) {
+      const official = historicalAirNow;
+      if (!official) { airNowEl.innerHTML = '<div class="aqmTop"><div><div class="aqmEyebrow">OFFICIAL AIRNOW · NYC REGION</div><div class="aqmMeta">NO OFFICIAL HISTORICAL PM2.5 AQI RECORDED FOR THIS DAY</div></div><div class="aqmScore">—<small>DAILY AQI</small></div></div>'; return; }
+      const info = aqiInfo(official.aqi);
+      airNowEl.innerHTML = '<div class="aqmTop"><div class="aqmContent"><div class="aqmHeading"><div><div class="aqmEyebrow">OFFICIAL AIRNOW · NYC REGION · ' + esc(official.date) + '</div><div class="aqmMeta">DAILY REPORTING-AREA OBSERVATION · PRELIMINARY</div></div><div class="aqmScore">' + official.aqi + '<small>' + esc(official.category || info[0]) + '</small></div></div><div class="aqmReadout">' + aqiProgress(official.aqi) + '</div></div></div>'; return;
+    }
     const pollutants = airNow && airNow.current && Array.isArray(airNow.current.pollutants) ? airNow.current.pollutants : [];
     const official = pollutants.find(item => /2\.5|particle/i.test(item.pollutant) && Number.isFinite(+item.aqi));
     const estimatedAqi = list.reduce((max, item) => Number.isFinite(item.aqi) ? Math.max(max, item.aqi) : max, -Infinity);
@@ -11417,18 +11444,17 @@ const airQuality = (() => {
     boroughTabs.innerHTML = BOROUGHS.map(name => '<button type="button" class="' + (name === borough ? 'on' : '') + '" data-borough="' + esc(name) + '" role="tab" aria-selected="' + (name === borough) + '">' + esc(name.toUpperCase()) + '</button>').join('');
   }
   function renderNeighborhoods() {
-    if (HIST.active) { neighborhoodList.innerHTML = '<div class="aqIntro">NEIGHBORHOOD AQI ESTIMATES ARE LIVE-ONLY. OPEN SENSOR NETWORK FOR RECORDED MEASUREMENTS.</div>'; return; }
     if (!neighborhoods.length) { neighborhoodList.innerHTML = '<div class="aqIntro">LOADING OFFICIAL 2020 NEIGHBORHOODS…</div>'; loadNeighborhoods(); return; }
     const rows = neighborhoods.filter(n => n.borough === borough);
-    neighborhoodList.innerHTML = '<div class="aqIntro">NYC SIM EST. AQI · PM2.5 INTERPOLATED FROM UP TO 4 CURRENT NYCCAS MONITORS. NOT AN OFFICIAL AIRNOW NEIGHBORHOOD AQI.</div>' + rows.map((n,i) => {
+    neighborhoodList.innerHTML = '<div class="aqIntro">' + (HIST.active ? 'RECONSTRUCTED HISTORICAL NYC SIM ESTIMATE · ' : 'NYC SIM EST. AQI · ') + 'PM2.5 INTERPOLATED FROM UP TO 4 ' + (HIST.active ? 'RECORDED' : 'CURRENT') + ' NYCCAS MONITORS. NOT AN OFFICIAL AIRNOW NEIGHBORHOOD AQI.</div>' + rows.map((n,i) => {
       const e = estimateNeighborhood(n); if (!e) return '<div class="aqNbhd"><i style="--aq:#8394a7"></i><span><b class="aqNbhdName">' + esc(n.name) + '</b><small class="aqNbhdMeta">INSUFFICIENT CURRENT SENSOR DATA</small></span><span class="aqNbhdValue">—<small>EST. AQI</small></span></div>';
       const info = aqiInfo(e.aqi); n.estimate = e;
-      return '<button type="button" class="aqNbhd" data-neighborhood="' + i + '" style="--aq:' + info[1] + '" aria-label="View estimated air quality for ' + esc(n.name) + '"><i></i><span><b class="aqNbhdName">' + esc(n.name) + '</b><small class="aqNbhdMeta">ESTIMATED · ' + info[0] + ' · ' + e.confidence + ' CONFIDENCE · NEAREST ' + e.nearest.toFixed(1) + ' KM</small></span><span class="aqNbhdValue">' + e.aqi + '<small>EST. AQI</small></span></button>';
+      return '<button type="button" class="aqNbhd" data-neighborhood="' + i + '" style="--aq:' + info[1] + '" aria-label="View estimated air quality for ' + esc(n.name) + '"><i></i><span><b class="aqNbhdName">' + esc(n.name) + '</b><small class="aqNbhdMeta">' + (HIST.active ? 'RECONSTRUCTED · NONOFFICIAL' : 'ESTIMATED') + ' · ' + info[0] + ' · ' + e.confidence + ' CONFIDENCE · NEAREST ' + e.nearest.toFixed(1) + ' KM</small></span><span class="aqNbhdValue">' + e.aqi + '<small>EST. AQI</small></span></button>';
     }).join('');
   }
   function openNeighborhood(n) {
     if (!n || !n.estimate) return; const e = n.estimate, info = aqiInfo(e.aqi);
-    const html = '<b>' + esc(n.name) + ' · estimated AQI ' + e.aqi + ' · ' + info[0] + '</b><br><span class="sub">NYC SIM estimate from ' + e.sensors + ' current NYCCAS monitors · nearest ' + e.nearest.toFixed(1) + ' km · ' + e.confidence.toLowerCase() + ' confidence · not official AirNow neighborhood data</span>';
+    const html = '<b>' + esc(n.name) + ' · estimated AQI ' + e.aqi + ' · ' + info[0] + '</b><br><span class="sub">' + (HIST.active ? 'Reconstructed historical NYC SIM estimate' : 'NYC SIM estimate') + ' from ' + e.sensors + ' ' + (HIST.active ? 'recorded' : 'current') + ' NYCCAS monitors · nearest ' + e.nearest.toFixed(1) + ' km · ' + e.confidence.toLowerCase() + ' confidence · not official AirNow neighborhood data</span>';
     setFocus('estimated neighborhood air quality', n.name, { borough:n.borough, estimated_aqi:e.aqi, estimated_pm25_ug_m3:+e.concentration.toFixed(1), confidence:e.confidence.toLowerCase(), nearest_monitor_km:+e.nearest.toFixed(1), estimated:true, source:'NYC SIM interpolation of NYCCAS' });
     focusui.enter(() => [n.x, 48, n.z], html); camTween = { p0:camera.position.clone(), t0:controls.target.clone(), p1:new THREE.Vector3(n.x+240,330,n.z-390), t1:new THREE.Vector3(n.x,20,n.z), t:0, dur:1.8 };
   }
@@ -11456,19 +11482,19 @@ const airQuality = (() => {
   }
   function openSensor(o) {
     if (!o) return;
-    const html = sensorDetail(o), data = { site: o.name, average_24h_pm25_ug_m3: o.hasAverage ? o.pm : null, average_24h_observation_count: o.hasAverage ? o.avgCount : null, latest_hourly_pm25_ug_m3: o.latestPm, observed_epoch_min: o.tMin, delta_1h: o.delta, nowcast_aqi: o.aqi, peak_12h_pm25_ug_m3: o.peakPm, peak_12h_epoch_min: o.peakMin, estimated: false, source: 'NYCCAS' };
+    const html = sensorDetail(o), data = { site: o.name, average_24h_pm25_ug_m3: o.hasAverage ? o.avgPm : null, average_24h_observation_count: o.hasAverage ? o.avgCount : null, latest_hourly_pm25_ug_m3: o.latestPm, observed_epoch_min: o.tMin, delta_1h: o.delta, nowcast_aqi: o.aqi, peak_12h_pm25_ug_m3: o.peakPm, peak_12h_epoch_min: o.peakMin, estimated: false, source: 'NYCCAS' };
     setFocus('air-quality monitor (NYCCAS)', fullSensorName(o.name), data);
     focusui.enter(() => [o.x, sensorLabelY(o), o.z], html);
     camTween = { p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(o.x + 170, camera.position.y, o.z - 310), t1: new THREE.Vector3(o.x, 20, o.z), t: 0, dur: 1.8, _hi: true };
   }
   function renderSensorPanel() {
     panel.classList.toggle('recorded', HIST.active);
-    if (!list.length) { panelList.innerHTML = '<div class="aqsEmpty">WAITING FOR ACTIVE SENSOR DATA…</div>'; renderPanelTimes(); return; }
+    if (!list.length) { panelList.innerHTML = '<div class="aqsEmpty">' + (HIST.active ? 'NO RECORDED READING FOR THIS INTERVAL' : 'WAITING FOR ACTIVE SENSOR DATA…') + '</div>'; renderPanelTimes(); return; }
     panelList.innerHTML = list.slice().sort((a, b) => a.name.localeCompare(b.name)).map((o, i) => {
       const st = sensorState(o), trend = o.delta == null ? 'NO TREND' : (o.delta > 0 ? '▲ +' : o.delta < 0 ? '▼ ' : '— ') + o.delta.toFixed(1) + ' / HR';
-      const metric = o.hasAverage ? '24H AVG · ' + o.avgCount + ' HOURS · LATEST ' + o.latestPm.toFixed(1) : 'RECORDED HOURLY';
+      const metricLabel = metric === 'hourly' ? 'HOURLY PM2.5' : '24H AVG · ' + o.avgCount + ' HOURS · LATEST ' + o.latestPm.toFixed(1);
       const estimatedAqi = o.aqi == null ? '' : ' · ESTIMATED AQI ' + Math.round(o.aqi);
-      return '<button type="button" class="aqsRow ' + st[0] + '" data-sensor="' + esc(o.id) + '" style="--pulse:-' + (i % 6 * .23).toFixed(2) + 's" aria-label="View ' + esc(o.name) + ' air-quality sensor"><i class="aqsDot"></i><span><span class="aqsName">' + esc(o.name) + '</span><span class="aqsMeta"><b class="aqsState">' + st[1] + '</b>' + metric + ' · ENDED <span class="aqsAge" data-sensor="' + esc(o.id) + '">' + ageText(o.tMin) + '</span>' + estimatedAqi + ' · 12H PEAK ' + o.peakPm.toFixed(1) + '</span></span><span class="aqsReading"><b>' + o.pm.toFixed(1) + '</b><small>µg/m³ · ' + category(o.pm) + '</small></span></button>';
+      return '<button type="button" class="aqsRow ' + st[0] + '" data-sensor="' + esc(o.id) + '" style="--pulse:-' + (i % 6 * .23).toFixed(2) + 's" aria-label="View ' + esc(o.name) + ' air-quality sensor"><i class="aqsDot"></i><span><span class="aqsName">' + esc(o.name) + '</span><span class="aqsMeta"><b class="aqsState">' + st[1] + '</b>' + metricLabel + ' · ENDED <span class="aqsAge" data-sensor="' + esc(o.id) + '">' + ageText(o.tMin) + '</span>' + estimatedAqi + ' · 12H PEAK ' + o.peakPm.toFixed(1) + '</span></span><span class="aqsReading"><b>' + o.pm.toFixed(1) + '</b><small>µg/m³ · ' + category(o.pm) + '</small></span></button>';
     }).join('');
     panel.classList.remove('sync'); requestAnimationFrame(() => panel.classList.add('sync'));
     renderPanelTimes();
@@ -11477,21 +11503,29 @@ const airQuality = (() => {
     let live = 0;
     for (const el of panelList.querySelectorAll('.aqsAge')) {
       const o = list.find(x => x.id === el.dataset.sensor); if (!o) continue;
-      el.textContent = ageText(o.tMin); const st = sensorState(o), row = el.closest('.aqsRow');
+      el.textContent = HIST.active ? intervalText(o.tMin) : ageText(o.tMin); const st = sensorState(o), row = el.closest('.aqsRow');
       row.classList.remove('live', 'delayed', 'overdue', 'recorded'); row.classList.add(st[0]); row.querySelector('.aqsState').textContent = st[1]; if (st[0] === 'live') live++;
     }
     const delayed = !HIST.active && (feedStale || live === 0);
     panel.classList.toggle('feedDelayed', delayed);
     panelMode.textContent = HIST.active ? 'RECORDED' : delayed ? 'DELAYED' : 'LIVE';
-    panelStatus.textContent = HIST.active ? list.length + ' SENSORS IN THIS SNAPSHOT' : feedStale ? 'SOURCE REFRESH DELAYED · LAST RECEIVED DATA' : live + ' OF ' + list.length + ' INTERVALS ENDED RECENTLY';
+    panelStatus.textContent = HIST.active ? (list.length ? list.length + ' SENSORS · EXACT RECORDED INTERVAL' : 'NO RECORDED READING FOR THIS INTERVAL') : feedStale ? 'SOURCE REFRESH DELAYED · LAST RECEIVED DATA' : live + ' OF ' + list.length + ' INTERVALS ENDED RECENTLY';
     const checked = sourceFetchedAt ? new Date(sourceFetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
-    panelSource.textContent = HIST.active ? 'RECORDED SNAPSHOT' : hubTab === 'neighborhoods' ? 'NYC SIM ESTIMATES · NYCCAS' : 'NYCCAS · ' + selectedSource.toUpperCase();
-    panelClock.textContent = HIST.active ? 'TIMELINE SNAPSHOT' : busy ? 'CHECKING SOURCE…' : (checked ? 'CHECKED ' + checked + ' · ' : '') + 'NEXT ' + Math.max(0, Math.ceil(poll - T)) + 's';
+    panelSource.textContent = HIST.active ? 'NYCCAS RECORDED · CITY ' + (HIST.cityDay || 'UNAVAILABLE') : hubTab === 'neighborhoods' ? 'NYC SIM ESTIMATES · NYCCAS' : 'NYCCAS · ' + selectedSource.toUpperCase();
+    panelClock.textContent = HIST.active && replayEndMin ? 'ENDED ' + new Date(replayEndMin * 60000).toLocaleString([], { timeZone:'America/New_York', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short' }) : HIST.active ? 'TIMELINE SNAPSHOT' : busy ? 'CHECKING SOURCE…' : (checked ? 'CHECKED ' + checked + ' · ' : '') + 'NEXT ' + Math.max(0, Math.ceil(poll - T)) + 's';
   }
   panelList.addEventListener('click', e => { const row = e.target.closest('[data-sensor]'); if (row) openSensor(list.find(o => o.id === row.dataset.sensor)); });
   hubTabs.addEventListener('click', e => { const button = e.target.closest('[data-aq-tab]'); if (!button) return; hubTab = button.dataset.aqTab; renderHubView(); neighborhoodList.scrollTop = 0; panelList.scrollTop = 0; });
   boroughTabs.addEventListener('click', e => { const button = e.target.closest('[data-borough]'); if (!button) return; borough = button.dataset.borough; renderBoroughTabs(); renderNeighborhoods(); neighborhoodList.scrollTop = 0; });
   neighborhoodList.addEventListener('click', e => { const row = e.target.closest('[data-neighborhood]'); if (!row) return; const items = neighborhoods.filter(n => n.borough === borough); openNeighborhood(items[+row.dataset.neighborhood]); });
+  historyControls.addEventListener('click', e => {
+    const resolutionButton = e.target.closest('[data-aq-resolution]'), metricButton = e.target.closest('[data-aq-metric]');
+    if (resolutionButton) resolution = resolutionButton.dataset.aqResolution;
+    if (metricButton) metric = metricButton.dataset.aqMetric;
+    for (const button of historyControls.querySelectorAll('[data-aq-resolution]')) button.classList.toggle('on', button.dataset.aqResolution === resolution);
+    for (const button of historyControls.querySelectorAll('[data-aq-metric]')) button.classList.toggle('on', button.dataset.aqMetric === metric);
+    if (HIST.active) timeline.refresh(); else rebuild(liveRows);
+  });
   renderBoroughTabs();
   function rebuild(rows) {
     list.length = 0;
@@ -11502,8 +11536,10 @@ const airQuality = (() => {
       const tMin = +r[5], latestPm = +r[4], stale = refMs() / 60000 - (tMin + 60) > 150;
       if (!isFinite(tMin) || !isFinite(latestPm)) continue;
       const peakPm = isFinite(+r[8]) ? +r[8] : latestPm, peakMin = isFinite(+r[9]) ? +r[9] : tMin;
-      const hasAverage = r[10] != null && isFinite(+r[10]), pm = hasAverage ? +r[10] : latestPm, avgCount = isFinite(+r[11]) ? +r[11] : 1;
-      list.push({ id: String(r[0]), name: String(r[1]), x: g.x, z: g.z, pm, latestPm, tMin,
+      const hasAverage = r[10] != null && isFinite(+r[10]), avgPm = hasAverage ? +r[10] : null, avgCount = isFinite(+r[11]) ? +r[11] : 1;
+      if (HIST.active && metric === 'average' && !hasAverage) continue;
+      const pm = metric === 'hourly' ? latestPm : hasAverage ? avgPm : latestPm;
+      list.push({ id: String(r[0]), name: String(r[1]), x: g.x, z: g.z, pm, avgPm, latestPm, tMin,
         delta: r[6] == null ? null : +r[6], aqi: r[7] == null ? null : +r[7], peakPm, peakMin, avgCount, hasAverage, nowcastPm:r[12] == null ? null : +r[12], stale });
     }
     mesh.count = list.length;
@@ -11584,8 +11620,8 @@ const airQuality = (() => {
     panel.style.display = visible ? 'flex' : 'none';
     renderAirNow(); renderHubView();
     if (!visible) for (const ch of chips) { ch.o = null; ch.el.style.display = 'none'; }
-    const recordedHourly = HIST.active && list.some(o => !o.hasAverage);
-    legend.innerHTML = '<div class="aqh"><span>' + (recordedHourly ? 'RECORDED HOURLY' : '24-HOUR AVG') + ' PM2.5 · µg/m³</span><span>' + (HIST.active ? 'RECORDED' : 'ROLLING') + '</span></div>' +
+    const metricTitle = metric === 'hourly' ? 'HOURLY' : '24-HOUR AVG';
+    legend.innerHTML = '<div class="aqh"><span>' + metricTitle + ' PM2.5 · µg/m³</span><span>' + (HIST.active ? 'RECORDED' : 'ROLLING') + '</span></div>' +
       '<div class="aqscale"><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i></span><b>LOW</b><small>0–9.0</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i></span><b>MODERATE</b><small>9.1–35.4</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i><i></i></span><b>ELEVATED</b><small>35.5–55.4</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>HIGH</b><small>55.5–125.4</small></span><span class="aqlevel"><span class="aqhexes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b>VERY HIGH</b><small>125.5+</small></span></div>' +
       '<div class="aqmeta">Taller hex stacks = more PM2.5; beacons measured, surface estimated · <a href="' + esc(HIST.active ? 'https://a816-dohbesp.nyc.gov/IndicatorPublic/data-features/realtime-air-quality/' : sourceHref) + '" target="_blank" rel="noopener noreferrer">NYC Health + Queens College</a></div>';
   }
@@ -11640,17 +11676,44 @@ const airQuality = (() => {
       ch.el.style.transform = 'translate(' + ((0.5 - _v.x * 0.5) * innerWidth).toFixed(1) + 'px,' + ((0.5 - _v.y * 0.5) * RENDER_H).toFixed(1) + 'px) translate(-50%,-130%)';
     }
   }
+  async function replay(day, targetMs) {
+    replayDay = day; replayTargetMs = targetMs;
+    let pack = replayPacks.get(day);
+    if (!pack) {
+      if (replayLoading && replayLoading.day === day) pack = await replayLoading.promise;
+      else {
+        const promise = fetch('/api/history/air-quality/' + day).then(r => { if (!r.ok) throw 0; return r.json(); }).catch(() => null);
+        replayLoading = { day, promise }; pack = await promise; if (replayLoading && replayLoading.promise === promise) replayLoading = null;
+        if (pack) { if (replayPacks.size >= 8) replayPacks.delete(replayPacks.keys().next().value); replayPacks.set(day, pack); }
+      }
+    }
+    if (!HIST.active || replayDay !== day || replayTargetMs !== targetMs) return null;
+    historicalAirNow = pack && pack.airNow || null;
+    const frames = pack && Array.isArray(pack.frames) ? pack.frames : [];
+    let frame = null;
+    if (resolution === 'daily' && pack && Number.isFinite(+pack.daily)) frame = frames.find(item => +item[0] === +pack.daily) || null;
+    else {
+      const targetMin = targetMs / 60000;
+      for (const candidate of frames) if (!frame || Math.abs(+candidate[0] - targetMin) < Math.abs(+frame[0] - targetMin)) frame = candidate;
+      if (frame && Math.abs(+frame[0] - targetMin) > 31) frame = null;
+    }
+    replayEndMin = frame ? +frame[0] : 0;
+    if (frame) HIST.epochS = replayEndMin * 60;
+    rebuild(frame ? frame[1] : []);
+    return frame ? replayEndMin * 60000 : null;
+  }
   function hist(rows) {
-    if (rows === null) { rebuild(liveRows); poll = 0; return; }
-    rebuild(rows || []);
+    if (rows === null) { historicalAirNow = null; replayDay = ''; replayEndMin = 0; rebuild(liveRows); poll = 0; return; }
+    replayEndMin = 0; rebuild(rows || []);
   }
   function setVisible(on, moveCamera = false) {
-    visible = !!on; refreshUi();
+    visible = !!on; timeline.setAirMode(visible); refreshUi();
+    if (HIST.active) timeline.refresh();
     if (visible && moveCamera) { autoPan.stop(); const p1 = camera.position.clone(); p1.y += 2822.4; camTween = { p0:camera.position.clone(), t0:controls.target.clone(), p1, t1:controls.target.clone(), t:0, dur:2.4, _hi:true }; }
   }
   function setActive(on, reselect) { setVisible(on, on && (reselect || !visible)); }
   function dev(rows) { rebuild(rows); }
-  const api = { update, hist, setVisible, setActive, rows:list, _dev:dev };
+  const api = { update, hist, replay, setVisible, setActive, rows:list, _dev:dev };
   featureMode.register('air', api); refreshUi();
   return api;
 })();
