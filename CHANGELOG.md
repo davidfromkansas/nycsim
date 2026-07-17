@@ -6,6 +6,18 @@ the rules on adding entries.
 
 ---
 
+## ☀️ Daylight links keep the whole city live
+
+**Shipped:** July 17, 2026
+
+**TL;DR:** Opening NYC SIM with `#mode=noon`, `#mode=golden`, or `#mode=dusk` now changes only the lighting; every normal control and live feature remains available.
+
+**What you'll see:** Shared daylight links retain City Vitals, the timeline, Air Quality Hub, live chips, thought ticker, camera controls, and all other standard interface elements instead of entering the stripped-down cinematic view. Time, weather, and live feed behavior continue normally while the selected sunlight appearance stays fixed. Removing the hash restores real-time solar lighting.
+
+**How it works:** URL hash modes now request a non-immersive lighting override. The live controller remains active for weather, time, and effects, while the renderer targets the chosen fixed lighting preset. The existing `L` keyboard shortcut still cycles through the intentional immersive lighting modes.
+
+---
+
 ## ⏪ Thirty-day Air Quality time travel
 
 **Shipped:** July 16, 2026

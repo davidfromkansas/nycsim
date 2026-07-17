@@ -6133,13 +6133,14 @@ const goToLiveEntity = (() => {
     const f = PICK[kind]; if (f) f();
   };
 })();
-function setMode(name) {
+function setMode(name, immersive = name !== 'live') {
+  if (name !== 'live' && !MODES[name]) return;
   modeName = name;
-  document.body.classList.toggle('manual', name !== 'live');
+  document.body.classList.toggle('manual', immersive && name !== 'live');
   if (name === 'live') {
     live.activate();
   } else {
-    live.deactivate();
+    if (immersive) live.deactivate(); else live.activate();
     tgt = MODES[name];
     paintGround(tgt);
   }
@@ -10836,7 +10837,7 @@ function applyHash() {
     try { live.FAKE.weather = JSON.parse(h.get('fakeweather')); live.applyWeather(live.FAKE.weather); }
     catch (e) { /* malformed override: ignore */ }
   }
-  if (h.has('mode')) setMode(h.get('mode'));
+  if (h.has('mode')) setMode(h.get('mode'), false);
   else if (h.has('faketime') || h.has('fakeweather')) setMode('live');
   if (h.has('q')) applyQuality(h.get('q'));
   if (h.has('cam')) { const v = h.get('cam').split(',').map(Number); if (v.length === 3) camera.position.set(v[0], v[1], v[2]); }
