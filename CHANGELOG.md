@@ -6,6 +6,18 @@ the rules on adding entries.
 
 ---
 
+## 🎥 Desktop orbit controls turn the expected way
+
+**Shipped:** July 18, 2026
+
+**TL;DR:** The left and right curved-arrow camera controls now perform each other's former action while keeping their existing icons and positions.
+
+**What you'll see:** Pressing either side of the desktop camera dial now rotates the city in the direction expected from that control's curved-arrow artwork. Button appearance is unchanged.
+
+**How it works:** The desktop dial's left and right orbit action signs are reversed at the camera-motion layer; mobile controls and every other camera action are unaffected.
+
+---
+
 ## 🐦 City Concierge looks clickable
 
 **Shipped:** July 18, 2026
