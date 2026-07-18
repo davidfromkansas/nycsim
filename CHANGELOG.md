@@ -10,9 +10,9 @@ the rules on adding entries.
 
 **Shipped:** July 18, 2026
 
-**TL;DR:** Home and Air Quality now sit side by side at the top of the blue mobile controls instead of covering the directional pad.
+**TL;DR:** Home and Air Quality now sit side by side at the top of the blue mobile controls instead of covering the directional pad, and the redundant small Home pill is gone.
 
-**What you'll see:** On portrait phones, both feature buttons remain inside the blue console area in a compact, horizontally centered top row. The full directional pad below stays visible and every direction remains easy to press, including on short screens.
+**What you'll see:** On portrait phones, both feature buttons remain inside the blue console area in a compact, horizontally centered top row. The redundant orange Home pill beneath them no longer appears. The full directional pad stays visible and every direction remains easy to press, including on short screens.
 
 **How it works:** GBA-mode-only positioning anchors the centered two-button group to the rendered screen boundary and sizes each to a 62-pixel square. At the console's minimum supported height, their touch bounds end above the vertically centered D-pad; desktop and non-GBA layouts are unchanged.
 
