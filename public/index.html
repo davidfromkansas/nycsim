@@ -975,8 +975,8 @@
   body.gba #homeBtn, body.gba #aqBtn {
     top:calc(var(--rh) + 6px); bottom:auto; width:62px; height:62px; border-radius:14px;
   }
-  body.gba #homeBtn { left:8px; }
-  body.gba #aqBtn { left:78px; }
+  body.gba #homeBtn { left:calc(50% - 66px); }
+  body.gba #aqBtn { left:calc(50% + 4px); }
   body.gba #wxAlerts { display:none !important; } /* drop the weather-alert card on phones */
   body.gba #camview { top:calc(var(--rh) / 2); } /* center the cam card on the screen, not the viewport */
   body.gba #personaCard { bottom:calc(var(--sh) + 10px); z-index:32; } /* dock the resident card just above the shell, IN FRONT of the concierge fab (z31) */
