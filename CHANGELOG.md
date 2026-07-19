@@ -6,6 +6,18 @@ the rules on adding entries.
 
 ---
 
+## 🌬️ Air Quality Hub can get out of the way
+
+**Shipped:** July 19, 2026
+
+**TL;DR:** The Air Quality Hub now has a clear close button, and the Air Quality card remains available to reopen it with one tap.
+
+**What you'll see:** A close control appears in the Hub's top-right corner on phones and desktops. Closing the Hub clears the map overlay and returns focus to the Air Quality card; tapping that card restores the complete Hub and visualization.
+
+**How it works:** Close and reopen both flow through the shared Home/Air Quality feature state, keeping the panel, map layer, timeline mode, toggle highlight, and accessibility state synchronized.
+
+---
+
 ## 🎥 Desktop orbit controls turn the expected way
 
 **Shipped:** July 18, 2026

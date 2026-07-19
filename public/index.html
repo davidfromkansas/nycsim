@@ -499,7 +499,11 @@
   #aqSensors::after { content:''; position:absolute; z-index:3; left:0; right:0; height:50px; top:-60px; pointer-events:none; background:linear-gradient(180deg,transparent,rgba(112,220,255,.08),transparent); animation:aqScan 5.4s linear infinite; }
   #aqSensors.recorded::after { display:none; }
   @keyframes aqScan { to { transform:translateY(calc(100vh + 120px)); } }
-  #aqSensors .aqsHead { position:relative; z-index:4; flex:none; padding:12px 13px 9px; border-bottom:1px solid rgba(147,211,255,.2); background:linear-gradient(180deg,rgba(32,88,119,.36),rgba(5,27,54,.15)); }
+  #aqSensors .aqsHead { position:relative; z-index:4; flex:none; padding:12px 48px 9px 13px; border-bottom:1px solid rgba(147,211,255,.2); background:linear-gradient(180deg,rgba(32,88,119,.36),rgba(5,27,54,.15)); }
+  #aqClose { position:absolute; top:8px; right:9px; width:30px; height:30px; padding:0; cursor:pointer; color:#d8ebff; font:400 22px/27px system-ui,sans-serif; border:1px solid rgba(153,211,248,.32); border-radius:10px; background:rgba(36,76,108,.46); box-shadow:inset 0 1px rgba(255,255,255,.12); }
+  #aqClose:hover { color:#fff; border-color:rgba(184,226,255,.66); background:rgba(57,109,143,.62); }
+  #aqClose:active { transform:scale(.94); }
+  #aqClose:focus-visible { outline:3px solid #83c9f4; outline-offset:2px; }
   #aqSensors.sync .aqsHead { animation:aqSync .75s ease-out; }
   @keyframes aqSync { from { box-shadow:inset 0 0 30px rgba(101,224,255,.34); } to { box-shadow:inset 0 0 0 transparent; } }
   #aqSensors .aqsTitle { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#eff9ff; font-size:12px; font-weight:900; letter-spacing:.7px; }
@@ -1155,7 +1159,7 @@
 <div id="homeChip" class="fybl"><b>🏠 Home</b></div><!-- beacon label; .fybl needs explicit display -->
 <div id="aqDock">
 <section id="aqSensors" aria-label="New York City Air Quality Hub">
-  <div class="aqsHead"><div class="aqsTitle"><span>AIR QUALITY HUB</span><span class="aqsLive"><i></i><span id="aqSensorMode">LIVE</span></span></div><div class="aqsSub"><span id="aqSensorStatus">CONNECTING TO AIR QUALITY SOURCES</span><span class="aqsSignal" aria-hidden="true"><i></i><i></i><i></i></span></div></div>
+  <div class="aqsHead"><button id="aqClose" type="button" aria-label="Close Air Quality Hub" title="Close Air Quality Hub">×</button><div class="aqsTitle"><span>AIR QUALITY HUB</span><span class="aqsLive"><i></i><span id="aqSensorMode">LIVE</span></span></div><div class="aqsSub"><span id="aqSensorStatus">CONNECTING TO AIR QUALITY SOURCES</span><span class="aqsSignal" aria-hidden="true"><i></i><i></i><i></i></span></div></div>
   <div id="aqAirNow" class="aqm" aria-live="polite"></div>
   <div id="aqHistoryControls" class="aqHistoryControls"><div class="aqHistoryGroup" role="group" aria-label="Air-quality history resolution"><button type="button" class="on" data-aq-resolution="daily">DAILY</button><button type="button" data-aq-resolution="hourly">HOURLY</button></div><div class="aqHistoryGroup" role="group" aria-label="Air-quality map metric"><button type="button" class="on" data-aq-metric="average">24H AVG</button><button type="button" data-aq-metric="hourly">HOURLY PM2.5</button></div></div>
   <div id="aqHubTabs" class="aqHubTabs" role="tablist" aria-label="Air Quality Hub views"><button type="button" class="on" data-aq-tab="neighborhoods" role="tab" aria-selected="true">NEIGHBORHOODS</button><button type="button" data-aq-tab="sensors" role="tab" aria-selected="false">SENSOR NETWORK</button></div>
@@ -1166,7 +1170,7 @@
 </section>
 </div>
 <button id="homeBtn" type="button" aria-label="Open your home" title="Open your home"><img src="home.png" alt=""></button><!-- §26f: shown only when /api/home says enabled -->
-<button id="aqBtn" type="button" aria-label="Show air-quality visualization" title="Show air-quality visualization" aria-pressed="false"><img src="aq_logo.png" alt=""></button>
+<button id="aqBtn" type="button" aria-label="Show air-quality visualization" title="Show air-quality visualization" aria-controls="aqSensors" aria-expanded="false" aria-pressed="false"><img src="aq_logo.png" alt=""></button>
 <div id="cameraPanel" aria-label="camera controls">
   <div id="orbitDial" aria-label="camera orbit, elevation, and zoom controls">
     <button class="od up" data-act="eu" aria-label="raise camera" title="raise camera"></button>
@@ -11364,7 +11368,7 @@ const featureMode = (() => {
 window.__featureMode = featureMode;
 const airQuality = (() => {
   const MAX = 32, btn = document.getElementById('aqBtn'), legend = document.getElementById('aqLegend');
-  const panel = document.getElementById('aqSensors'), panelList = document.getElementById('aqSensorList'), airNowEl = document.getElementById('aqAirNow');
+  const panel = document.getElementById('aqSensors'), closeButton = document.getElementById('aqClose'), panelList = document.getElementById('aqSensorList'), airNowEl = document.getElementById('aqAirNow');
   const neighborhoodList = document.getElementById('aqNeighborhoodList'), hubTabs = document.getElementById('aqHubTabs'), boroughTabs = document.getElementById('aqBoroughTabs'), historyControls = document.getElementById('aqHistoryControls');
   const panelStatus = document.getElementById('aqSensorStatus'), panelMode = document.getElementById('aqSensorMode'), panelClock = document.getElementById('aqSensorClock'), panelSource = document.getElementById('aqSensorSource');
   const list = [], liveRows = [], grid = [], neighborhoods = [], BOROUGHS = ['Manhattan', 'Brooklyn', 'Queens', 'Bronx', 'Staten Island'];
@@ -11626,6 +11630,7 @@ const airQuality = (() => {
     if (fieldMesh) fieldMesh.visible = visible && list.length > 0;
     btn.disabled = false;
     btn.setAttribute('aria-pressed', String(visible));
+    btn.setAttribute('aria-expanded', String(visible));
     const buttonLabel = visible ? 'Air Quality selected' : 'Select Air Quality';
     btn.setAttribute('aria-label', buttonLabel); btn.title = buttonLabel;
     legend.style.display = visible ? 'block' : 'none';
@@ -11724,6 +11729,7 @@ const airQuality = (() => {
     if (visible && moveCamera) { autoPan.stop(); const p1 = camera.position.clone(); p1.y += 2822.4; camTween = { p0:camera.position.clone(), t0:controls.target.clone(), p1, t1:controls.target.clone(), t:0, dur:2.4, _hi:true }; }
   }
   function setActive(on, reselect) { setVisible(on, on && (reselect || !visible)); }
+  closeButton.addEventListener('click', () => { if (visible) featureMode.select('air'); btn.focus(); });
   function dev(rows) { rebuild(rows); }
   const api = { update, hist, replay, setVisible, setActive, rows:list, _dev:dev };
   featureMode.register('air', api); refreshUi();
