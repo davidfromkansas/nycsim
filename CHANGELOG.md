@@ -6,6 +6,18 @@ the rules on adding entries.
 
 ---
 
+## 💬 Conversation viewer shows complete history
+
+**Shipped:** July 19, 2026
+
+**TL;DR:** The private City Concierge conversation viewer now shows every retained day instead of only the latest seven.
+
+**What you'll see:** Conversation counts, search results, visitor totals, and threads cover the complete available log history while today's activity continues updating live.
+
+**How it works:** The authenticated log API exposes an index of retained dates. The viewer loads those dates in small batches, merges turns into the existing conversation timeline, and caches immutable past days to avoid unnecessary repeat requests.
+
+---
+
 ## 🌬️ Air Quality Hub can get out of the way
 
 **Shipped:** July 19, 2026

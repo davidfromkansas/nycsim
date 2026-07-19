@@ -106,9 +106,9 @@
 <script>
 /* Live viewer over GET /api/agent-log (server-side key gate — the password IS the
    AGENT_LOG_KEY, checked by the API on every request; nothing is trusted client-side).
-   Loads the last DAYS days, groups turns into conversations (same visitor, <30 min
+   Loads all available days, groups turns into conversations (same visitor, <30 min
    gap), newest conversation first, and re-polls today every POLL_MS. */
-const DAYS = 7, POLL_MS = 30_000, GAP_MS = 30 * 60_000;
+const LOAD_BATCH = 4, POLL_MS = 30_000, GAP_MS = 30 * 60_000;
 const list = document.getElementById('list'), thread = document.getElementById('thread'),
       mhead = document.getElementById('mhead'), stat = document.getElementById('stat');
 const gate = document.getElementById('gate'), gateForm = document.getElementById('gateForm'),
@@ -127,6 +127,15 @@ let KEY = sessionStorage.getItem('convoKey') || '';
 let S = [];            // conversations, newest first: { v, key, turns:[...] }
 let activeKey = null;  // stable id (visitor + first-turn iso) so refresh keeps selection
 const dayCache = {};   // day → raw turns (past days are immutable; only today re-fetches)
+
+async function fetchDays() {
+  const r = await fetch('/api/agent-log?days=1&key=' + encodeURIComponent(KEY));
+  if (r.status === 401) throw Object.assign(new Error('unauthorized'), { auth: true });
+  if (r.status === 429) throw Object.assign(new Error('Too many attempts — this connection is paused for an hour.'), { friendly: true });
+  if (!r.ok) throw new Error('http ' + r.status);
+  const j = await r.json();
+  return (j.days || []).filter(day => /^\d{4}-\d{2}-\d{2}$/.test(day));
+}
 
 async function fetchDay(day, force) {
   if (dayCache[day] && !force) return dayCache[day];
@@ -162,7 +171,7 @@ function regroup() {
 function renderStat() {
   const totalTurns = S.reduce((n, s) => n + s.turns.length, 0);
   const visitors = new Set(S.map(s => s.v)).size;
-  stat.textContent = `${S.length} conversations · ${visitors} visitors · ${totalTurns} messages · last ${DAYS} days · updated ${new Date().toLocaleTimeString()}`;
+  stat.textContent = `${S.length} conversations · ${visitors} visitors · ${totalTurns} messages · all history · updated ${new Date().toLocaleTimeString()}`;
 }
 
 function renderList(filter) {
@@ -210,20 +219,22 @@ function rerender() {
   if (activeKey) { const s = S.find(x => x.key === activeKey); if (s) renderThread(s); }
 }
 
-async function loadAll() {
-  const days = Array.from({ length: DAYS }, (_, i) => dayStr(i));
-  await Promise.all(days.map(d => fetchDay(d, d === days[0]).catch(e => { if (e.auth) throw e; })));
-  rerender();
+async function loadAll(days) {
+  for (let i = 0; i < days.length; i += LOAD_BATCH) {
+    const batch = days.slice(i, i + LOAD_BATCH);
+    await Promise.all(batch.map(d => fetchDay(d, d === dayStr(0)).catch(e => { if (e.auth) throw e; })));
+    rerender();
+  }
 }
 
 async function unlock(pw) {
   goBtn.disabled = true; bad.textContent = '';
   KEY = pw;
   try {
-    await fetchDay(dayStr(0), true);       // auth check + first load in one request
+    const days = await fetchDays();
     sessionStorage.setItem('convoKey', KEY);
     gate.style.display = 'none';
-    await loadAll();
+    await loadAll(days);
     setInterval(() => { // live: re-poll today (and pick up midnight rollover) — quiet on failure
       fetchDay(dayStr(0), true).then(rerender).catch(() => {});
     }, POLL_MS);
