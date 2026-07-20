@@ -6,15 +6,15 @@ the rules on adding entries.
 
 ---
 
-## 💬 City Concierge asks for your feedback
+## 💬 David asks what NYC Sim should build next
 
 **Shipped:** July 20, 2026
 
-**TL;DR:** People using the City Concierge can now send feedback directly from the conversation panel.
+**TL;DR:** After a minute exploring NYC Sim, visitors can tell David what brought them to the city and what they want to see next without leaving the site.
 
-**What you'll see:** A full-width feedback strip sits directly above the City Concierge message box on phones and desktops. It asks users to **Help improve City Concierge** and provides a clear **Give feedback** action that opens an email addressed to David with **City Concierge feedback for NYC SIM** as the subject.
+**What you'll see:** After 45 seconds of visible use on desktop or mobile, a centered **Hey!** note from David appears with an optional email field, a four-row message box, and a **Send** button. It waits if another modal is already open, can be dismissed with its close button, the backdrop, or Escape, and stays away for 30 days after dismissal. The existing City Concierge feedback strip remains available at any time. David can review every response, search its text, and open supplied contact emails from the password-protected **nycsim.com/feedback** dashboard.
 
-**How it works:** The entire strip is a standard pre-addressed email link, so feedback goes directly to David without adding analytics, an external feedback service, or another data collection flow.
+**How it works:** The browser counts only time while the page is visible, then posts the form to a same-origin endpoint. Each response is written as an immutable JSON record in the project's existing private Vercel Blob store; no external feedback service or raw IP address is used, and email is stored only when the visitor chooses to provide it. The endpoint validates field lengths and email shape, uses a hidden spam trap and a per-instance rate limit, and never writes submitted text to server logs. The private dashboard reads those records only through a server endpoint protected by the same `AGENT_LOG_KEY`, constant-time password comparison, and failed-attempt throttle as the conversation and visitor viewers. The City Concierge strip remains a standard pre-addressed email link.
 
 ---
 
