@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NYC SIM — Visitor Retention</title>
+<style>
+  :root { color-scheme:dark; --ink:#ecf4ff; --muted:#8ea5c4; --line:#233959; --panel:#101d32; --blue:#70b7ff; --green:#72e6b1; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(circle at 20% 0,#18335a 0,#08111f 42%,#050a12 100%);
+    color:var(--ink); font:14px ui-monospace,SFMono-Regular,Menlo,monospace; }
+  button,input { font:inherit; }
+  .gate { position:fixed; inset:0; display:grid; place-items:center; padding:20px; background:#060d18; z-index:5; }
+  .gate[hidden],main[hidden] { display:none; }
+  .gate-card { width:min(390px,100%); border:1px solid var(--line); background:var(--panel); padding:28px; box-shadow:0 24px 80px #0009; }
+  .eyebrow { color:var(--blue); font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+  h1 { margin:8px 0 6px; font:700 clamp(24px,4vw,38px) system-ui,sans-serif; letter-spacing:-1px; }
+  .sub { margin:0; color:var(--muted); line-height:1.55; }
+  form { display:flex; gap:8px; margin-top:22px; }
+  input { min-width:0; flex:1; padding:11px 12px; color:var(--ink); background:#081322; border:1px solid var(--line); outline:none; }
+  input:focus { border-color:var(--blue); }
+  button { cursor:pointer; padding:10px 14px; border:1px solid #3977ad; color:var(--ink); background:#17466f; }
+  button:hover { background:#205b8d; }
+  .error { min-height:18px; margin-top:10px; color:#ff8f9a; }
+  main { width:min(1050px,calc(100% - 32px)); margin:0 auto; padding:44px 0 64px; }
+  header { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding-bottom:22px; border-bottom:1px solid var(--line); }
+  .actions { display:flex; gap:8px; }
+  .actions button { background:transparent; border-color:var(--line); color:var(--muted); }
+  .summary { display:flex; align-items:baseline; gap:12px; margin:28px 0 18px; }
+  .summary strong { font:700 32px system-ui,sans-serif; }
+  .summary span { color:var(--muted); }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .metric { min-height:220px; padding:22px; border:1px solid var(--line); background:linear-gradient(145deg,#12233c,#0c1728);
+    box-shadow:0 15px 45px #0004; display:flex; flex-direction:column; }
+  .metric h2 { margin:0; font:650 16px system-ui,sans-serif; }
+  .info { display:inline-grid; place-items:center; width:17px; height:17px; margin-left:5px; border:1px solid #587090; border-radius:50%;
+    color:var(--muted); font:11px system-ui,sans-serif; cursor:help; vertical-align:2px; }
+  .count { margin-top:28px; font:750 52px/1 system-ui,sans-serif; letter-spacing:-2px; }
+  .pct { margin-top:8px; color:var(--green); font:650 20px system-ui,sans-serif; }
+  .desc { margin:auto 0 0; color:var(--muted); line-height:1.5; }
+  footer { display:flex; justify-content:space-between; gap:16px; margin-top:18px; color:#6f86a4; font-size:11px; }
+  @media (max-width:760px) { .grid { grid-template-columns:1fr; } header { align-items:flex-start; flex-direction:column; } .metric { min-height:190px; } }
+</style>
+</head>
+<body>
+<section id="gate" class="gate">
+  <div class="gate-card">
+    <div class="eyebrow">Private analytics</div>
+    <h1>Visitor retention</h1>
+    <p class="sub">Enter the analytics viewer key. It stays in this browser tab and is never placed in the page URL.</p>
+    <form id="gateForm"><input id="key" type="password" autocomplete="current-password" placeholder="AGENT_LOG_KEY" required><button>Open</button></form>
+    <div id="error" class="error" role="alert"></div>
+  </div>
+</section>
+
+<main id="dashboard" hidden>
+  <header>
+    <div><div class="eyebrow">NYC SIM analytics</div><h1>Visitor retention</h1><p id="date" class="sub"></p></div>
+    <div class="actions"><button id="refresh">Refresh</button><button id="lock">Lock</button></div>
+  </header>
+  <div class="summary"><strong id="total">0</strong><span>unique visitors today</span></div>
+  <section class="grid" aria-label="Rolling returning visitor metrics">
+    <article class="metric">
+      <h2>1-Day Returning Visitors <span class="info" title="Visited both yesterday and today." aria-label="Visited both yesterday and today">i</span></h2>
+      <div id="oneCount" class="count">0</div><div id="onePct" class="pct">0%</div>
+      <p class="desc">Visited both yesterday and today.</p>
+    </article>
+    <article class="metric">
+      <h2>7-Day Returning Visitors <span class="info" title="Visited today and on at least one other day in the past seven days." aria-label="Visited today and on at least one other day in the past seven days">i</span></h2>
+      <div id="sevenCount" class="count">0</div><div id="sevenPct" class="pct">0%</div>
+      <p class="desc">Visited today and on at least one other day in the past seven days.</p>
+    </article>
+    <article class="metric">
+      <h2>30-Day Returning Visitors <span class="info" title="Visited today and on at least one other day in the past 30 days." aria-label="Visited today and on at least one other day in the past 30 days">i</span></h2>
+      <div id="thirtyCount" class="count">0</div><div id="thirtyPct" class="pct">0%</div>
+      <p class="desc">Visited today and on at least one other day in the past 30 days.</p>
+    </article>
+  </section>
+  <footer><span>New York calendar days · authenticated accounts deduplicated</span><span id="updated"></span></footer>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let KEY = sessionStorage.getItem('visitorLogKey') || '';
+const pct = n => `${Number(n || 0).toFixed(Number(n || 0) % 1 ? 1 : 0)}%`;
+function render(data) {
+  const r = data.rollingReturningVisitors;
+  if (!r) throw new Error('rolling visitor metrics are unavailable');
+  $('date').textContent = `${r.date} · ${r.timezone}`;
+  $('total').textContent = Number(r.totalUniqueVisitorsToday || 0).toLocaleString();
+  for (const [name, id] of [['oneDay','one'],['sevenDay','seven'],['thirtyDay','thirty']]) {
+    $(id + 'Count').textContent = Number(r.returningVisitors[name].count || 0).toLocaleString();
+    $(id + 'Pct').textContent = pct(r.returningVisitors[name].percentage);
+  }
+  $('updated').textContent = `updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
+}
+async function load() {
+  const response = await fetch('/api/visitor-log?days=30&key=' + encodeURIComponent(KEY));
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { const e = new Error(data.error || `HTTP ${response.status}`); e.auth = response.status === 401; throw e; }
+  render(data);
+}
+async function unlock(key) {
+  KEY = key; $('error').textContent = '';
+  try {
+    await load(); sessionStorage.setItem('visitorLogKey', KEY);
+    $('gate').hidden = true; $('dashboard').hidden = false;
+  } catch (e) {
+    if (e.auth) { KEY = ''; sessionStorage.removeItem('visitorLogKey'); }
+    $('error').textContent = e.auth ? 'Wrong key.' : `Could not load analytics (${e.message}).`;
+  }
+}
+$('gateForm').addEventListener('submit', e => { e.preventDefault(); unlock($('key').value); });
+$('refresh').addEventListener('click', () => load().catch(e => { $('updated').textContent = `refresh failed: ${e.message}`; }));
+$('lock').addEventListener('click', () => { KEY = ''; sessionStorage.removeItem('visitorLogKey'); $('dashboard').hidden = true; $('gate').hidden = false; $('key').value = ''; });
+if ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') && location.hash === '#demo') {
+  render({ rollingReturningVisitors: { date:'2026-07-19', timezone:'America/New_York', totalUniqueVisitorsToday:128,
+    returningVisitors: { oneDay:{count:34,percentage:26.6}, sevenDay:{count:51,percentage:39.8}, thirtyDay:{count:73,percentage:57} } } });
+  $('gate').hidden = true; $('dashboard').hidden = false;
+} else if (KEY) unlock(KEY);
+setInterval(() => { if (KEY) load().catch(() => {}); }, 300000);
+</script>
+</body>
+</html>

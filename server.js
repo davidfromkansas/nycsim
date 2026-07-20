@@ -14,6 +14,8 @@ const { handleApi, routes, sendJSON } = require('./lib/api-core');
 const { handleAgent } = require('./lib/agent-core');
 const { handleAgentLog } = require('./lib/agent-log-view');
 const { handleHome } = require('./lib/home-core');
+const { handleVisit } = require('./lib/visitor-log');
+const { handleVisitorLog } = require('./lib/visitor-log-view');
 
 const PORT = Number(process.env.PORT) || 4173;
 const STATIC_ROOT = path.join(__dirname, 'public'); // mirrors Vercel's outputDirectory
@@ -29,6 +31,8 @@ http.createServer(async (req, res) => {
     if (p === '/api/agent') return await handleAgent(req, res); // mirrors api/agent.js (real file beats the Vercel rewrite)
     if (p === '/api/agent-log') return await handleAgentLog(req, res); // mirrors api/agent-log.js
     if (p === '/api/home') return await handleHome(req, res); // mirrors api/home.js
+    if (p === '/api/visit') return await handleVisit(req, res); // mirrors api/visit.js
+    if (p === '/api/visitor-log') return await handleVisitorLog(req, res); // mirrors api/visitor-log.js
     if (p.startsWith('/api/')) return await handleApi(p, res);
     // static: index.html for /, real files otherwise (no path escape, no dotfiles)
     let file = p === '/' ? 'index.html' : p.slice(1);
