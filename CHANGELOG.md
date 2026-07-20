@@ -6,6 +6,18 @@ the rules on adding entries.
 
 ---
 
+## 💬 City Concierge asks for your feedback
+
+**Shipped:** July 20, 2026
+
+**TL;DR:** People using the City Concierge can now send feedback directly from the conversation panel.
+
+**What you'll see:** A full-width feedback strip sits directly above the City Concierge message box on phones and desktops. It asks users to **Help improve City Concierge** and provides a clear **Give feedback** action that opens an email addressed to David with **City Concierge feedback for NYC SIM** as the subject.
+
+**How it works:** The entire strip is a standard pre-addressed email link, so feedback goes directly to David without adding analytics, an external feedback service, or another data collection flow.
+
+---
+
 ## 💬 Conversation viewer shows complete history
 
 **Shipped:** July 19, 2026

@@ -602,6 +602,7 @@
     #agentPanel #agentForm input { font-size:16px; min-height:44px; }
     #agentPanel #agentForm button { min-width:52px; min-height:44px; font-size:17px; }
     #agentPanel #agentHead button { min-width:40px; min-height:36px; }
+    #agentPanel #agentFeedbackBar { min-height:44px; box-sizing:border-box; font-size:13px; }
     #agentPanel #agentLog .m { font-size:13.5px; line-height:1.45; }
     #agentPanel #agentChips button { min-height:40px; font-size:13px; }
   }
@@ -630,6 +631,16 @@
     border-radius:8px; padding:3px 10px;
   }
   #agentForm button:disabled { opacity:.4; cursor:default; }
+  #agentFeedbackBar {
+    display:flex; flex:none; align-items:center; justify-content:space-between; gap:10px;
+    color:#ffe9d2; background:rgba(232,165,88,.14);
+    border:1px solid rgba(232,165,88,.42); border-radius:9px; padding:7px 10px; text-decoration:none;
+  }
+  #agentFeedbackBar span { font-weight:650; }
+  #agentFeedbackBar strong { flex:none; color:#ffc47f; text-decoration:underline; text-underline-offset:3px; }
+  #agentFeedbackBar:hover { color:#fff3e6; background:rgba(232,165,88,.22); border-color:rgba(255,196,127,.62); }
+  #agentFeedbackBar:hover strong { color:#ffe0b8; }
+  #agentFeedbackBar:focus-visible { outline:2px solid #ffc47f; outline-offset:2px; }
   #agentHead { display:flex; align-items:center; gap:6px; padding:0 2px 2px; }
   #agentHead b { font-size:11px; color:rgba(255,255,255,.92); margin-right:auto; }
   #agentHead button {
@@ -1196,6 +1207,7 @@
   <div id="agentUses"></div>
   <div id="agentLog"></div>
   <div id="agentChips"></div>
+  <a id="agentFeedbackBar" href="mailto:david.lietjauw@gmail.com?subject=City%20Concierge%20feedback%20for%20NYC%20SIM"><span>Help improve City Concierge.</span><strong>Give feedback</strong></a>
   <form id="agentForm"><input id="agentIn" type="text" maxlength="300" placeholder="Ask the city… “show me Times Square”" autocomplete="off"><button type="submit" title="send">➤</button></form>
 </div>
 
