@@ -38,8 +38,22 @@
   .count { margin-top:28px; font:750 52px/1 system-ui,sans-serif; letter-spacing:-2px; }
   .pct { margin-top:8px; color:var(--green); font:650 20px system-ui,sans-serif; }
   .desc { margin:auto 0 0; color:var(--muted); line-height:1.5; }
+  .chart-card { margin-top:14px; padding:22px; border:1px solid var(--line); background:linear-gradient(145deg,#12233c,#0c1728);
+    box-shadow:0 15px 45px #0004; }
+  .chart-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+  .chart-head h2 { margin:0 0 5px; font:650 18px system-ui,sans-serif; }
+  .chart-stats { display:flex; gap:22px; text-align:right; }
+  .chart-stats strong { display:block; color:var(--ink); font:700 20px system-ui,sans-serif; }
+  .chart-stats span { color:var(--muted); font-size:10px; letter-spacing:.8px; text-transform:uppercase; }
+  .chart-wrap { margin-top:18px; width:100%; overflow:hidden; }
+  #dailyChart { display:block; width:100%; height:auto; min-height:210px; }
+  #dailyChart .grid-line { stroke:#29415f; stroke-width:1; }
+  #dailyChart text { fill:#8197b5; font:11px ui-monospace,SFMono-Regular,Menlo,monospace; }
+  #dailyChart .bar { fill:#439fe8; transition:fill .15s; }
+  #dailyChart .bar:hover,#dailyChart .bar:focus { fill:#72e6b1; outline:none; }
   footer { display:flex; justify-content:space-between; gap:16px; margin-top:18px; color:#6f86a4; font-size:11px; }
-  @media (max-width:760px) { .grid { grid-template-columns:1fr; } header { align-items:flex-start; flex-direction:column; } .metric { min-height:190px; } }
+  @media (max-width:760px) { .grid { grid-template-columns:1fr; } header,.chart-head { align-items:flex-start; flex-direction:column; }
+    .metric { min-height:190px; } .chart-stats { width:100%; justify-content:flex-start; text-align:left; } .chart-card { padding:18px 12px; } }
 </style>
 </head>
 <body>
@@ -76,6 +90,13 @@
       <p class="desc">Visited today and on at least one other day in the past 30 days.</p>
     </article>
   </section>
+  <section class="chart-card" aria-labelledby="dailyTitle">
+    <div class="chart-head">
+      <div><h2 id="dailyTitle">Daily Unique Visitors</h2><p class="sub">One deduplicated visitor per New York calendar day · last 30 days</p></div>
+      <div class="chart-stats"><div><strong id="dailyAverage">0</strong><span>daily average</span></div><div><strong id="dailyPeak">0</strong><span>peak day</span></div></div>
+    </div>
+    <div class="chart-wrap"><svg id="dailyChart" viewBox="0 0 960 300" role="img" aria-labelledby="dailyTitle dailyChartDesc"><desc id="dailyChartDesc">Bar chart of daily unique visitors for the last 30 days.</desc></svg></div>
+  </section>
   <footer><span>New York calendar days · authenticated accounts deduplicated</span><span id="updated"></span></footer>
 </main>
 
@@ -83,6 +104,45 @@
 const $ = id => document.getElementById(id);
 let KEY = sessionStorage.getItem('visitorLogKey') || '';
 const pct = n => `${Number(n || 0).toFixed(Number(n || 0) % 1 ? 1 : 0)}%`;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svgEl(name, attrs = {}, text = '') {
+  const node = document.createElementNS(SVG_NS, name);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  if (text) node.textContent = text;
+  return node;
+}
+function niceCeiling(value) {
+  if (value <= 4) return 4;
+  const power = 10 ** Math.floor(Math.log10(value));
+  return Math.ceil(value / power * 2) / 2 * power;
+}
+function renderDailyChart(rows = []) {
+  const data = rows.slice(-30).map(row => ({ day:row.day, value:Number(row.unique_visitors || 0) }));
+  const svg = $('dailyChart'), width = 960, height = 300, left = 46, right = 14, top = 12, bottom = 38;
+  const plotW = width - left - right, plotH = height - top - bottom;
+  const peak = Math.max(0, ...data.map(d => d.value)), ceiling = niceCeiling(peak);
+  const average = data.length ? data.reduce((sum, d) => sum + d.value, 0) / data.length : 0;
+  $('dailyAverage').textContent = average.toLocaleString(undefined, { maximumFractionDigits:1 });
+  $('dailyPeak').textContent = peak.toLocaleString();
+  svg.replaceChildren($('dailyChartDesc'));
+  for (let i = 0; i <= 4; i++) {
+    const y = top + plotH * i / 4, value = Math.round(ceiling * (1 - i / 4));
+    svg.append(svgEl('line', { x1:left, y1:y, x2:width-right, y2:y, class:'grid-line' }));
+    svg.append(svgEl('text', { x:left-8, y:y+4, 'text-anchor':'end' }, value));
+  }
+  if (!data.length) return;
+  const slot = plotW / data.length, barW = Math.max(2, slot * .68);
+  data.forEach((d, i) => {
+    const barH = d.value / ceiling * plotH, x = left + i * slot + (slot - barW) / 2, y = top + plotH - barH;
+    const bar = svgEl('rect', { x, y, width:barW, height:barH, rx:Math.min(3,barW/4), class:'bar', tabindex:'0' });
+    bar.append(svgEl('title', {}, `${new Date(d.day + 'T12:00:00Z').toLocaleDateString([], { month:'short', day:'numeric', timeZone:'UTC' })}: ${d.value.toLocaleString()} unique visitor${d.value === 1 ? '' : 's'}`));
+    svg.append(bar);
+    if (i === 0 || i === data.length - 1 || i % 5 === 0) {
+      const label = new Date(d.day + 'T12:00:00Z').toLocaleDateString([], { month:'short', day:'numeric', timeZone:'UTC' });
+      svg.append(svgEl('text', { x:left + (i + .5) * slot, y:height-12, 'text-anchor':'middle' }, label));
+    }
+  });
+}
 function render(data) {
   const r = data.rollingReturningVisitors;
   if (!r) throw new Error('rolling visitor metrics are unavailable');
@@ -92,6 +152,7 @@ function render(data) {
     $(id + 'Count').textContent = Number(r.returningVisitors[name].count || 0).toLocaleString();
     $(id + 'Pct').textContent = pct(r.returningVisitors[name].percentage);
   }
+  renderDailyChart(data.by_day);
   $('updated').textContent = `updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
 }
 async function load() {
@@ -114,8 +175,9 @@ $('gateForm').addEventListener('submit', e => { e.preventDefault(); unlock($('ke
 $('refresh').addEventListener('click', () => load().catch(e => { $('updated').textContent = `refresh failed: ${e.message}`; }));
 $('lock').addEventListener('click', () => { KEY = ''; sessionStorage.removeItem('visitorLogKey'); $('dashboard').hidden = true; $('gate').hidden = false; $('key').value = ''; });
 if ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') && location.hash === '#demo') {
-  render({ rollingReturningVisitors: { date:'2026-07-19', timezone:'America/New_York', totalUniqueVisitorsToday:128,
-    returningVisitors: { oneDay:{count:34,percentage:26.6}, sevenDay:{count:51,percentage:39.8}, thirtyDay:{count:73,percentage:57} } } });
+  render({ by_day:Array.from({length:30},(_,i) => ({ day:new Date(Date.UTC(2026,5,20+i)).toISOString().slice(0,10), unique_visitors:52+((i*17)%71) })),
+    rollingReturningVisitors: { date:'2026-07-19', timezone:'America/New_York', totalUniqueVisitorsToday:128,
+      returningVisitors: { oneDay:{count:34,percentage:26.6}, sevenDay:{count:51,percentage:39.8}, thirtyDay:{count:73,percentage:57} } } });
   $('gate').hidden = true; $('dashboard').hidden = false;
 } else if (KEY) unlock(KEY);
 setInterval(() => { if (KEY) load().catch(() => {}); }, 300000);

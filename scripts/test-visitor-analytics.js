@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { rollingReturningVisitors, nyDayString } = require('../lib/visitor-log-view');
+const { rollingReturningVisitors, dailyUniqueVisitors, nyDayString } = require('../lib/visitor-log-view');
 const { ignoredRequest } = require('../lib/visitor-log');
 
 const noonNY = day => Date.parse(day + 'T16:00:00Z'); // dates used below are in EDT
@@ -11,6 +11,21 @@ const calculate = rows => rollingReturningVisitors(rows, links, today);
 // 1. Today only: no rolling return metric.
 let r = calculate([event('today-only', '2026-07-19')]);
 assert.equal(r.totalUniqueVisitorsToday, 1);
+
+// Daily chart matches Vercel's daily-unique semantics: one identity per day,
+// with signed-in cookie rotations/devices collapsed to their stable account.
+const daily = dailyUniqueVisitors([
+  event('cookie-a', '2026-07-18'), event('cookie-a', '2026-07-18', 1),
+  event('cookie-b', '2026-07-18'), event('anonymous', '2026-07-18'),
+  event('cookie-a', '2026-07-19'), event('anonymous', '2026-07-19')
+], [
+  { visitor: 'cookie-a', user: 'account-1' }, { visitor: 'cookie-b', user: 'account-1' }
+], ['2026-07-17', '2026-07-18', '2026-07-19']);
+assert.deepEqual(daily, [
+  { day: '2026-07-17', unique_visitors: 0 },
+  { day: '2026-07-18', unique_visitors: 2 },
+  { day: '2026-07-19', unique_visitors: 2 }
+]);
 assert.deepEqual(r.returningVisitors, {
   oneDay: { count: 0, percentage: 0 }, sevenDay: { count: 0, percentage: 0 }, thirtyDay: { count: 0, percentage: 0 }
 });
