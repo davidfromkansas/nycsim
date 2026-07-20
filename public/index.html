@@ -714,7 +714,7 @@
     background:rgba(255,255,255,.08); color:rgba(255,255,255,.8); border:1px solid rgba(255,255,255,.2);
     font:10px system-ui; cursor:pointer; line-height:18px; text-align:center; padding:0; }
   #gsiBtn { margin:12px 0 4px; min-height:44px; }
-  /* §26g 60-second feedback prompt — centered over either the desktop city or GBA shell */
+  /* §26g 45-second feedback prompt — centered over either the desktop city or GBA shell */
   #feedbackModal {
     display:none; position:fixed; inset:0; z-index:80; align-items:center; justify-content:center;
     box-sizing:border-box; padding:18px; background:rgba(4,7,12,.68);
@@ -12236,7 +12236,7 @@ const homeui = (() => {
 window.__home = homeui; // §26e GBA indirection + dev/testing hook
 
 /* ============================================================
-   26g. TIMED FEEDBACK — invite after 60 seconds of visible use.
+   26g. TIMED FEEDBACK — invite after 45 seconds of visible use.
    Dismissal sleeps the prompt for 30 days; a sent response retires
    this prompt version. Storage is private via POST /api/feedback.
    ============================================================ */
@@ -12245,7 +12245,7 @@ const feedbackPrompt = (() => {
   const modal = el('feedbackModal'), form = el('feedbackForm'), email = el('feedbackEmail');
   const message = el('feedbackMessage'), status = el('feedbackStatus'), send = form.querySelector('.fmSend');
   const DISMISSED = 'nycsimFeedbackDismissedV1', SENT = 'nycsimFeedbackSentV1';
-  const WAIT_MS = location.hash.includes('feedbackdemo') ? 1000 : 60000, SNOOZE_MS = 30 * 86400000;
+  const WAIT_MS = location.hash.includes('feedbackdemo') ? 1000 : 45000, SNOOZE_MS = 30 * 86400000;
   let usedMs = 0, last = performance.now(), open = false, previousFocus = null, tourWasRunning = false;
   const stored = (key) => { try { return +(localStorage.getItem(key) || 0); } catch { return 0; } };
   const put = (key) => { try { localStorage.setItem(key, String(Date.now())); } catch { } };
