@@ -68,13 +68,15 @@
   }
   #brand img { display:block; width:100%; height:auto; }
   #brandActions { display:flex; align-items:center; justify-content:center; gap:6px; }
-  #fbBtn { /* Give Feedback — mailto pill below the logo (desktop only, rides #brand) */
+  #fbBtn, #controlsBtn { /* desktop action pills below the logo (ride #brand) */
     display:block; width:max-content; margin:6px 0 0; pointer-events:auto; /* #brand itself is pointer-events:none */
     font:600 11px/1.2 system-ui, -apple-system, sans-serif; color:rgba(255,255,255,.92); text-decoration:none;
     background:rgba(10,13,20,.55); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:5px 11px;
     backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   }
-  #fbBtn:hover { background:rgba(25,45,70,.78); border-color:rgba(140,190,255,.4); }
+  #controlsBtn { display:none; cursor:pointer; }
+  #fbBtn:hover, #controlsBtn:hover { background:rgba(25,45,70,.78); border-color:rgba(140,190,255,.4); }
+  @media (min-width:601px) and (pointer:fine) { #controlsBtn { display:block; } }
   body.photo #brand { display:none !important; } /* clean screenshots */
   @media (max-width: 820px) { #brand { display:none; } } /* the top bar is full on phones/tablets — no room to center it */
   #credit {
@@ -84,6 +86,30 @@
     backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); touch-action:manipulation;
   }
   body.photo #credit, body.agent #credit, body.focusmode #credit { display:none !important; } /* clean screenshots + declutter */
+  #controlsHelp {
+    position:fixed; inset:0; z-index:70; display:none; align-items:center; justify-content:center; padding:20px;
+    box-sizing:border-box; background:rgba(3,9,20,.58); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+  }
+  #controlsHelp.open { display:flex; }
+  #controlsHelp .chCard {
+    position:relative; width:min(440px,calc(100vw - 40px)); box-sizing:border-box; padding:22px 24px 20px;
+    color:#dceeff; font:12px/1.4 system-ui,-apple-system,sans-serif; border:2px solid #15243c; border-radius:16px;
+    background:linear-gradient(180deg,#315f96,#173b70 58%,#102c59); box-shadow:inset 0 0 0 2px #7392b6,0 16px 48px rgba(0,0,0,.58);
+  }
+  #controlsHelp h2 { margin:0 38px 5px 0; font:800 20px/1.2 system-ui,sans-serif; color:#fff; }
+  #controlsHelp .chIntro { margin:0 0 15px; color:#abcbe8; }
+  #controlsHelp .chGrid { display:grid; grid-template-columns:max-content 1fr; gap:8px 14px; align-items:center; }
+  #controlsHelp kbd {
+    min-width:104px; box-sizing:border-box; padding:5px 8px; text-align:center; white-space:nowrap;
+    color:#eaf6ff; font:700 10px/1.2 system-ui,sans-serif; border:1px solid #88afd2; border-radius:7px;
+    background:#10294f; box-shadow:inset 0 1px rgba(255,255,255,.12),0 2px 0 #08172e;
+  }
+  #controlsHelp .chX {
+    position:absolute; right:12px; top:11px; width:30px; height:30px; padding:0; cursor:pointer;
+    color:#dceeff; font:700 16px/27px system-ui; border:1px solid rgba(180,220,255,.35); border-radius:50%; background:rgba(4,17,40,.5);
+  }
+  #controlsHelp .chFoot { margin:16px 0 0; color:#8eb7da; font-size:10px; text-align:center; }
+  @media (max-width:600px), (pointer:coarse) { #controlsHelp { display:none !important; } }
   body.touchnav #joy { display:block; }
   #lockbtn {
     position:fixed; right:16px; bottom:112px; z-index:30; width:46px; height:46px;
@@ -1188,7 +1214,26 @@
 <div id="brand"><img src="nycsim-logo.png" alt="nycsim.com">
   <div id="brandActions">
     <a id="credit" href="https://www.linkedin.com/in/davidfromkansas/" target="_blank" rel="noopener noreferrer">Made by David</a>
+    <button id="controlsBtn" type="button" aria-haspopup="dialog" aria-controls="controlsHelp">ⓘ Controls</button>
     <a id="fbBtn" href="mailto:david.lietjauw@gmail.com?subject=Feedback%20for%20NYC%20SIMS">Feedback</a>
+  </div>
+</div>
+<div id="controlsHelp" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="controlsHelpTitle">
+  <div class="chCard">
+    <button class="chX" type="button" aria-label="Close controls help">✕</button>
+    <h2 id="controlsHelpTitle">Explore NYC with your mouse</h2>
+    <p class="chIntro">Navigate like a city-building game, then click anything alive in the city to inspect it.</p>
+    <div class="chGrid">
+      <kbd>Left click</kbd><span>Inspect a resident, vehicle, camera, or marker</span>
+      <kbd>Left drag</kbd><span>Move the map</span>
+      <kbd>Right drag</kbd><span>Orbit and tilt the view</span>
+      <kbd>Wheel drag</kbd><span>Orbit and tilt (city-builder style)</span>
+      <kbd>Scroll</kbd><span>Zoom toward the pointer</span>
+      <kbd>Double-click</kbd><span>Make that ground point the new center</span>
+      <kbd>N</kbd><span>Face north</span>
+      <kbd>0</kbd><span>Return to the hero view</span>
+    </div>
+    <p class="chFoot">The camera panel and keys 1–7 remain available for precise moves and saved views.</p>
   </div>
 </div>
 <div id="thoughtTicker"><div class="tkin"></div></div>
@@ -1862,57 +1907,25 @@ function inFidi(x, z) {
   return ins;
 }
 
-// Brooklyn real-massing chunks (DCP tiles BK01/02/03/06/07 baked via exact geoRaw).
-// Each ring suppresses the procedural Brooklyn box/block fabric inside it; the bk-*.json
-// mesh replaces it. Waterfront belt (Greenpoint→Williamsburg→DUMBO→Red Hook→Sunset Park)
-// + brownstone core + Bed-Stuy. Parks (Prospect/Green-Wood) stream separately and are NOT
-// listed here — they hold only sparse structures and their blocks keep procedural fill.
-const BK_RINGS = [
-  [2350, 3800, 4950, 6750], [2500, 4350, 3750, 4950], [2350, 4350, 2500, 3750], [4350, 5700, 3150, 5250], // greenpoint, wburg-n, wburg-s, e-wburg
-  [1500, 3300, 550, 2350], [1250, 2950, -500, 900], [1150, 2450, -1150, 50], [2950, 4050, 900, 2550],      // downtown/dumbo, heights/cobble, carroll/columbia, fortgreene/navy
-  [3300, 4600, 600, 1950], [4600, 6750, 650, 2750],                                                        // clinton hill, bed-stuy
-  [2300, 3300, -2150, -500], [3300, 4550, -2550, -250], [800, 2300, -2750, -850], [2300, 4450, -5500, -2500], // gowanus, park slope, red hook, sunset park
-  // central + east Brooklyn (BK04/05/08/09)
-  [3550, 5200, -500, 950], [5000, 6950, -400, 1450], [6300, 7650, -850, 350], [5050, 6750, -1800, -450],   // prospect hts, crown hts+weeksville, crown hts s+wingate, prospect-lefferts
-  [5600, 7950, 2850, 5150],                                                                                 // bushwick
-  [7650, 9100, 1950, 3550], [8750, 10550, 3450, 5250], [8650, 10750, 1350, 3450],                           // broadway jct, cypress hills+highland pk, east new york
-  [9750, 11550, 3050, 4750], [9450, 11250, 850, 2250], [9850, 12450, 50, 1750],                              // city line, new lots, starrett city+spring creek
-  // the Bronx (BX01-12)
-  [500, 3500, 13900, 15300], [-200, 2900, 15300, 18500], [2900, 4900, 15300, 18500], [-700, 2900, 18500, 21300], // mott haven, melrose+concourse, hunts point, fordham
-  [2900, 4900, 18500, 21300], [4900, 6900, 15300, 19000], [6900, 9200, 15300, 21100], [4900, 6900, 19000, 21300],// tremont, soundview, throggs neck, parkchester
-  [2900, 5300, 21300, 23100], [5300, 9400, 21100, 27000], [-200, 2900, 21300, 23590], [800, 5300, 23590, 27000], // pelham pkwy, pelham bay+city island, norwood, wakefield
-  [-2700, -200, 21300, 27000],                                                                                    // riverdale
-  // south Brooklyn (BK10-18)
-  [1500, 4400, -9600, -6000], [4400, 6300, -8750, -5900], [6300, 8900, -8750, -5900], [8900, 12200, -8700, -5800], // bay ridge, bensonhurst, gravesend, sheepshead
-  [5400, 9900, -11600, -8750], [4100, 6100, -5900, -3600], [6100, 7900, -5900, -3600], [4100, 7000, -3600, -250],  // coney island, borough park, midwood, flatbush
-  [7000, 9400, -2300, -150], [7000, 9400, -150, 1950], [9400, 11300, -2300, 50], [7900, 11900, -5800, -2300]      // east flatbush, brownsville, canarsie, mill basin
-];
-function inBK(x, z) {
-  for (let k = 0; k < BK_RINGS.length; k++) {
-    const b = BK_RINGS[k];
-    if (x > b[0] && x < b[1] && z > b[2] && z < b[3]) return true;
-  }
-  return false;
+// Brooklyn, Bronx + Queens real-massing suppression comes from the shipped DCP LOD geometry,
+// not neighborhood rectangles. scripts/bake_dcp_coverage.mjs rasterizes the actual
+// building-box footprints at 10 m; park-only and airport chunks are deliberately excluded.
+let DCP_COVERAGE = null;
+function inBoroughDcp(x, z) {
+  if (!DCP_COVERAGE) return false;
+  const gx = Math.floor((x - DCP_COVERAGE.x0) / DCP_COVERAGE.cell);
+  const gz = Math.floor((z - DCP_COVERAGE.z0) / DCP_COVERAGE.cell);
+  if (gx < 0 || gx >= DCP_COVERAGE.w || gz < 0 || gz >= DCP_COVERAGE.h) return false;
+  const bit = gx * DCP_COVERAGE.h + gz;
+  return (DCP_COVERAGE.bits[bit >> 3] & (128 >> (bit & 7))) !== 0;
 }
-
-// Queens real-massing chunks (DCP tiles baked to scene via exact geoRaw). Each ring
-// suppresses the procedural box/block fabric inside it; the qn-*.json mesh replaces it.
-// Rings ship inside each asset too (j.ring) — keep this list and the assets in sync.
-const QN_RINGS = [
-  [[1760, 6420], [2500, 6560], [3250, 6820], [3350, 7500], [3150, 7980], [2500, 8000], [2000, 7900], [1770, 7300], [1700, 6800]] // qn-lic
-];
-const QN_BB = QN_RINGS.map(r => { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
-  for (const [x, z] of r) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
-  return [x0, x1, z0, z1]; });
-function inQnDcp(x, z) {
-  for (let k = 0; k < QN_RINGS.length; k++) {
-    const b = QN_BB[k];
-    if (x < b[0] || x > b[1] || z < b[2] || z > b[3]) continue;
-    const r = QN_RINGS[k]; let ins = false;
-    for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
-      if ((r[i][1] > z) !== (r[j][1] > z) && x < (r[j][0] - r[i][0]) * (z - r[i][1]) / (r[j][1] - r[i][1]) + r[i][0]) ins = !ins;
-    }
-    if (ins) return true;
+function footprintInBoroughDcp(x, z, w, d, rot) {
+  if (inBoroughDcp(x, z)) return true;
+  const ca = Math.cos(rot), sa = Math.sin(rot), hx = w * 0.3, hz = d * 0.3;
+  let hits = 0;
+  for (const [lx, lz] of [[hx, 0], [-hx, 0], [0, hz], [0, -hz],
+    [hx, hz], [hx, -hz], [-hx, hz], [-hx, -hz]]) {
+    if (inBoroughDcp(x + lx * ca - lz * sa, z + lx * sa + lz * ca) && ++hits >= 2) return true;
   }
   return false;
 }
@@ -2187,21 +2200,21 @@ async function fetchJP(url) {
 }
 const bootStep = (v, txt) => { if (!window.__gbaBoot) return; window.__gbaBoot.p(v, txt); return new Promise(r => setTimeout(r, 0)); };
 window.__gbaBoot?.p(0.15, 'downloading the real city…');
-let [SG_DATA, BLK_DATA, BLDG, QN_CLAIMS, QN_EAST_RAW, BK_SOUTH_RAW] = await Promise.all([ // let: build-time data, released after generation (PERF.md C1)
+let [SG_DATA, BLK_DATA, BLDG, QN_EAST_RAW, BK_SOUTH_RAW, DCP_COVERAGE_RAW] = await Promise.all([ // let: build-time data, released after generation (PERF.md C1)
   fetch('streets.json').then(r => r.json()),
   fetch('blocks.json').then(r => r.json()),
   fetchJP('buildings.json'), // 305k REAL buildings as oriented boxes (one-time local bake)
-  fetch('qn-claims.json').then(r => r.ok ? r.json() : []).catch(() => []), // Queens Tier-A claim circles (suppress replaced boxes; missing file = no claims)
   fetch('qn-east-land.json').then(r => r.ok ? r.json() : null).catch(() => null), // eastern Queens land bitmask (CD6/CD7 + Glendale: off-plate real fabric)
-  fetch('bk-south-land.json').then(r => r.ok ? r.json() : null).catch(() => null) // south Brooklyn land bitmask (Coney peninsula + Jamaica Bay basins, from building coverage)
+  fetch('bk-south-land.json').then(r => r.ok ? r.json() : null).catch(() => null), // south Brooklyn land bitmask (Coney peninsula + Jamaica Bay basins, from building coverage)
+  fetch('dcp-coverage.bin').then(r => { if (!r.ok) throw new Error('DCP coverage HTTP ' + r.status); return r.arrayBuffer(); })
 ]);
 const HOME_FOOTPRINTS = { n: BLDG.n, x: Float32Array.from(BLDG.x), z: Float32Array.from(BLDG.z),
   w: Float32Array.from(BLDG.w), d: Float32Array.from(BLDG.d), r: Int16Array.from(BLDG.r) };
 await bootStep(0.47, 'unpacking the city…'); // §26e boot bar: data down, generation begins (yield → repaint)
 // Eastern Queens land mask (Flushing/College Point/Whitestone/Rego Park/Forest Hills/
 // Glendale): a packed occupancy bitmask from the baked building coverage — coast-accurate
-// (buildings stop at the shore). Enables landOK (streets + residents) AND suppresses the
-// ~1,800 stray boxes there, since the qn-*.json chunks are the real fabric.
+// (buildings stop at the shore). It remains the landOK authority for streets + residents;
+// building suppression now comes from the finer geometry-derived DCP_COVERAGE mask.
 let QN_EAST = null;
 if (QN_EAST_RAW) {
   const a = atob(QN_EAST_RAW.bits), bytes = new Uint8Array(a.length);
@@ -2213,6 +2226,16 @@ if (BK_SOUTH_RAW) {
   const a = atob(BK_SOUTH_RAW.bits), bytes = new Uint8Array(a.length);
   for (let i = 0; i < a.length; i++) bytes[i] = a.charCodeAt(i);
   BK_SOUTH = { x0: BK_SOUTH_RAW.x0, z0: BK_SOUTH_RAW.z0, cell: BK_SOUTH_RAW.cell, w: BK_SOUTH_RAW.w, h: BK_SOUTH_RAW.h, bytes };
+}
+{
+  const dv = new DataView(DCP_COVERAGE_RAW);
+  if (dv.getUint32(0, true) !== 0x31504344) throw new Error('DCP coverage: bad magic');
+  const w = dv.getUint32(16, true), h = dv.getUint32(20, true);
+  const bits = new Uint8Array(DCP_COVERAGE_RAW, 24);
+  if (bits.byteLength !== Math.ceil(w * h / 8)) throw new Error('DCP coverage: bad length');
+  DCP_COVERAGE = { x0: dv.getFloat32(4, true), z0: dv.getFloat32(8, true),
+    cell: dv.getFloat32(12, true), w, h, bits };
+  DCP_COVERAGE_RAW = null;
 }
 function inBkSouth(x, z) {
   if (!BK_SOUTH) return false;
@@ -2234,25 +2257,6 @@ function inQnEast(x, z) {
 function inAirport(x, z) {
   return (x > 4850 && x < 6600 && z > 12250 && z < 14450) ||   // LaGuardia
          (x > 14800 && x < 20400 && z > 1900 && z < 6300);      // JFK
-}
-// Queens DCP claims: one circle per baked Tier-A building — the box fabric inside a
-// circle is replaced by real massing from the qn-*.json chunks. 60 m cell hash.
-const QN_CLAIM_HASH = new Map();
-for (const c of QN_CLAIMS) {
-  const [ccx, ccz, cr] = c;
-  for (let gx = ((ccx - cr) / 60) | 0; gx <= ((ccx + cr) / 60) | 0; gx++)
-    for (let gz = ((ccz - cr) / 60) | 0; gz <= ((ccz + cr) / 60) | 0; gz++) {
-      const key = gx * 100000 + gz;
-      if (!QN_CLAIM_HASH.has(key)) QN_CLAIM_HASH.set(key, []);
-      QN_CLAIM_HASH.get(key).push(c);
-    }
-}
-QN_CLAIMS = null; // release
-function inQnClaim(x, z) {
-  const arr = QN_CLAIM_HASH.get((((x / 60) | 0) * 100000) + ((z / 60) | 0));
-  if (!arr) return false;
-  for (const [ccx, ccz, cr] of arr) { const dx = x - ccx, dz = z - ccz; if (dx * dx + dz * dz < cr * cr) return true; }
-  return false;
 }
 const G_NODES = SG_DATA.nodes, G_EDGES = SG_DATA.edges; // runtime substrate — kept forever
 let G_BLOCKS = BLK_DATA.blocks;                          // build-time only — released after 19d
@@ -2658,16 +2662,21 @@ camera.position.set(-9200, 4700, -3900); // classic hero: from the southwest (th
 
 const controls = new OrbitControls(camera, renderer.domElement);
 const ORBIT_ONLY = matchMedia('(min-width:601px) and (pointer:fine)').matches;
-const LOCKED_POLAR = 0.92;
+const MIN_POLAR = 0.22, MAX_POLAR = 1.45;
 controls.target.set(300, 0, 10500);
 controls.enableDamping = true; controls.dampingFactor = 0.07;
 controls.rotateSpeed = 0.55; controls.zoomToCursor = true;
 controls.minDistance = 25; controls.maxDistance = 28000;
-controls.maxPolarAngle = ORBIT_ONLY ? LOCKED_POLAR : Math.PI * 0.93;
+controls.maxPolarAngle = ORBIT_ONLY ? MAX_POLAR : Math.PI * 0.93;
 if (ORBIT_ONLY) {
-  controls.minPolarAngle = LOCKED_POLAR; controls.enableRotate = false; controls.enablePan = false; controls.enableZoom = false;
+  controls.minPolarAngle = MIN_POLAR;
+  controls.enableRotate = true; controls.enablePan = true; controls.enableZoom = true;
+  controls.screenSpacePanning = false;
+  controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+  controls.mouseButtons.MIDDLE = THREE.MOUSE.ROTATE;
+  controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
   document.body.classList.add('orbit-only');
-  document.getElementById('hint').innerHTML = 'dial arrows orbit/elevate &middot; pitch fader tilts view &middot; +/− zoom &middot; WASD/arrows move &middot; keys 0&ndash;6 views &middot; L light &middot; P photo';
+  document.getElementById('hint').innerHTML = 'left-drag moves &middot; right-drag orbits &middot; scroll zooms &middot; click inspects &middot; ⓘ Controls';
 }
 controls.update();
 
@@ -2690,6 +2699,93 @@ for (const evType of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'
       ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey
     }));
   }, true); // capture at window: runs before OrbitControls' target-phase listeners
+}
+
+// Desktop mouse navigation shares the canvas with dense entity picking. A small
+// drag threshold preserves clicks while preventing the browser's post-drag click
+// from opening a marker. The mirrored presentation needs camera-space x for the
+// double-click ground ray, just like the pointer shim above.
+if (ORBIT_ONLY) {
+  let dragId = null, dragX = 0, dragY = 0, draggedUntil = 0;
+  renderer.domElement.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    dragId = e.pointerId; dragX = e.clientX; dragY = e.clientY;
+  });
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (e.pointerId === dragId && Math.hypot(e.clientX - dragX, e.clientY - dragY) > 7) draggedUntil = performance.now() + 250;
+  });
+  renderer.domElement.addEventListener('pointerup', e => { if (e.pointerId === dragId) dragId = null; });
+  renderer.domElement.addEventListener('pointercancel', e => { if (e.pointerId === dragId) dragId = null; });
+  renderer.domElement.addEventListener('click', e => {
+    if (performance.now() < draggedUntil) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+  renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+  const groundRay = new THREE.Raycaster(), groundNdc = new THREE.Vector2(), groundHit = new THREE.Vector3(), groundOff = new THREE.Vector3();
+  // Pin the visible world point beneath the mouse while zooming. Doing the scale
+  // around that anchor explicitly avoids OrbitControls reading the horizontally
+  // mirrored canvas at the opposite x. Negative deltaY (wheel forward/up) moves in;
+  // positive deltaY moves out. A zero-delta synthetic wheel still reaches the
+  // existing tour/tween cancellation hooks without applying a second zoom.
+  window.addEventListener('wheel', e => {
+    if (!e.isTrusted || !e.deltaY) return;
+    const uiScroller = e.target.closest && e.target.closest(
+      'input,textarea,select,#agentPanel,#aqSensors,#homePanel,#homeModal,#feedbackModal,#controlsHelp'
+    );
+    if (uiScroller) return; // forms and scrollable dashboards keep their native wheel behavior
+    e.preventDefault(); e.stopImmediatePropagation();
+    const r = renderer.domElement.getBoundingClientRect();
+    const cameraX = r.left + r.right - e.clientX;
+    groundNdc.set((cameraX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+    groundRay.setFromCamera(groundNdc, camera);
+    const dy = groundRay.ray.direction.y;
+    const t = dy < -1e-4 ? (LAND_Y - groundRay.ray.origin.y) / dy : -1;
+    const anchored = t > 0;
+    if (anchored) groundHit.copy(groundRay.ray.direction).multiplyScalar(t).add(groundRay.ray.origin);
+    groundOff.copy(camera.position).sub(controls.target);
+    const dist = groundOff.length() || 1;
+    const deltaPx = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
+    const wanted = Math.exp(clamp(deltaPx, -160, 160) * 0.0015);
+    const scale = clamp(dist * wanted, controls.minDistance, controls.maxDistance) / dist;
+    if (anchored) {
+      camera.position.sub(groundHit).multiplyScalar(scale).add(groundHit);
+      controls.target.sub(groundHit).multiplyScalar(scale).add(groundHit);
+    } else {
+      camera.position.copy(controls.target).addScaledVector(groundOff, scale);
+    }
+    controls.update();
+    renderer.domElement.dispatchEvent(new WheelEvent('wheel', {
+      bubbles: true, cancelable: true, composed: true, deltaY: 0,
+      clientX: cameraX, clientY: e.clientY,
+      ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey
+    }));
+  }, { capture: true, passive: false });
+  renderer.domElement.addEventListener('dblclick', e => {
+    const r = renderer.domElement.getBoundingClientRect();
+    const cameraX = r.left + r.right - e.clientX;
+    groundNdc.set((cameraX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+    groundRay.setFromCamera(groundNdc, camera);
+    const dy = groundRay.ray.direction.y;
+    if (dy >= -1e-4) return;
+    const t = (LAND_Y - groundRay.ray.origin.y) / dy;
+    if (t <= 0) return;
+    groundHit.copy(groundRay.ray.direction).multiplyScalar(t).add(groundRay.ray.origin);
+    if (!landOK(groundHit.x, groundHit.z)) return;
+    camTween = null;
+    controls.target.set(groundHit.x, LAND_Y, groundHit.z);
+    controls.update();
+  });
+}
+
+// Desktop-only discoverability: a persistent Controls pill opens an accessible
+// reference card; backdrop click and Escape close it without affecting the city.
+{
+  const help = document.getElementById('controlsHelp'), button = document.getElementById('controlsBtn');
+  const close = () => { help.classList.remove('open'); help.setAttribute('aria-hidden', 'true'); button.setAttribute('aria-expanded', 'false'); button.focus(); };
+  const open = () => { help.classList.add('open'); help.setAttribute('aria-hidden', 'false'); button.setAttribute('aria-expanded', 'true'); help.querySelector('.chX').focus(); };
+  button.addEventListener('click', open);
+  help.querySelector('.chX').addEventListener('click', close);
+  help.addEventListener('pointerdown', e => { if (e.target === help) close(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && help.classList.contains('open')) { e.stopImmediatePropagation(); close(); } }, true);
 }
 
 const sun = new THREE.DirectionalLight(0xffb066, 2.6);
@@ -3124,7 +3220,7 @@ function landOK(x, z) {
   return s === null || x > s + 12;
 }
 window.__audit = { coastAt, landOK, bkContains, qnContains, bxContains, bayContains,
-  bkShoreX, qnShoreX, bxShoreX, qwShoreX, riIslContains, matchStreet, nearestNode, BK, QB,
+  bkShoreX, qnShoreX, bxShoreX, qwShoreX, riIslContains, dcpCoverage: inBoroughDcp, matchStreet, nearestNode, BK, QB,
   G: () => G_COUNTS }; // spatial-audit handle (counts captured at load — block data itself is released post-build)
 
 // Roosevelt Island at its TRUE geoRaw position (un-shifted — the old channel-fit
@@ -4280,10 +4376,7 @@ await bootStep(0.7, 'paving the boroughs…'); // §26e boot bar (yield → repa
   for (let i = 0; i < BLDG.n; i++) {
     const x = BLDG.x[i], z = BLDG.z[i];
     if (onLand(x, z)) continue;                            // Manhattan boxes feed B in generateCity
-    if (inQnDcp(x, z)) continue;                           // Queens DCP chunks render real massing (qn-*.json)
-    if (inQnClaim(x, z)) continue;                         // box replaced by a baked Tier-A building
-    if (inQnEast(x, z)) continue;                          // eastern Queens: baked chunk fabric replaces boxes
-    if (inBK(x, z)) continue;                              // NW/central Brooklyn: DCP chunks (bk-*.json) render real massing
+    if (footprintInBoroughDcp(x, z, BLDG.w[i], BLDG.d[i], BLDG.r[i] / 1000)) continue; // detailed geometry substantially overlaps this footprint
     if (inAirport(x, z)) continue;                         // airport grounds: DCP terminals + runways, no boxes
     if (!landB(x, z)) continue;
     if (!onPlate(x, z) && !islets.some(([P]) => polyContains(P, x, z))) continue; // iron rule 2: painted plate or islet under every box
@@ -4304,10 +4397,6 @@ await bootStep(0.7, 'paving the boroughs…'); // §26e boot bar (yield → repa
     const o = blockOBB(blk.p);
     if (onLand(o.cx, o.cz)) continue;                     // Manhattan handled in generateCity
     if (inInner(o.cx, o.cz)) continue;                    // real footprints own the inner zone
-    if (inQnDcp(o.cx, o.cz)) continue;                    // Queens DCP chunks own their fabric
-    if (inQnClaim(o.cx, o.cz)) continue;                  // block face replaced by baked Tier-A massing
-    if (inQnEast(o.cx, o.cz)) continue;                   // eastern Queens: baked chunk fabric
-    if (inBK(o.cx, o.cz)) continue;                       // NW/central Brooklyn: DCP chunks render real massing
     if (inAirport(o.cx, o.cz)) continue;                  // airport grounds
     if (!landB(o.cx, o.cz)) continue;
     if (blk.a < 1500 || o.w < 24 || o.l < 24) continue;   // traffic islands
@@ -4339,6 +4428,7 @@ await bootStep(0.7, 'paving the boroughs…'); // §26e boot bar (yield → repa
         if (extra === 'wf') { const sh = bkShoreX(cz2) ?? qnShoreX(cz2);
           if (sh !== null && cx2 - sh < 460 && R() < 0.3) { hgt = 40 + R() * R() * 130; kind = 1; w = 26 + R() * 12; d = 24 + R() * 10; } }
         if (extra === 'dt') { const k = 1 + 5.2 * gauss2(cx2, cz2, 2620, 640, 430, 430); hgt = Math.min(hgt * k, 190); if (hgt > 60) kind = 1; }
+        if (footprintInBoroughDcp(cx2, cz2, w, d, ang)) continue; // keep only the uncovered part of a seam block
         const pal = kind === 1 ? PAL.glass : (palN === 'stone' ? PAL.stone : PAL.brick);
         const col = pal[(R() * pal.length) | 0];
         const fade = 0.80 + R() * 0.3;
@@ -5984,11 +6074,10 @@ renderer.domElement.addEventListener('wheel', () => { camTween = null; }, { pass
     if (pitch) {
       _off.copy(camera.position).sub(controls.target);
       const dist = _off.length() || 1, flat = Math.hypot(_off.x, _off.z) || 1;
-      const polar = clamp(Math.atan2(flat, _off.y) + pitch * RATE * dt, 0.22, 1.52);
+      const polar = clamp(Math.atan2(flat, _off.y) + pitch * RATE * dt, MIN_POLAR, MAX_POLAR);
       const nextFlat = Math.sin(polar) * dist, nextY = Math.cos(polar) * dist;
       controls.target.set(camera.position.x - _off.x / flat * nextFlat,
         camera.position.y - nextY, camera.position.z - _off.z / flat * nextFlat);
-      controls.minPolarAngle = polar; controls.maxPolarAngle = polar;
     }
     if (elevate) {
       const want = elevate * Math.max(_off.length() * RATE, 25) * dt;
@@ -6247,6 +6336,12 @@ addEventListener('keydown', (e) => {
   const pk = { '0': 'hero', '1': 'hero', '2': 'downtown', '3': 'canyon', '4': 'park', '5': 'bridges', '6': 'gwb', '7': 'birds' };
   if (pk[K]) flyTo(pk[K]);
   else if (K === 'h') flyTo('hero');
+  else if (K === 'n' && ORBIT_ONLY) {
+    camTween = null; autoPan.stop();
+    const off = camera.position.clone().sub(controls.target), flat = Math.hypot(off.x, off.z);
+    camera.position.set(controls.target.x, controls.target.y + off.y, controls.target.z - flat);
+    controls.update();
+  }
   else if (K === 'p') togglePhoto();
   else if (K === 'l') setMode(modeName === 'live' ? 'golden' : modeName === 'golden' ? 'noon' : modeName === 'noon' ? 'dusk' : 'live');
   else if (K === '`') ui.dbg.style.display = ui.dbg.style.display === 'block' ? 'none' : 'block';
@@ -8564,6 +8659,7 @@ const cams = (() => {
   let dX = 0, dY = 0, dT = 0;
   renderer.domElement.addEventListener('pointerdown', (e) => { dX = e.clientX; dY = e.clientY; dT = performance.now(); });
   renderer.domElement.addEventListener('pointerup', (e) => {
+    if (e.button !== 0) return;
     if (!CAMS.length || document.pointerLockElement) return;
     if (performance.now() - dT > 450 || Math.hypot(e.clientX - dX, e.clientY - dY) > 7) return;
     camera.getWorldDirection(_cd);
@@ -9549,6 +9645,7 @@ const linknyc = (() => {
   // the resident/cam pickers (registered later, some after fetches) never also fire
   // for it; a miss passes the event through untouched
   renderer.domElement.addEventListener('pointerup', (e) => {
+    if (e.button !== 0) return;
     if (!placed.length || document.pointerLockElement) return;
     if (performance.now() - kT > 450 || Math.hypot(e.clientX - kX, e.clientY - kY) > 7) return;
     camera.getWorldDirection(_kd);
@@ -9937,6 +10034,7 @@ const personas = (() => {
   let dX = 0, dY = 0, dT = 0;
   renderer.domElement.addEventListener('pointerdown', (e) => { dX = e.clientX; dY = e.clientY; dT = performance.now(); });
   renderer.domElement.addEventListener('pointerup', (e) => {
+    if (e.button !== 0) return;
     if (!PEOPLE.length || document.pointerLockElement) return;
     if (performance.now() - dT > 450 || Math.hypot(e.clientX - dX, e.clientY - dY) > 7) return;
     camera.getWorldDirection(_pd);

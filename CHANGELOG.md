@@ -6,6 +6,30 @@ the rules on adding entries.
 
 ---
 
+## 🏙️ Missing neighborhood blocks restored
+
+**Shipped:** July 29, 2026
+
+**TL;DR:** Brooklyn, the Bronx, and Queens now keep their fallback buildings everywhere the detailed city model has a real gap, while removing fallback buildings only where detailed geometry genuinely replaces them.
+
+**What you'll see:** Previously blank bands—including the blocks around 7th Avenue and Prospect Avenue in South Slope—are populated again. The same correction covers Flatbush, Hunts Point, Throggs Neck, Bushwick, Crown Heights, Brownsville, LIC, Astoria, Sunnyside, Flushing, and every other seam across 79 streamed borough building chunks. Detailed and fallback buildings meet without the broad empty rectangles or circle-shaped clearings used before.
+
+**How it works:** An offline bake rasterizes 333,350 ground footprints from the shipped [NYC Department of City Planning 3D Model](https://www.nyc.gov/content/planning/pages/resources/datasets/nyc-3d-model) LOD boxes into a deterministic 10-meter, 1.18 MB coverage mask. At startup, each fallback footprint from NYC Open Data's [Building Footprints](https://data.cityofnewyork.us/d/jh45-qr5r) is tested at its center and inset perimeter; it is suppressed only when multiple samples overlap detailed geometry. Procedural block-fill buildings receive the same per-building test. Airport grounds and sparse park-only chunks retain their dedicated rules, and the mask represents model coverage—not newly surveyed construction; the DCP source is an August 2018 release based on earlier aerial survey work.
+
+---
+
+## 🖱️ Explore NYC with a mouse
+
+**Shipped:** July 29, 2026
+
+**TL;DR:** Desktop visitors can now pan, orbit, tilt, zoom, recenter, and inspect NYC directly with a mouse, with an always-available controls guide under the NYC Sim logo.
+
+**What you'll see:** Left-drag moves the map, right-drag or wheel-drag orbits and tilts, scrolling zooms toward the pointer, and left-click still inspects residents, vehicles, cameras, and markers. Double-clicking land makes it the new center, **N** faces north, and **0** returns to the hero view. The desktop-only **ⓘ Controls** button opens a complete reference card that closes with its close button, the backdrop, or Escape; the existing camera panel and phone/GBA controls remain available.
+
+**How it works:** NYC Sim configures its existing [Three.js OrbitControls](https://threejs.org/docs/pages/OrbitControls.html) with map-style mouse bindings, cursor-directed zoom, bounded pitch, inertial damping, and a click-versus-drag threshold. Selection remains limited to primary-button clicks, the mirrored canvas coordinate correction is preserved for navigation and ground recentering, and coarse-pointer/mobile devices retain their existing fly and GBA input paths. No new external data source or runtime dependency is used.
+
+---
+
 ## 💬 David asks what NYC Sim should build next
 
 **Shipped:** July 20, 2026
